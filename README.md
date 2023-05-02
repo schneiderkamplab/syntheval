@@ -46,6 +46,7 @@ Useability is a core attribute of utility, and entails how well the synthetic da
 - AdaBoostClassifier
 - RandomForestClassifier
 - LogisticRegression
+
 The average accuracy is reported together with the accuracy difference from models trained on real and synthetic data. If a test set is provided, the classifiers are also trained once on the entire training set, and again the accuracy and accuracy differences are reported, but now on the test data.
 
 By default the results are given in terms of accuracy (micro F1 scores). To change, use {‘micro’, ‘macro’, ‘weighted’} for the <code>SynthEval.F1_type</code> attribute.
