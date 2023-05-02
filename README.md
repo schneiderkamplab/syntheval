@@ -52,8 +52,7 @@ By default the results are given in terms of accuracy (micro F1 scores). To chan
 
 ### Utility score
 finally, a summary utility score is calculated based on the tests described above. Specifically we calculate the utility score in the following way
-$$ \mathrm{UTIL} = \frac{1}{10} [ (1-\tanh{\mathrm{corr.\: diff.}})+(1-\tanh{\mathrm{MI\: diff.}})+ (1-\mathrm{KS\: dist.}) + (1-\mathrm{KS\: sig.frac.}) + \mathrm{CIO}
-+ (1-\mathrm{H\: dist.}) + \left(1-\frac{\mathrm{pMSE}}{0.25}\right) +(1-\mathrm{NNAA})+ (1-\mathrm{train\:F1\:diff.})+(1-\mathrm{test\:F1\:diff.})]$$
+$$\mathrm{UTIL} = \frac{1}{10} [ (1-\tanh{\mathrm{corr.\: diff.}})+(1-\tanh{\mathrm{MI\: diff.}})+ (1-\mathrm{KS\: dist.}) + (1-\mathrm{KS\: sig.frac.}) + \mathrm{CIO}+ (1-\mathrm{H\: dist.}) + \left(1-\frac{\mathrm{pMSE}}{0.25}\right) +(1-\mathrm{NNAA})+ (1-\mathrm{train\:F1\:diff.})+(1-\mathrm{test\:F1\:diff.})]$$
 
 ### Privacy evaluation
 Privacy is a crucial aspect of evaluating synthetic data, we include only three highlevel metrics with more to be added in the future.
