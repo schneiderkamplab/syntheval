@@ -1,3 +1,5 @@
+[![PyPI version](https://badge.fury.io/py/syntheval.svg)](https://badge.fury.io/py/syntheval)
+
 # SynthEval
 The SynthEval library is a tool made for evaluating the quality of tabularised synthetic data compared with real data. Synthetic data is microdata that is artificially generated and thus does not directly correspond to real-world individuals, making it a possible alternative to regular data anonymity. This tool builds on many previous works, and compile them in a single tool to make evaluation of synthetic data utility easier for data scientists and reasearchers alike.
 
@@ -5,12 +7,13 @@ The SynthEval library is a tool made for evaluating the quality of tabularised s
 The current version of the tool offers a wide selection of utility metrics, to evaluate how well your synthetic data aligns on quality, resemblance and usability. In the current version we include only three high level privacy tools, but it is the aim to provide a more extensive assesment of disclosure risk in a future version. 
 
 ## Installation
-
-
-
+Installation with PyPI using
+```
+pip install syntheval
+```
 
 ## User guide
-In this section we breifly outline how to run the main test, for further details see the "syntheval_guide.ipynb". The library is made to be run with two datasets that look similar, i.e. same number of columns, same variable types and same column and variable names. The data should be supplied as a pandas dataframe. 
+In this section we breifly outline how to run the main test, for further details see the [notebook](https://github.com/schneiderkamplab/syntheval/blob/main/guides/syntheval_guide.ipynb). The library is made to be run with two datasets that look similar, i.e. same number of columns, same variable types and same column and variable names. The data should be supplied as a pandas dataframe. 
 In Python the library is acessed and run in the following way;
 ```python
 from syntheval import SynthEval
