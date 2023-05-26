@@ -30,6 +30,9 @@ class SynthEval():
         else:
             self.hold_out = None
 
+        ### Options
+        self.mixed_correlation = True # Switch of for faster but less sensitive correlation matrix difference.
+        self.permutation = True # Switch to False for faster but less sensitive KS test
         self.F1_type = 'micro' # Use {‘micro’, ‘macro’, ‘weighted’}
 
         self.categorical_columns = cat_cols
@@ -79,7 +82,10 @@ class SynthEval():
 
         self._early_utility_analysis(real,fake,target)
 
-        ks_dist, ks_p_val, ks_num_sig, ks_frac_sig = featurewise_ks_test(real, fake)
+        if self.permutation == True:
+            ks_dist, ks_p_val, ks_num_sig, ks_frac_sig = featurewise_ks_test(real, fake, cat_cols=self.categorical_columns)
+        else:
+            ks_dist, ks_p_val, ks_num_sig, ks_frac_sig = featurewise_ks_test(real, fake, cat_cols=[])
         self.ks_dist, self.ks_p_val, self.ks_num_sig, self.ks_frac_sig = ks_dist, ks_p_val, ks_num_sig, ks_frac_sig
         self.res_dict['Kolmogorov-Smirnov avg. dist'] = ks_dist
         self.res_dict['Kolmogorov-Smirnov avg. p-val'] = ks_p_val
@@ -95,16 +101,16 @@ class SynthEval():
         self.res_dict['Normed distance to closest record (DCR)'] = mean_DCR
 
         print('SynthEval: fast evaluation complete\n',
-                "+-------------------------------+\n",
-                "| avg. KS-dist         : %.4f |\n" % ks_dist,
-                "| frac. of sig. tests  : %d      |\n"% ks_frac_sig,
-                "| Avg. H-dist          : %.4f |\n" % H_dist,
-                "| Normed DCR           : %.4f |\n" % mean_DCR,
-                "+-------------------------------+\n"       
+                "+-----------------------------------------+\n",
+                "| Avg. KS-dist         : %.4f SE(%.4f) |\n" % (ks_dist['avg'],ks_dist['std']),
+                "| frac. of sig. tests  : %d                |\n"% ks_frac_sig,
+                "| Avg. H-dist          : %.4f           |\n" % H_dist,
+                "| Normed DCR           : %.4f           |\n" % mean_DCR,
+                "+-----------------------------------------+\n"       
         )
 
         self.save_results()
-        return [ks_dist,ks_frac_sig], H_dist, mean_DCR
+        return ks_dist, ks_frac_sig, H_dist, mean_DCR
     
     def full_eval(self, synthetic_data, target_col: str):
         """Main function for evaluate synthetic data"""
@@ -151,7 +157,7 @@ class SynthEval():
     def _quality_metrics(self, real, fake):
         """Function for calculating pairwise statistics, correlations, Hellinger distance, confidence intervals etc."""
 
-        corr_diff = correlation_matrix_difference(real,fake,self.numerical_columns)
+        corr_diff = correlation_matrix_difference(real, fake, self.numerical_columns, self.categorical_columns, self.mixed_correlation)
         self.corr_diff = corr_diff
         self.res_dict['Correlation matrix differences (num only)'] = corr_diff
 
@@ -159,7 +165,10 @@ class SynthEval():
         self.mi_diff = mi_diff
         self.res_dict['Pairwise mutual information difference'] = mi_diff
 
-        ks_dist, ks_p_val, ks_num_sig, ks_frac_sig = featurewise_ks_test(real, fake)
+        if self.permutation == True:
+            ks_dist, ks_p_val, ks_num_sig, ks_frac_sig = featurewise_ks_test(real, fake,cat_cols=self.categorical_columns)
+        else:
+            ks_dist, ks_p_val, ks_num_sig, ks_frac_sig = featurewise_ks_test(real, fake,cat_cols=[])
         self.ks_dist, self.ks_p_val, self.ks_num_sig, self.ks_frac_sig = ks_dist, ks_p_val, ks_num_sig, ks_frac_sig
         self.res_dict['Kolmogorov-Smirnov avg. dist'] = ks_dist
         self.res_dict['Kolmogorov-Smirnov avg. p-val'] = ks_p_val
@@ -241,7 +250,7 @@ class SynthEval():
         
         lst.append(1-np.tanh(self.corr_diff))
         lst.append(1-np.tanh(self.mi_diff))
-        lst.append(1-self.ks_dist)
+        lst.append(1-self.ks_dist['avg'])
         lst.append(1-self.ks_frac_sig)
         lst.append(self.CIO)
         lst.append(1-self.H_dist)
@@ -286,12 +295,13 @@ class SynthEval():
         if do_qual:
             print(
                 "Quality metrics:\n",
+                "metric description                            value   error\n",                                   
                 "+---------------------------------------------------------------+\n",
                 "| Correlation matrix difference (num only) :   %.4f           |\n" % (self.corr_diff),
                 "| Pairwise mutual information difference   :   %.4f           |\n" % (self.mi_diff),
                 "| Kolmogorov–Smirnov test                                       |\n",
-                "|   -> avg. Kolmogorov–Smirnov distance    :   %.4f           |\n" % (self.ks_dist),
-                "|   -> avg. Kolmogorov–Smirnov p-value     :   %.4f           |\n" % (self.ks_p_val),
+                "|   -> avg. Kolmogorov–Smirnov distance    :   %.4f  %.4f   |\n" % (self.ks_dist['avg'],self.ks_dist['err']),
+                "|   -> avg. Kolmogorov–Smirnov p-value     :   %.4f  %.4f   |\n" % (self.ks_p_val['avg'],self.ks_p_val['err']),
                 "|   -> # significant tests at a=0.05       :   %d                |\n" % (self.ks_num_sig),
                 "|   -> fraction of significant tests       :   %.4f           |\n" % (self.ks_frac_sig),
                 "+---------------------------------------------------------------+"
@@ -342,9 +352,9 @@ class SynthEval():
         if all([do_qual, do_resm, do_usea]):
             self._utility_score()
             print(
-                " \n",
+                "                                                        SE\n",
                 "+---------------------------------------------------------------+\n",
-                "| Overall utility score                    :   %.4f(%.4f)   |\n" % (np.mean(self.util_lst),np.std(self.util_lst,ddof=1)),
+                "| Overall utility score                    :   %.4f  %.4f   |\n" % (np.mean(self.util_lst),np.std(self.util_lst,ddof=1)/np.sqrt(10)),
                 "+---------------------------------------------------------------+"
             )
                 

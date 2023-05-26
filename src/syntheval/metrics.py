@@ -9,10 +9,11 @@ import pandas as pd
 from scipy.stats import ks_2samp, sem
 
 from sklearn.decomposition import PCA
+from scipy.stats import permutation_test, chi2_contingency
 from sklearn.model_selection import KFold
 from sklearn.neighbors import NearestNeighbors
 from sklearn.neural_network import MLPClassifier
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, LabelEncoder
 from sklearn.metrics import normalized_mutual_info_score, f1_score
 
 from .file_utils import stack
@@ -75,6 +76,93 @@ def _hellinger(p,q):
     diff = sqrt_pdf1 - sqrt_pdf2
     return np.sqrt(np.linalg.norm(diff))
 
+def _discrete_ks_statistic(x, y):
+    """Function for calculating the KS statistic"""
+    KstestResult = ks_2samp(x,y)
+    return np.round(KstestResult.statistic,4)
+
+def _discrete_ks(x, y):
+    """Function for doing permutation test of discrete values in the KS test"""
+    res = permutation_test((x, y), _discrete_ks_statistic, n_resamples=1000, vectorized=False, permutation_type='independent', alternative='greater')
+    # plt.figure()
+    # plt.hist(res.null_distribution, bins=50)
+    # plt.axvline(x=res.statistic, color='red', linestyle='--')
+    # plt.savefig('permutation_test')
+    # plt.close()
+    return res.statistic, res.pvalue
+
+def _cramers_V(var1,var2) :
+    """function for calculating Cramers V between two categorial variables
+    credit: https://www.kaggle.com/code/chrisbss1/cramer-s-v-correlation-matrix
+    """
+    crosstab =np.array(pd.crosstab(var1, var2, rownames=None, colnames=None)) # Cross table building
+    stat = chi2_contingency(crosstab)[0] # Keeping of the test statistic of the Chi2 test
+    obs = np.sum(crosstab) # Number of observations
+    mini = min(crosstab.shape)-1 # Take the minimum value between the columns and the rows of the cross table
+    return (stat/(obs*mini))
+
+def _cat_cat_corr(data):
+    """Help function for calculating the correlation ratio of categorial-categorials"""
+    label = LabelEncoder()
+    data_encoded = pd.DataFrame() 
+
+    for i in data.columns :
+        data_encoded[i]=label.fit_transform(data[i])
+        rows= []
+
+        for var1 in data_encoded:
+            col = []
+            for var2 in data_encoded :
+                cramers = _cramers_V(data_encoded[var1], data_encoded[var2])
+                col.append(round(cramers,4)) 
+            rows.append(col)
+    
+    return pd.DataFrame(np.array(rows), columns=data_encoded.columns, index=data_encoded.columns)
+
+def _correlation_ratio(categories, measurements):
+    """Function for calculating the correlation ration eta^2 of categorial and nummerical data"""
+    fcat, _ = pd.factorize(categories)
+    cat_num = np.max(fcat)+1
+    y_avg_array = np.zeros(cat_num)
+    n_array = np.zeros(cat_num)
+    for i in range(0,cat_num):
+        cat_measures = measurements[np.argwhere(fcat == i).flatten()]
+        n_array[i] = len(cat_measures)
+        y_avg_array[i] = np.average(cat_measures)
+    y_total_avg = np.sum(np.multiply(y_avg_array,n_array))/np.sum(n_array)
+    numerator = np.sum(np.multiply(n_array,np.power(np.subtract(y_avg_array,y_total_avg),2)))
+    denominator = np.sum(np.power(np.subtract(measurements,y_total_avg),2))
+    if numerator == 0:
+        eta = 0.0
+    else:
+        eta = numerator/denominator
+    return eta
+
+def _cat_num_corr(data,cat_cols,num_cols):
+    """Help function for calculating the correlation ratio of categorial-numericals"""
+    rows = []
+    for cat in cat_cols:
+        col = []
+        for num in num_cols:
+            eta2 = _correlation_ratio(data[cat],data[num])
+            col.append(eta2)
+        rows.append(col)
+    return pd.DataFrame(np.array(rows), columns = num_cols, index = cat_cols)
+
+def mixed_correlation(data,num_cols,cat_cols):
+    """Function for calculating a correlation matrix of mixed datatypes.
+    Spearman's rho is used for rank-based correlation, Cramer's V is used for categorical variables, 
+    and correlation ratio is used for categorical and continuous variables.
+    """
+    corr_num_num = data[num_cols].corr()
+    corr_cat_cat = _cat_cat_corr(data[cat_cols])
+    corr_cat_num = _cat_num_corr(data, cat_cols, num_cols)
+
+    top_row = pd.concat([corr_cat_cat,corr_cat_num],axis=1)
+    bot_row = pd.concat([corr_cat_num.transpose(),corr_num_num],axis=1)
+    corr = pd.concat([top_row,bot_row],axis=0)
+    return corr
+
 def class_test(real_models, fake_models, real, fake, test, F1_type='micro'):
     """Function for running a training session and getting predictions 
     on the SciPy model provided, and data."""
@@ -117,12 +205,24 @@ def principal_component_analysis(real,fake,num_cols,target, fig_index):
     PlotPCA(r_pca,f_pca, fig_index)
     pass
 
-#TODO: make this work for categorials too <ADL 09-03-2023 11:56>
-def correlation_matrix_difference(real,fake,num_cols):
-    """Function for calculating the correlation matrix difference, 
-    but only for the nummerical columns"""
-    r_corr = real[num_cols].corr()
-    f_corr = fake[num_cols].corr()
+def correlation_matrix_difference(real, fake, num_cols, cat_cols, mixed=True):
+    """Function for calculating the (mixed) correlation matrix difference.
+    This calculation uses spearmans rho for numerical-numerical, Cramer's V for categories,
+    and correlation ratio (eta) for numerical-categorials.
+    
+    Mixed mode can be disabled, to only use the numerical variables."""
+
+    if mixed==True:
+        r_corr = mixed_correlation(real,num_cols,cat_cols)
+        f_corr = mixed_correlation(fake,num_cols,cat_cols)
+    else:
+        r_corr = real[num_cols].corr()
+        f_corr = fake[num_cols].corr()
+    
+    # fig, axs = plt.subplots(1,2,figsize=(12,4))
+    # sns.heatmap(r_corr,annot=True, fmt='.2f',ax=axs[0])
+    # sns.heatmap(f_corr,annot=True, fmt='.2f',ax=axs[1])
+    # plt.show()
 
     corr_mat = r_corr-f_corr
     PlotCORR(corr_mat)
@@ -137,23 +237,36 @@ def mutual_information_matrix_difference(real,fake):
     PlotMI(mi_mat)
     return np.linalg.norm(mi_mat,ord='fro')
 
-def featurewise_ks_test(real,fake, sig_lvl=0.05):
-    """Function for running the KS test in each of the marginals, returns
-    the average p-value and the number of significant tests."""
+def featurewise_ks_test(real, fake, cat_cols, sig_lvl=0.05):
+    """Function for executing the Kolmogorov-Smirnov test.
+    
+    Returns:
+        Avg. KS dist: dict  - holds avg. and standard error of the mean (SE)
+        Avg. KS pval: dict  - holds avg. and SE
+        num of sigs : int   - the number of significant tests at sig_lvl
+        frac of sigs: float - the fraction of significant tests at sig_lvl   
+     """
     dists = []
     pvals = []
+
     for category in real.columns:
         R = real[category]
         F = fake[category]
-        stat, pval = ks_2samp(R,F)
-        dists.append(stat)
-        pvals.append(pval)
+
+        if category in cat_cols:
+            statistic, pvalue = _discrete_ks(F,R)
+            dists.append(statistic)
+            pvals.append(pvalue)
+        else:
+            KstestResult = ks_2samp(R,F)
+            dists.append(KstestResult.statistic)
+            pvals.append(KstestResult.pvalue)
 
     ### Calculate number of significant tests, and fraction of sifnificant tests
     num  = sum([p_val < sig_lvl for p_val in pvals])
     frac = num/len(pvals)
-    
-    return np.mean(dists), np.mean(pvals), num, frac 
+
+    return {'avg': np.mean(dists), 'err': np.std(dists)}, {'avg': np.mean(pvals), 'err':np.std(pvals)}, num, frac 
 
 def featurewise_hellinger_distance(real, fake, cat_cols, num_cols):
     """Function for calculating the hellinger distance of the categorial 
