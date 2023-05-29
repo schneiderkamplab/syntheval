@@ -101,23 +101,10 @@ def _cramers_V(var1,var2) :
     mini = min(crosstab.shape)-1 # Take the minimum value between the columns and the rows of the cross table
     return (stat/(obs*mini))
 
-def _cat_cat_corr(data):
-    """Help function for calculating the correlation ratio of categorial-categorials"""
-    label = LabelEncoder()
-    data_encoded = pd.DataFrame() 
-
-    for i in data.columns :
-        data_encoded[i]=label.fit_transform(data[i])
-        rows= []
-
-        for var1 in data_encoded:
-            col = []
-            for var2 in data_encoded :
-                cramers = _cramers_V(data_encoded[var1], data_encoded[var2])
-                col.append(round(cramers,4)) 
-            rows.append(col)
-    
-    return pd.DataFrame(np.array(rows), columns=data_encoded.columns, index=data_encoded.columns)
+def _apply_mat(data,func,labs1,labs2):
+    """Help function for constructing a matrix based on func accross labels 1 and 2"""
+    res = (func(data[lab1],data[lab2]) for lab1 in labs1 for lab2 in labs2)
+    return pd.DataFrame(np.fromiter(res, dtype=float).reshape(len(labs1),len(labs2)), columns = labs2, index = labs1)
 
 def _correlation_ratio(categories, measurements):
     """Function for calculating the correlation ration eta^2 of categorial and nummerical data"""
@@ -138,25 +125,14 @@ def _correlation_ratio(categories, measurements):
         eta = numerator/denominator
     return eta
 
-def _cat_num_corr(data,cat_cols,num_cols):
-    """Help function for calculating the correlation ratio of categorial-numericals"""
-    rows = []
-    for cat in cat_cols:
-        col = []
-        for num in num_cols:
-            eta2 = _correlation_ratio(data[cat],data[num])
-            col.append(eta2)
-        rows.append(col)
-    return pd.DataFrame(np.array(rows), columns = num_cols, index = cat_cols)
-
 def mixed_correlation(data,num_cols,cat_cols):
     """Function for calculating a correlation matrix of mixed datatypes.
     Spearman's rho is used for rank-based correlation, Cramer's V is used for categorical variables, 
     and correlation ratio is used for categorical and continuous variables.
     """
     corr_num_num = data[num_cols].corr()
-    corr_cat_cat = _cat_cat_corr(data[cat_cols])
-    corr_cat_num = _cat_num_corr(data, cat_cols, num_cols)
+    corr_cat_cat = _apply_mat(data,_cramers_V,cat_cols,cat_cols)
+    corr_cat_num = _apply_mat(data,_correlation_ratio,cat_cols,num_cols)
 
     top_row = pd.concat([corr_cat_cat,corr_cat_num],axis=1)
     bot_row = pd.concat([corr_cat_num.transpose(),corr_num_num],axis=1)
@@ -368,4 +344,3 @@ def hitting_rate(real,fake,cat_cols):
         hit += any((abs(r-fake) <= thres).all(axis='columns'))
     hit_rate = hit/len(real)
     return hit_rate
-
