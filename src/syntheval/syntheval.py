@@ -14,7 +14,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 
 from .metrics import *
-from .file_utils import empty_dict, create_results_file, add_to_results_file, convert_nummerical_pair, convert_nummerical_single
+from .file_utils import empty_dict, create_results_file, add_to_results_file, consistent_label_encoding
 
 class SynthEval():
     def __init__(self, real ,hold_out=None, cat_cols=[], save_name = 'SynthEval_result_file', unique_thresh = 10, n_samples=None) -> None:
@@ -34,9 +34,12 @@ class SynthEval():
         self.mixed_correlation = True # Switch of for faster but less sensitive correlation matrix difference.
         self.permutation = True # Switch to False for faster but less sensitive KS test
         self.F1_type = 'micro' # Use {‘micro’, ‘macro’, ‘weighted’}
+        self.knn_metric = 'gower'
 
         self.categorical_columns = cat_cols
+        #self.cat_idxs = [real.columns.get_loc(col) for col in cat_cols]
         self.numerical_columns = [column for column in real.columns if column not in cat_cols]
+        #self.num_idxs = [real.columns.get_loc(col) for col in self.numerical_columns]
 
         self.save_flag = 0
         self.save_name = save_name + '.csv'
@@ -78,7 +81,10 @@ class SynthEval():
         """This function is for running the quick version of TabEval, for model checkpoints etc."""
         self._update_syn_data(synthetic_dataframe)
 
-        real, fake = convert_nummerical_pair(self.real,self.fake,self.categorical_columns)
+        #real, fake = convert_nummerical_pair(self.real,self.fake,self.categorical_columns)
+        CLE = consistent_label_encoding(self.real,self.fake,self.categorical_columns)
+        real = CLE.encode(self.real)
+        fake = CLE.encode(self.fake)
 
         self._early_utility_analysis(real,fake,target)
 
@@ -96,29 +102,36 @@ class SynthEval():
         self.H_dist = H_dist
         self.res_dict['Average empirical Hellinger distance'] = H_dist
 
-        mean_DCR = distance_to_closest_record(real,fake)
-        self.mean_DCR = mean_DCR
-        self.res_dict['Normed distance to closest record (DCR)'] = mean_DCR
+        DCR = distance_to_closest_record(real,fake,self.categorical_columns,self.knn_metric)
+        self.DCR = DCR
+        self.res_dict['Normed distance to closest record (DCR)'] = DCR
 
         print('SynthEval: fast evaluation complete\n',
-                "+-----------------------------------------+\n",
-                "| Avg. KS-dist         : %.4f SE(%.4f) |\n" % (ks_dist['avg'],ks_dist['std']),
-                "| frac. of sig. tests  : %d                |\n"% ks_frac_sig,
-                "| Avg. H-dist          : %.4f           |\n" % H_dist,
-                "| Normed DCR           : %.4f           |\n" % mean_DCR,
-                "+-----------------------------------------+\n"       
+                "+------------------------------------------+\n",
+                "| Avg. KS-dist         : %.4f SE(%.4f) |\n" % (ks_dist['avg'], ks_dist['err']),
+                "| frac. of sig. tests  : %d                 |\n"% ks_frac_sig,
+                "| Avg. H-dist          : %.4f SE(%.4f) |\n" % (H_dist['avg'], H_dist['err']),
+                "| Normed DCR           : %.4f SE(%.4f) |\n" % (DCR['avg'], DCR['err']),
+                "+------------------------------------------+\n"       
         )
 
         self.save_results()
-        return ks_dist, ks_frac_sig, H_dist, mean_DCR
+        return ks_dist, ks_frac_sig, H_dist, DCR
     
     def full_eval(self, synthetic_data, target_col: str):
         """Main function for evaluate synthetic data"""
         ### Initialize the data
         self._update_syn_data(synthetic_data)
-        real, fake = convert_nummerical_pair(self.real,self.fake,self.categorical_columns)
-        
-        if self.hold_out is not None: hout = convert_nummerical_single(self.hold_out,self.categorical_columns)
+
+        #if self.save_flag == 0:
+        CLE = consistent_label_encoding(self.real,self.fake,self.categorical_columns)
+        real = CLE.encode(self.real)
+        fake = CLE.encode(self.fake)
+        #else:
+        #    real = self.real
+        #    fake = self.CLE.encode(self.fake)
+
+        if self.hold_out is not None: hout = CLE.encode(self.hold_out)
         else: hout = None
 
         # Initialize flags 
@@ -179,11 +192,13 @@ class SynthEval():
     def _resemblance_metrics(self, real, fake):
         """Function for calculating confidence interval overlaps, hellinger distance, pMSE and NNAA."""
         
-        CIO, CIO_negatives = confidence_interval_overlap(real,fake,self.numerical_columns)
+        CIO, num_CIO, frac_CIO = confidence_interval_overlap(real,fake,self.numerical_columns)
         self.CIO = CIO
-        self.CIO_negatives = CIO_negatives
+        self.num_CIO = num_CIO
+        self.frac_CIO = frac_CIO
         self.res_dict['Average confidence interval overlap'] = CIO
-        self.res_dict['Number of non overlapping COIs at 95pct'] = CIO_negatives
+        self.res_dict['Number of non-overlapping CIs at 95pct'] = num_CIO
+        self.res_dict['Fraction of non-overlapping CIs at 95pct'] = frac_CIO
 
         H_dist = featurewise_hellinger_distance(real,fake,self.categorical_columns,self.numerical_columns)
         self.H_dist = H_dist
@@ -192,9 +207,10 @@ class SynthEval():
         pMSE, pMSE_acc = propensity_mean_square_error(real,fake)
         self.pMSE = pMSE
         self.pMSE_acc = pMSE_acc
-        self.res_dict['Propensity Mean Squared Error (acc, pMSE)'] = np.array([pMSE_acc, pMSE])
+        self.res_dict['Propensity Mean Squared Error (pMSE)'] = pMSE
+        self.res_dict['Propensity Mean Squared Error (acc)'] =  pMSE_acc
 
-        NNAA = adversarial_accuracy(real,fake)
+        NNAA = adversarial_accuracy(real, fake, self.categorical_columns, self.knn_metric)
         self.NNAA = NNAA
         self.res_dict['Nearest neighbour adversarial accuracy'] = NNAA
         return True
@@ -216,7 +232,7 @@ class SynthEval():
 
         ### Run 5-fold cross-validation
         kf = KFold(n_splits=5)
-        res = np.zeros((len(real_models),2))
+        res = []#np.zeros((len(real_models),2))
         for train_index, test_index in tqdm(kf.split(real_y),desc='USEA',total=5):
             real_x_train = real_x.iloc[train_index]
             real_x_test = real_x.iloc[test_index]
@@ -225,22 +241,35 @@ class SynthEval():
             fake_x_train = fake_x.iloc[train_index]
             fake_y_train = fake_y.iloc[train_index]
 
-            res += class_test(real_models,fake_models,[real_x_train, real_y_train],
-                                                            [fake_x_train, fake_y_train],
-                                                            [real_x_test, real_y_test],self.F1_type)
+            res.append(class_test(real_models,fake_models,[real_x_train, real_y_train],
+                                                          [fake_x_train, fake_y_train],
+                                                          [real_x_test, real_y_test],self.F1_type))
+        #print(np.mean(res,axis=0),np.std(res,axis=0,ddof=1)/np.sqrt(5))
 
-        class_res = np.array(res)/5
-        self.class_res = class_res
-        self.res_dict['models trained on real data' ] = class_res[:,0]
-        self.res_dict['models trained on fake data' ] = class_res[:,1]
+        class_avg = np.mean(res,axis=0)
+        class_err = np.std(res,axis=0,ddof=1)/np.sqrt(5)
+        class_diff = np.abs(class_avg[0,:]-class_avg[1,:])
+        class_diff_err = np.sqrt(class_err[0,:]**2+class_err[1,:]**2)
+
+        self.class_res = class_avg
+        self.class_diff = class_diff
+        self.class_diff_err = class_diff_err
+        self.res_dict['models trained on real data'] = {'avg':class_avg[0,:],'err':class_err[0,:]}
+        self.res_dict['models trained on fake data'] = {'avg':class_avg[1,:],'err':class_err[1,:]}
+        self.res_dict['f1 difference training data'] = {'avg':class_diff,'err':class_diff_err}
 
         if hout is not None:
-            hold_out_res = class_test(real_models, fake_models, [real_x, real_y],
-                                                                            [fake_x, fake_y],
-                                                                            [hout.drop([target_col],axis=1), hout[target_col]],self.F1_type)
-            self.hold_out_res = hold_out_res
-            self.res_dict['model trained on real data on holdout'] = hold_out_res[:,0]
-            self.res_dict['model trained on fake data on holdout'] = hold_out_res[:,1]
+            holdout_res = class_test(real_models, fake_models, [real_x, real_y],
+                                                                [fake_x, fake_y],
+                                                                [hout.drop([target_col],axis=1), hout[target_col]],self.F1_type)
+            
+            holdout_diff = np.abs(holdout_res[0,:]-holdout_res[1,:])
+
+            self.holdout_res = holdout_res
+            self.holdout_diff = holdout_diff
+            self.res_dict['model trained on real data on holdout'] = holdout_res[0,:]
+            self.res_dict['model trained on fake data on holdout'] = holdout_res[1,:]
+            self.res_dict['f1 difference holdout data'] = holdout_diff
                                    
         return True
 
@@ -252,24 +281,28 @@ class SynthEval():
         lst.append(1-np.tanh(self.mi_diff))
         lst.append(1-self.ks_dist['avg'])
         lst.append(1-self.ks_frac_sig)
-        lst.append(self.CIO)
-        lst.append(1-self.H_dist)
-        lst.append(1-self.pMSE/0.25)
-        lst.append(1-self.NNAA)
+        lst.append(self.CIO['avg'])
+        lst.append(1-self.H_dist['avg'])
+        lst.append(1-self.pMSE['avg']/0.25)
+        lst.append(1-self.NNAA['avg'])
 
-        lst.append(1-np.mean(abs(self.class_res[:,0]-self.class_res[:,1])))
-        lst.append(1-np.mean(abs(self.hold_out_res[:,0]-self.hold_out_res[:,1])))
+        lst.append(1-np.mean(self.class_diff))
+        lst.append(1-np.mean(self.holdout_diff))
 
-        self.util_lst = lst
-        self.res_dict['Overall utility score'] = np.mean(lst)
+        # prop_err = 1/10*np.sqrt(self.ks_dist['err']**2+self.CIO['err']**2+self.H_dist['err']**2+(self.pMSE['err']/0.25)**2+self.NNAA['err']**2+(0.25*np.sqrt(sum(self.class_diff_err**2)))**2+(np.std(self.holdout_diff,ddof=1)/np.sqrt(4))**2)
+        # print(prop_err)
+
+        res = {'avg':np.mean(lst),'err':np.std(lst,ddof=1)/np.sqrt(10)}
+        self.util_score = res
+        self.res_dict['Overall utility score'] = res
         return True
 
     def _simple_privacy_mets(self, real, fake, hout=None):
         """Calculate the mean distance to closest record (DCR) and hitting rate"""
         
-        mean_DCR = distance_to_closest_record(real,fake)
-        self.mean_DCR = mean_DCR
-        self.res_dict['Normed distance to closest record (DCR)'] = mean_DCR
+        DCR = distance_to_closest_record(real,fake,self.categorical_columns, self.knn_metric)
+        self.DCR = DCR
+        self.res_dict['Normed distance to closest record (DCR)'] = DCR
 
         hit_rate = hitting_rate(real,fake,self.categorical_columns)
         self.hit_rate = hit_rate
@@ -277,8 +310,11 @@ class SynthEval():
 
         ### Privacy loss (Nearest neighbour adversarial accuracy)
         if hout is not None:
-            privloss = adversarial_accuracy(hout[real.columns],fake) -self.NNAA
-        else: privloss = 0
+            NNAA = adversarial_accuracy(hout[real.columns],fake,self.categorical_columns, self.knn_metric)
+            privloss_val = NNAA['avg'] - self.NNAA['avg']
+            privloss_err = np.sqrt(self.NNAA['err']**2+NNAA['err']**2)
+            privloss = {'avg': privloss_val, 'err': privloss_err}
+        else: privloss = {'avg': 0, 'err': 0}
 
         self.privloss = privloss
         self.res_dict['Privacy loss (discrepancy in NNAA)'] = privloss
@@ -311,11 +347,13 @@ class SynthEval():
             print(
                 "Resemblance metrics:\n",
                 "+---------------------------------------------------------------+\n",
-                "| Average confidence interval overlap      :   %.4f           |\n" % (self.CIO),
-                "|   -> # Non overlapping COIs at 95%%       :   %d                |\n" % (self.CIO_negatives),
-                "| Average empirical Hellinger distance     :   %.4f           |\n" % (self.H_dist),
-                "| Propensity Mean Squared Error (acc=%.2f) :   %.4f           |\n" % (self.pMSE_acc,self.pMSE),
-                "| Nearest neighbour adversarial accuracy   :   %.4f           |\n" % (self.NNAA),
+                "| Average confidence interval overlap      :   %.4f  %.4f   |\n" % (self.CIO['avg'],self.CIO['err']),
+                "|   -> # non-overlapping COIs at 95%%       :   %d                |\n" % (self.num_CIO),
+                "|   -> fraction of non-overlapping CIs     :   %.4f           |\n" % (self.frac_CIO),                                
+                "| Average empirical Hellinger distance     :   %.4f  %.4f   |\n" % (self.H_dist['avg'],self.H_dist['err']),
+                "| Propensity Mean Squared Error (pMSE)     :   %.4f  %.4f   |\n" % (self.pMSE['avg'],self.pMSE['err']),
+                "|   -> average pMSE classifier accuracy    :   %.4f  %.4f   |\n" % (self.pMSE_acc['avg'],self.pMSE_acc['err']),
+                "| Nearest neighbour adversarial accuracy   :   %.4f  %.4f   |\n" % (self.NNAA['avg'],self.NNAA['err']),
                 "+---------------------------------------------------------------+"
             )
 
@@ -324,28 +362,28 @@ class SynthEval():
             print(
                 "Usability metrics:\n",
                 "avg. of 5-fold cross val.:\n",
-                "clasifier model              real_f1     fake_f1     |diff.|\n",
+                "clasifier model              acc_r   acc_f    |diff|  error\n",
                 "+---------------------------------------------------------------+\n",
-                "| DecisionTreeClassifier :    %.4f      %.4f      %.4f    |\n" % (res[0,0], res[0,1], abs(res[0,0]-res[0,1])),
-                "| AdaBoostClassifier     :    %.4f      %.4f      %.4f    |\n" % (res[1,0], res[1,1], abs(res[1,0]-res[1,1])),
-                "| RandomForestClassifier :    %.4f      %.4f      %.4f    |\n" % (res[2,0], res[2,1], abs(res[2,0]-res[2,1])),
-                "| LogisticRegression     :    %.4f      %.4f      %.4f    |\n" % (res[3,0], res[3,1], abs(res[3,0]-res[3,1])),
+                "| DecisionTreeClassifier  :   %.4f  %.4f   %.4f  %.4f   |\n" % (res[0,0], res[1,0], self.class_diff[0], self.class_diff_err[0]),
+                "| AdaBoostClassifier      :   %.4f  %.4f   %.4f  %.4f   |\n" % (res[0,1], res[1,1], self.class_diff[1], self.class_diff_err[1]),
+                "| RandomForestClassifier  :   %.4f  %.4f   %.4f  %.4f   |\n" % (res[0,2], res[1,2], self.class_diff[2], self.class_diff_err[2]),
+                "| LogisticRegression      :   %.4f  %.4f   %.4f  %.4f   |\n" % (res[0,3], res[1,3], self.class_diff[3], self.class_diff_err[3]),
                 "+---------------------------------------------------------------+\n",
-                "| Average                :    %.4f      %.4f      %.4f    |\n" % (np.mean(res[:,0]),np.mean(res[:,1]),np.mean(abs(res[:,0]-res[:,1]))),
+                "| Average                 :   %.4f  %.4f   %.4f  %.4f   |\n" % (np.mean(res[0,:]),np.mean(res[1,:]),np.mean(self.class_diff),0.25*np.sqrt(sum(self.class_diff_err**2))),
                 "+---------------------------------------------------------------+"
             )
 
         if do_usea and (self.hold_out is not None):
-            hres = self.hold_out_res
+            hres = self.holdout_res
             print(
                 " hold out data results:\n",
                 "+---------------------------------------------------------------+\n",
-                "| DecisionTreeClassifier :    %.4f      %.4f      %.4f    |\n" % (hres[0,0], hres[0,1], abs(hres[0,0]-hres[0,1])),
-                "| AdaBoostClassifier     :    %.4f      %.4f      %.4f    |\n" % (hres[1,0], hres[1,1], abs(hres[1,0]-hres[1,1])),
-                "| RandomForestClassifier :    %.4f      %.4f      %.4f    |\n" % (hres[2,0], hres[2,1], abs(hres[2,0]-hres[2,1])),
-                "| LogisticRegression     :    %.4f      %.4f      %.4f    |\n" % (hres[3,0], hres[3,1], abs(hres[3,0]-hres[3,1])),
+                "| DecisionTreeClassifier  :   %.4f  %.4f   %.4f           |\n" % (hres[0,0], hres[1,0], self.holdout_diff[0]),
+                "| AdaBoostClassifier      :   %.4f  %.4f   %.4f           |\n" % (hres[0,1], hres[1,1], self.holdout_diff[1]),
+                "| RandomForestClassifier  :   %.4f  %.4f   %.4f           |\n" % (hres[0,2], hres[1,2], self.holdout_diff[2]),
+                "| LogisticRegression      :   %.4f  %.4f   %.4f           |\n" % (hres[0,3], hres[1,3], self.holdout_diff[3]),
                 "+---------------------------------------------------------------+\n",
-                "| Average                :    %.4f      %.4f      %.4f    |\n" % (np.mean(hres[:,0]),np.mean(hres[:,1]),np.mean(abs(hres[:,0]-hres[:,1]))),
+                "| Average                 :   %.4f  %.4f   %.4f  %.4f   |\n" % (np.mean(hres[:,0]),np.mean(hres[:,1]),np.mean(self.holdout_diff),np.std(self.holdout_diff,ddof=1)/np.sqrt(4)),
                 "+---------------------------------------------------------------+"
             )
 
@@ -354,7 +392,7 @@ class SynthEval():
             print(
                 "                                                        SE\n",
                 "+---------------------------------------------------------------+\n",
-                "| Overall utility score                    :   %.4f  %.4f   |\n" % (np.mean(self.util_lst),np.std(self.util_lst,ddof=1)/np.sqrt(10)),
+                "| Overall utility score                    :   %.4f  %.4f   |\n" % (self.util_score['avg'],self.util_score['err']),
                 "+---------------------------------------------------------------+"
             )
                 
@@ -362,9 +400,9 @@ class SynthEval():
             print(
                 "Privacy metrics:\n",
                 "+---------------------------------------------------------------+\n",
-                "| Normed distance to closest record (DCR)  :   %.4f           |\n" % (self.mean_DCR),
+                "| Normed distance to closest record (DCR)  :   %.4f  %.4f   |\n" % (self.DCR['avg'], self.DCR['err']),
                 "| Hitting rate (thres = range(att)/30)     :   %.4f           |\n" % (self.hit_rate),
-                "| Privacy loss (discrepancy in NNAA)       :   %.4f           |\n" % (self.privloss),
+                "| Privacy loss (discrepancy in NNAA)       :   %.4f  %.4f   |\n" % (self.privloss['avg'], self.privloss['err']),
                 "+---------------------------------------------------------------+"
             )
         pass

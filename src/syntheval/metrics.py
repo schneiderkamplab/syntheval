@@ -13,7 +13,7 @@ from scipy.stats import permutation_test, chi2_contingency
 from sklearn.model_selection import KFold
 from sklearn.neighbors import NearestNeighbors
 from sklearn.neural_network import MLPClassifier
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, LabelEncoder
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.metrics import normalized_mutual_info_score, f1_score
 
 from .file_utils import stack
@@ -32,41 +32,54 @@ def scott_ref_rule(set1,set2):
     N = min(abs(int((max_edge-min_edge)/bin_width)),10000); Nplus1 = N + 1
     return np.linspace(min_edge, max_edge, Nplus1)
 
-
 ### Functions to assist tests
-def _pairwise_attributes_mutual_information(dataset):
-    """Compute normalized mutual information for all pairwise attributes. Return a DataFrame.
-        Implementation stolen from 
-        
-        Ping H, Stoyanovich J, Howe B. DataSynthesizer: privacy-preserving synthetic datasets. 2017 
-        Presented at: Proceedingsof the 29th International Conference on Scientific and Statistical Database Management; 2017; Chicago. 
-        [doi:10.1145/3085504.3091117]
-    
-    """
-    sorted_columns = sorted(dataset.columns)
-    mi_df = pd.DataFrame(columns=sorted_columns, index=sorted_columns, dtype=float)
-    for row in mi_df.columns:
-        for col in mi_df.columns:
-            mi_df.loc[row, col] = normalized_mutual_info_score(dataset[row].astype(str),
-                                                               dataset[col].astype(str),
-                                                               average_method='arithmetic')
-    return mi_df
+def _pairwise_attributes_mutual_information(data):
+    """Compute normalized mutual information for all pairwise attributes.
 
-def _distance(a,b):
-    """Function used for finding nearest neighbours"""
-    nn = NearestNeighbors(n_neighbors=2)
-    if np.array_equal(a,b):
-        nn.fit(a)
-        d = nn.kneighbors()[0][:,1]
-    else:
-        nn.fit(b)
-        d = nn.kneighbors(a)[0][:,0]
-    return d
+    Elements borrowed from: 
+    Ping H, Stoyanovich J, Howe B. DataSynthesizer: privacy-preserving synthetic datasets. 2017
+    Presented at: Proceedingsof the 29th International Conference on Scientific and Statistical Database Management; 2017; Chicago.
+    [doi:10.1145/3085504.3091117]"""
 
-def _adversarial_score(real,fake):
+    labs = sorted(data.columns)
+    res = (normalized_mutual_info_score(data[cat1].astype(str),data[cat2].astype(str),average_method='arithmetic') for cat1 in labs for cat2 in labs)
+    return pd.DataFrame(np.fromiter(res, dtype=float).reshape(len(labs),len(labs)), columns = labs, index = labs)
+
+def _knn_distance(a,b,cat_cols,metric='gower'):
+    def eucledian_knn(a,b):
+        """Function used for finding nearest neighbours"""
+        nn = NearestNeighbors(n_neighbors=2)#,metric=_distance,metric_params={'cat_cols_idx':cat_col_idx,'num_cols_idx':num_col_idx})
+        if np.array_equal(a,b):
+            nn.fit(a)
+            d = nn.kneighbors()[0][:,1]
+        else:
+            nn.fit(b)
+            d = nn.kneighbors(a)[0][:,0]
+        return d
+
+    def gower_knn(a,b,cat_cols):
+        import gower
+        """Function used for finding nearest neighbours"""
+        if np.array_equal(a,b):
+            #d = gower.gower_topn(a,cat_features=cat_cols,n=1)#['values']
+            d = gower.gower_matrix(a,cat_features=cat_cols)+np.eye(len(a))
+            d = d.min(axis=1)
+        else:
+            #d = gower.gower_topn(a,b,cat_features=cat_cols,n=1)#['values']
+            d = gower.gower_matrix(a,b,cat_features=cat_cols)
+            d = d.min(axis=1)
+        return d
+
+    if metric=='gower':
+        return gower_knn(a,b,cat_cols)
+    if metric=='euclid':
+        return eucledian_knn(a,b)
+    else: raise Exception("Unknown metric; options are 'gower' or 'euclid'")
+
+def _adversarial_score(real,fake,cat_cols,metric):
     """Function for calculating adversarial score"""
-    left = np.mean(_distance(real,fake) > _distance(real, real))
-    right = np.mean(_distance(fake,real) > _distance(fake, fake))
+    left = np.mean(_knn_distance(real, fake, cat_cols, metric) > _knn_distance(real, real, cat_cols, metric))
+    right = np.mean(_knn_distance(fake, real, cat_cols, metric) > _knn_distance(fake, fake, cat_cols, metric))
     return 0.5 * (left + right)
 
 def _hellinger(p,q):
@@ -74,7 +87,7 @@ def _hellinger(p,q):
     sqrt_pdf1 = np.sqrt(p)
     sqrt_pdf2 = np.sqrt(q)
     diff = sqrt_pdf1 - sqrt_pdf2
-    return np.sqrt(np.linalg.norm(diff))
+    return 1/np.sqrt(2)*np.sqrt(np.linalg.norm(diff))
 
 def _discrete_ks_statistic(x, y):
     """Function for calculating the KS statistic"""
@@ -154,7 +167,7 @@ def class_test(real_models, fake_models, real, fake, test, F1_type='micro'):
         f1_fake = f1_score(test[1],pred_fake,average=F1_type)
 
         res.append([f1_real, f1_fake])
-    return np.array(res)
+    return np.array(res).T
 
 ### Functions for the tests themselves
 def dimensionwise_means(real, fake, num_cols, fig_index):
@@ -242,7 +255,7 @@ def featurewise_ks_test(real, fake, cat_cols, sig_lvl=0.05):
     num  = sum([p_val < sig_lvl for p_val in pvals])
     frac = num/len(pvals)
 
-    return {'avg': np.mean(dists), 'err': np.std(dists)}, {'avg': np.mean(pvals), 'err':np.std(pvals)}, num, frac 
+    return {'avg': np.mean(dists), 'err': np.std(dists,ddof=1)/np.sqrt(len(dists))}, {'avg': np.mean(pvals), 'err':np.std(pvals,ddof=1)/np.sqrt(len(pvals))}, num, frac 
 
 def featurewise_hellinger_distance(real, fake, cat_cols, num_cols):
     """Function for calculating the hellinger distance of the categorial 
@@ -265,7 +278,7 @@ def featurewise_hellinger_distance(real, fake, cat_cols, num_cols):
 
         H_dist.append(_hellinger(pdfR,pdfF))
 
-    return np.mean(H_dist)
+    return {'avg': np.mean(H_dist), 'err': np.std(H_dist,ddof=1)/np.sqrt(len(H_dist))}
 
 def confidence_interval_overlap(real, fake, num_cols):
     """Function for calculating the average CIO, also returns the 
@@ -282,7 +295,10 @@ def confidence_interval_overlap(real, fake, num_cols):
         top = (min(us[i][0],us[i][1])-max(ls[i][0],ls[i][1]))
         Jk.append(max(0,0.5*(top/(us[i][0]-ls[i][0])+top/(us[i][1]-ls[i][1]))))
 
-    return np.mean(Jk), sum([j == 0 for j in Jk])
+    num = sum([j == 0 for j in Jk])
+    frac = num/len(Jk)
+
+    return {'avg': np.mean(Jk), 'err': np.std(Jk,ddof=1)/np.sqrt(len(Jk))}, num, frac
 
 def propensity_mean_square_error(real, fake):
     """Train a a discriminator to distinguish between real and fake data."""
@@ -304,39 +320,45 @@ def propensity_mean_square_error(real, fake):
         pred = mod.predict_proba(x_test)
         
         res.append(np.mean((pred[:,0]-0.5)**2))
-        acc.append(f1_score(y_test,mod.predict(x_test),average='micro'))
+        acc.append(f1_score(y_test,mod.predict(x_test),average='macro'))
 
-    return np.mean(res), np.mean(acc)
+    return {'avg': np.mean(res), 'err': np.std(res,ddof=1)/np.sqrt(len(res))},  {'avg': np.mean(acc), 'err': np.std(acc,ddof=1)/np.sqrt(len(acc))}
 
-def adversarial_accuracy(real, fake, n_batches=30):
+def adversarial_accuracy(real, fake, cat_cols, metric, n_batches=30):
     """Implementation heavily inspired by original paper"""
     r_scaled = MinMaxScaler().fit_transform(real)
     f_scaled = MinMaxScaler().fit_transform(fake)
 
+    bool_cat_cols = [col1 in cat_cols for col1 in real.columns]
+    
     if len(r_scaled)*2 < len(f_scaled):
         aa_lst = []
         for batch in range(n_batches):
-            temp_f = random.choices(f_scaled, k=len(r_scaled))#fake.sample(len(real))
-            
-            aa_lst.append(_adversarial_score(r_scaled,temp_f))
-        return np.mean(aa_lst)
+            temp_f = np.array(random.choices(f_scaled, k=len(r_scaled)))
+            aa_lst.append(_adversarial_score(r_scaled,temp_f,bool_cat_cols, metric))
+        return {'avg': np.mean(aa_lst), 'err': np.std(aa_lst,ddof=1)/np.sqrt(len(aa_lst))}
     else:
-        return _adversarial_score(r_scaled,f_scaled)
+        return {'avg': _adversarial_score(r_scaled,f_scaled,cat_cols,metric), 'err': 0.0}
 
-def distance_to_closest_record(real,fake):
+def distance_to_closest_record(real,fake,cat_cols,metric):
     """Distance to closest record, using the same NN stuff as NNAA"""
-    distances = _distance(real,fake)
-    in_dists = _distance(real,real)
+    bool_cat_cols = [col1 in cat_cols for col1 in real.columns]
+    distances = _knn_distance(fake,real,bool_cat_cols,metric)
+    in_dists = _knn_distance(real,real,bool_cat_cols,metric)
 
     int_nn_avg = np.mean(in_dists)
+    int_nn_err = np.std(in_dists,ddof=1)/np.sqrt(len(in_dists))
+    min_dist_avg = np.mean(distances)
+    min_dist_err = np.std(distances,ddof=1)/np.sqrt(len(distances))
 
-    min_distances = np.mean(distances)
-    return np.mean(min_distances)/int_nn_avg
+    dcr = min_dist_avg/int_nn_avg
+    dcr_err = np.sqrt((min_dist_err/min_dist_avg)**2+(int_nn_err/int_nn_avg)**2)
+    return {'avg': dcr, 'err': dcr_err}
 
 def hitting_rate(real,fake,cat_cols):
     """For hitting rate we regard records as similar if the 
     nummerical attributes are within a threshold range(att)/30"""
-    thres = (real.max()- real.min())/30
+    thres = (real.max() - real.min())/30
     thres[cat_cols] = 0
 
     hit = 0

@@ -6,6 +6,8 @@ import csv
 import numpy as np
 import pandas as pd
 
+from sklearn.preprocessing import OrdinalEncoder
+
 def stack(real,fake):
     """Function for stacking the real and fake dataframes and adding a column for keeping 
     track of which is which. This is essentially to ease the use of seaborn plots hue."""
@@ -20,26 +22,39 @@ def stack(real,fake):
 #     df = df.dropna()
 #     return df
 
-def convert_nummerical_pair(real,fake,categorical_columns):
-    """Function for turning categorical classes into integers 
-    so we dont get issues with strings."""
-    real,fake = real.copy(),fake.copy()
+class consistent_label_encoding():
+    def __init__(self, real, fake, categorical_columns) -> None:
+        joint_dataframe = stack(real,fake)
 
-    for c in categorical_columns:
-        if real[c].dtype == 'object':
-                real[c] = pd.factorize(real[c], sort=True)[0]
-                fake[c] = pd.factorize(fake[c], sort=True)[0]
-    return real, fake
+        self.encoder = OrdinalEncoder().fit(joint_dataframe[categorical_columns])
+        self.cat_cols = categorical_columns
+        pass
 
-def convert_nummerical_single(data,categorical_columns):
-    """Function for turning categorical classes into integers 
-    so we dont get issues with strings."""
-    data = data.copy()
+    def encode(self, data):
+        data = data.copy()
+        data[self.cat_cols] = self.encoder.transform(data[self.cat_cols])
+        return data
 
-    for c in categorical_columns:
-        if data[c].dtype == 'object':
-                data[c] = pd.factorize(data[c], sort=True)[0]
-    return data
+# def convert_nummerical_pair(real,fake,categorical_columns):
+#     """Function for turning categorical classes into integers 
+#     so we dont get issues with strings."""
+#     real,fake = real.copy(),fake.copy()
+
+#     for c in categorical_columns:
+#         if real[c].dtype == 'object':
+#                 real[c] = pd.factorize(real[c], sort=True)[0]
+#                 fake[c] = pd.factorize(fake[c], sort=True)[0]
+#     return real, fake
+
+# def convert_nummerical_single(data,categorical_columns):
+#     """Function for turning categorical classes into integers 
+#     so we dont get issues with strings."""
+#     data = data.copy()
+
+#     for c in categorical_columns:
+#         if data[c].dtype == 'object':
+#                 data[c] = pd.factorize(data[c], sort=True)[0]
+#     return data
 
 def empty_dict():
     """Function to initialize the dictionary"""
@@ -54,13 +69,17 @@ def empty_dict():
         'Number of significant KS-tests at a=0.05'  : '',
         'Average confidence interval overlap'       : '',
         'Number of non overlapping COIs at 95pct'   : '',
+        'Fraction of non-overlapping CIs at 95pct'  : '',
         'Average empirical Hellinger distance'      : '',
-        'Propensity Mean Squared Error (acc, pMSE)' : '',
+        'Propensity Mean Squared Error (pMSE)'      : '',
+        'Propensity Mean Squared Error (acc)'       : '',
         'Nearest neighbour adversarial accuracy'    : '',
         'models trained on real data'               : '',
         'models trained on fake data'               : '',
+        'f1 difference training data'               : '',
         'model trained on real data on holdout'     : '',
         'model trained on fake data on holdout'     : '',
+        'f1 difference holdout data'                : '',
         'Overall utility score'                     : '',
         'Normed distance to closest record (DCR)'   : '',
         'Hitting rate (thres = range(att)/30)'      : '',
