@@ -23,7 +23,23 @@ evaluator.full_eval(df_fake, class_lab_col)
 ```
 Where the user supply <code>df_real, df_test, df_fake</code> as pandas dataframes, as well as the <code>class_cat_col</code> list of column names for the categorical variables and <code>class_lab_col</code> string for designating one column with discrete values as target for usability predictions and coloration. 
 
-Results are saved to a csv file, multiple runs of the same SynthEval instance with different synthetic data files will save new rows allowing for various uses such as snapshots, checkpoints and benchmarking. 
+Results are saved to a csv file, multiple runs of the same SynthEval instance with different synthetic data files will save new rows allowing for various uses such as snapshots, checkpoints and benchmarking.
+
+### Command line interface
+SynthEval can also be run from the commandline with the following syntax:
+```
+> SynthEval [OPTIONS] [EVALUATE]
+
+Options:
+  -r, --real-data-file PATH   Path to csv file with real data.
+  -s, --synt-data-file PATH   Path to csv file with synthetic data.
+  -h, --test-data-file PATH   Path to csv file with real data that wasn't used
+                              for training.
+  -l, --category-labels PATH  Path to txt file with comma separated labels.
+  -c, --class-label TEXT      Label to use for prediction usability and
+                              coloring on plots.
+  --help                      Show this message and exit.
+```
 
 ## Included metrics overview
 The SynthEval library comes equipped with a broard selection of metrics to evaluate various aspects of synthetic tabular data.

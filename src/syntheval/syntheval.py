@@ -123,13 +123,9 @@ class SynthEval():
         ### Initialize the data
         self._update_syn_data(synthetic_data)
 
-        #if self.save_flag == 0:
         CLE = consistent_label_encoding(self.real,self.fake,self.categorical_columns)
         real = CLE.encode(self.real)
         fake = CLE.encode(self.fake)
-        #else:
-        #    real = self.real
-        #    fake = self.CLE.encode(self.fake)
 
         if self.hold_out is not None: hout = CLE.encode(self.hold_out)
         else: hout = None
@@ -244,7 +240,6 @@ class SynthEval():
             res.append(class_test(real_models,fake_models,[real_x_train, real_y_train],
                                                           [fake_x_train, fake_y_train],
                                                           [real_x_test, real_y_test],self.F1_type))
-        #print(np.mean(res,axis=0),np.std(res,axis=0,ddof=1)/np.sqrt(5))
 
         class_avg = np.mean(res,axis=0)
         class_err = np.std(res,axis=0,ddof=1)/np.sqrt(5)

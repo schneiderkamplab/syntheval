@@ -48,7 +48,7 @@ def _pairwise_attributes_mutual_information(data):
 def _knn_distance(a,b,cat_cols,metric='gower'):
     def eucledian_knn(a,b):
         """Function used for finding nearest neighbours"""
-        nn = NearestNeighbors(n_neighbors=2)#,metric=_distance,metric_params={'cat_cols_idx':cat_col_idx,'num_cols_idx':num_col_idx})
+        nn = NearestNeighbors(n_neighbors=2)
         if np.array_equal(a,b):
             nn.fit(a)
             d = nn.kneighbors()[0][:,1]
@@ -61,11 +61,9 @@ def _knn_distance(a,b,cat_cols,metric='gower'):
         import gower
         """Function used for finding nearest neighbours"""
         if np.array_equal(a,b):
-            #d = gower.gower_topn(a,cat_features=cat_cols,n=1)#['values']
             d = gower.gower_matrix(a,cat_features=cat_cols)+np.eye(len(a))
             d = d.min(axis=1)
         else:
-            #d = gower.gower_topn(a,b,cat_features=cat_cols,n=1)#['values']
             d = gower.gower_matrix(a,b,cat_features=cat_cols)
             d = d.min(axis=1)
         return d

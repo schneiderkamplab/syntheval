@@ -7,11 +7,11 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
-params = {'text.usetex' : True,
-          'font.size' : 14,
-          'font.family' : 'lmodern'
-          }
-plt.rcParams.update(params) 
+# params = {'text.usetex' : True,
+#           'font.size' : 14,
+#           'font.family' : 'lmodern'
+#           }
+# plt.rcParams.update(params) 
 
 def PlotDWM(means,sem,labels,fig_index):
     """Plot the dimensionwise means of real and synthetic data and note down the GoF"""
