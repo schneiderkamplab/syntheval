@@ -9,7 +9,7 @@ import pandas as pd
 from scipy.stats import ks_2samp, sem
 
 from sklearn.decomposition import PCA
-from scipy.stats import permutation_test, chi2_contingency
+from scipy.stats import permutation_test, chi2_contingency, entropy
 from sklearn.model_selection import KFold
 from sklearn.neighbors import NearestNeighbors
 from sklearn.neural_network import MLPClassifier
@@ -45,13 +45,13 @@ def _pairwise_attributes_mutual_information(data):
     res = (normalized_mutual_info_score(data[cat1].astype(str),data[cat2].astype(str),average_method='arithmetic') for cat1 in labs for cat2 in labs)
     return pd.DataFrame(np.fromiter(res, dtype=float).reshape(len(labs),len(labs)), columns = labs, index = labs)
 
-def _knn_distance(a,b,cat_cols,metric='gower'):
+def _knn_distance(a,b,cat_cols,metric='gower',weights=None):
     def eucledian_knn(a,b):
         """Function used for finding nearest neighbours"""
-        nn = NearestNeighbors(n_neighbors=2)
+        nn = NearestNeighbors(n_neighbors=2,metric_params={'w':weights})
         if np.array_equal(a,b):
             nn.fit(a)
-            d = nn.kneighbors()[0][:,1]
+            d = nn.kneighbors(a)[0][:,1]
         else:
             nn.fit(b)
             d = nn.kneighbors(a)[0][:,0]
@@ -61,10 +61,10 @@ def _knn_distance(a,b,cat_cols,metric='gower'):
         import gower
         """Function used for finding nearest neighbours"""
         if np.array_equal(a,b):
-            d = gower.gower_matrix(a,cat_features=cat_cols)+np.eye(len(a))
+            d = gower.gower_matrix(a,cat_features=cat_cols,weight=weights)+np.eye(len(a))
             d = d.min(axis=1)
         else:
-            d = gower.gower_matrix(a,b,cat_features=cat_cols)
+            d = gower.gower_matrix(a,b,cat_features=cat_cols,weight=weights)
             d = d.min(axis=1)
         return d
 
@@ -353,6 +353,15 @@ def distance_to_closest_record(real,fake,cat_cols,metric):
     dcr_err = np.sqrt((min_dist_err/min_dist_avg)**2+(int_nn_err/int_nn_avg)**2)
     return {'avg': dcr, 'err': dcr_err}
 
+def nearest_neighbour_distance_ratio(real, fake, num_cols):
+    """
+    Compute the Nearest Neighbour Distance Ratio (NNDR) between two datasets.
+    """
+    nbrs = NearestNeighbors(n_neighbors=2).fit(real[num_cols])
+    distance, _ = nbrs.kneighbors(fake[num_cols])
+    dr = list(map(lambda x: x[0] / x[1], distance))
+    return {'avg': np.mean(dr), 'err': np.std(dr,ddof=1)/np.sqrt(len(dr))}
+
 def hitting_rate(real,fake,cat_cols):
     """For hitting rate we regard records as similar if the 
     nummerical attributes are within a threshold range(att)/30"""
@@ -364,3 +373,40 @@ def hitting_rate(real,fake,cat_cols):
         hit += any((abs(r-fake) <= thres).all(axis='columns'))
     hit_rate = hit/len(real)
     return hit_rate
+
+def epsilon_identifiability(real, fake, num_cols, cat_cols, metric):
+    """Function for computing the epsilon identifiability risk
+
+    Adapted from:
+    Yoon, J., Drumright, L. N., & van der Schaar, M. (2020). Anonymization Through Data Synthesis Using Generative Adversarial Networks (ADS-GAN). 
+    IEEE Journal of Biomedical and Health Informatics, 24(8), 2378–2388. [doi:10.1109/JBHI.2020.2980262] 
+    """
+
+    # Entropy computation
+    def column_entropy(labels):
+        value, counts = np.unique(np.round(labels), return_counts=True)
+        return entropy(counts)
+
+    bool_cat_cols = [col1 in cat_cols for col1 in real.columns]
+
+    if metric == 'euclid':
+        real = np.asarray(real[num_cols])
+        fake = np.asarray(fake[num_cols])
+    else: 
+        real, fake = np.asarray(real), np.asarray(fake)
+
+    no, x_dim = np.shape(real)
+    W = [column_entropy(real[:, i]) for i in range(x_dim)]
+    W_adjust = 1/(np.array(W)+1e-16)
+
+    # for i in range(x_dim):
+    #     real_hat[:, i] = real[:, i] * 1. / W[i]
+    #     fake_hat[:, i] = fake[:, i] * 1. / W[i]
+
+    in_dists = _knn_distance(real,real,bool_cat_cols,metric,W_adjust)
+    ext_distances = _knn_distance(real,fake,bool_cat_cols,metric,W_adjust)
+
+    R_Diff = ext_distances - in_dists
+    identifiability_value = np.sum(R_Diff < 0) / float(no)
+
+    return identifiability_value

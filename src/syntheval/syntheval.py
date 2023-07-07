@@ -34,29 +34,16 @@ class SynthEval():
         self.mixed_correlation = True # Switch of for faster but less sensitive correlation matrix difference.
         self.permutation = True # Switch to False for faster but less sensitive KS test
         self.F1_type = 'micro' # Use {‘micro’, ‘macro’, ‘weighted’}
-        self.knn_metric = 'gower'
+        self.knn_metric = 'gower' # Use {'gower', 'euclid'}
 
         self.categorical_columns = cat_cols
-        #self.cat_idxs = [real.columns.get_loc(col) for col in cat_cols]
         self.numerical_columns = [column for column in real.columns if column not in cat_cols]
-        #self.num_idxs = [real.columns.get_loc(col) for col in self.numerical_columns]
 
         self.save_flag = 0
         self.save_name = save_name + '.csv'
 
         self.fast_eval_flag = 0
-        # Make sure the number of samples is equal in both datasets.
-        # <ADL 23-11-2022 10:26> Not sure this is nessecary for our needs?
-        # if n_samples is None:
-        #     self.n_samples = min(len(self.real), len(self.fake))
-        # elif len(fake) >= n_samples and len(real) >= n_samples:
-        #     self.n_samples = n_samples
-        # else:
-        #     raise Exception(f'Make sure n_samples < len(fake/real). len(real): {len(real)}, len(fake): {len(fake)}')
 
-        # self.real = self.real.sample(self.n_samples)
-        # self.fake = self.fake.sample(self.n_samples)
-        # assert len(self.real) == len(self.fake), f'len(real) != len(fake)'
         pass
     
     def _update_syn_data(self,fake):
@@ -78,7 +65,7 @@ class SynthEval():
         pass
 
     def fast_eval(self,synthetic_dataframe, target):
-        """This function is for running the quick version of TabEval, for model checkpoints etc."""
+        """This function is for running the quick version of SynthEval, for model checkpoints etc."""
         self._update_syn_data(synthetic_dataframe)
 
         #real, fake = convert_nummerical_pair(self.real,self.fake,self.categorical_columns)
@@ -118,6 +105,44 @@ class SynthEval():
         self.save_results()
         return ks_dist, ks_frac_sig, H_dist, DCR
     
+    def priv_eval(self, synthetic_dataframe, target):
+        """This function is for running only the privacy metrics, for model checkpoints etc."""
+        self._update_syn_data(synthetic_dataframe)
+
+        #real, fake = convert_nummerical_pair(self.real,self.fake,self.categorical_columns)
+        CLE = consistent_label_encoding(self.real,self.fake,self.categorical_columns,self.hold_out)
+        real = CLE.encode(self.real)
+        fake = CLE.encode(self.fake)
+
+        if self.hold_out is not None: 
+            hout = CLE.encode(self.hold_out)
+            NNAA = adversarial_accuracy(real, fake, self.categorical_columns, self.knn_metric)
+            self.NNAA = NNAA
+            self.res_dict['Nearest neighbour adversarial accuracy'] = NNAA
+        else: hout = None
+
+        self._simple_privacy_mets(real, fake, hout)
+
+        print('SynthEval: privacy evaluation complete\n',
+                "+------------------------------------------+\n",
+                "| Normed DCR           : %.4f SE(%.4f) |\n" % (self.DCR['avg'], self.DCR['err']),
+                "| NN distance ratio    : %.4f SE(%.4f) |\n" % (self.NNDR['avg'],self.NNDR['err']),
+                "| Hitting rate         : %.4f            |\n" % (self.hit_rate),
+                "| epsilon identif.     : %.4f            |\n" % (self.eps_idf),
+                "+------------------------------------------+"       
+        )
+        if self.hold_out is not None:
+            print(
+                "Privacy losses:\n",
+                "+------------------------------------------+\n",
+                "| NNAA discrepancy     : %.4f SE(%.4f) |\n" % (self.nnaa_loss['avg'], self.nnaa_loss['err']),
+                "| NNDR discrepancy     : %.4f SE(%.4f) |\n" % (self.nndr_loss['avg'], self.nndr_loss['err']),
+                "+------------------------------------------+",
+            )
+        
+        self.save_results()
+        return 
+
     def full_eval(self, synthetic_data, target_col: str):
         """Main function for evaluate synthetic data"""
         ### Initialize the data
@@ -265,6 +290,7 @@ class SynthEval():
             self.res_dict['model trained on real data on holdout'] = holdout_res[0,:]
             self.res_dict['model trained on fake data on holdout'] = holdout_res[1,:]
             self.res_dict['f1 difference holdout data'] = holdout_diff
+        else: self.holdout_diff=0
                                    
         return True
 
@@ -299,20 +325,34 @@ class SynthEval():
         self.DCR = DCR
         self.res_dict['Normed distance to closest record (DCR)'] = DCR
 
+        NNDR = nearest_neighbour_distance_ratio(real, fake, self.numerical_columns)
+        self.NNDR = NNDR
+        self.res_dict['Nearest neighbour distance ratio'] = NNDR
+
         hit_rate = hitting_rate(real,fake,self.categorical_columns)
         self.hit_rate = hit_rate
         self.res_dict['Hitting rate (thres = range(att)/30)'] = hit_rate
 
-        ### Privacy loss (Nearest neighbour adversarial accuracy)
-        if hout is not None:
-            NNAA = adversarial_accuracy(hout[real.columns],fake,self.categorical_columns, self.knn_metric)
-            privloss_val = NNAA['avg'] - self.NNAA['avg']
-            privloss_err = np.sqrt(self.NNAA['err']**2+NNAA['err']**2)
-            privloss = {'avg': privloss_val, 'err': privloss_err}
-        else: privloss = {'avg': 0, 'err': 0}
+        eps_idf = epsilon_identifiability(real,fake,self.numerical_columns,self.categorical_columns,self.knn_metric)
+        self.eps_idf = eps_idf
+        self.res_dict['epsilon identifiability risk'] = eps_idf
 
-        self.privloss = privloss
-        self.res_dict['Privacy loss (discrepancy in NNAA)'] = privloss
+        ### Privacy losses
+        if hout is not None:
+            NNAA_h = adversarial_accuracy(hout[real.columns],fake,self.categorical_columns, self.knn_metric)
+            nnaa_loss_val = NNAA_h['avg'] - self.NNAA['avg']
+            nnaa_loss_err = np.sqrt(self.NNAA['err']**2+NNAA_h['err']**2)
+            nnaa_loss = {'avg': nnaa_loss_val, 'err': nnaa_loss_err}
+
+            NNDR_h = nearest_neighbour_distance_ratio(hout, fake, self.numerical_columns)
+            nndr_loss_val = NNDR['avg'] - NNDR_h['avg']
+            nndr_loss_err = np.sqrt(NNDR['err']**2+NNDR_h['err']**2)
+            nndr_loss = {'avg': nndr_loss_val, 'err': nndr_loss_err}
+
+            self.nnaa_loss = nnaa_loss
+            self.res_dict['Privacy loss (NNAA)'] = nnaa_loss
+            self.nndr_loss = nndr_loss
+            self.res_dict['Privacy loss (NNDR)'] = nndr_loss
 
         return True
 
@@ -396,8 +436,15 @@ class SynthEval():
                 "Privacy metrics:\n",
                 "+---------------------------------------------------------------+\n",
                 "| Normed distance to closest record (DCR)  :   %.4f  %.4f   |\n" % (self.DCR['avg'], self.DCR['err']),
+                "| Nearest neighbour distance ratio (NNDR)  :   %.4f  %.4f   |\n" % (self.NNDR['avg'], self.NNDR['err']),
                 "| Hitting rate (thres = range(att)/30)     :   %.4f           |\n" % (self.hit_rate),
-                "| Privacy loss (discrepancy in NNAA)       :   %.4f  %.4f   |\n" % (self.privloss['avg'], self.privloss['err']),
+                "| Epsilon identifiability risk             :   %.4f           |\n" % (self.eps_idf),
+                "+---------------------------------------------------------------+"
+            )
+        if do_priv and (self.hold_out is not None):
+            print(
+                " | Privacy loss (NNAA)                      :   %.4f  %.4f   |\n" % (self.nnaa_loss['avg'],self.nnaa_loss['err']),
+                "| Privacy loss (NNDR)                      :   %.4f  %.4f   |\n" % (self.nndr_loss['avg'],self.nndr_loss['err']),
                 "+---------------------------------------------------------------+"
             )
         pass

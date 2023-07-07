@@ -23,8 +23,9 @@ def stack(real,fake):
 #     return df
 
 class consistent_label_encoding():
-    def __init__(self, real, fake, categorical_columns) -> None:
-        joint_dataframe = stack(real,fake)
+    def __init__(self, real, fake, categorical_columns, hout=None) -> None:
+        joint_dataframe = pd.concat((real.reset_index(),fake.reset_index()),axis=0)
+        if hout is not None: joint_dataframe = pd.concat((joint_dataframe.reset_index(),hout.reset_index()),axis=0)
 
         self.encoder = OrdinalEncoder().fit(joint_dataframe[categorical_columns])
         self.cat_cols = categorical_columns
@@ -82,8 +83,11 @@ def empty_dict():
         'f1 difference holdout data'                : '',
         'Overall utility score'                     : '',
         'Normed distance to closest record (DCR)'   : '',
+        'Nearest neighbour distance ratio'          : '',
         'Hitting rate (thres = range(att)/30)'      : '',
-        'Privacy loss (discrepancy in NNAA)'        : ''
+        'Privacy loss (NNAA)'                       : '',
+        'Privacy loss (NNDR)'                       : '',
+        'epsilon identifiability risk'              : ''
     }
     return dict
 
