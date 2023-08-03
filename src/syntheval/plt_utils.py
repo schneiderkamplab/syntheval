@@ -13,6 +13,7 @@ from scipy.optimize import curve_fit
 #           }
 # plt.rcParams.update(params) 
 
+
 def PlotDWM(means,sem,labels,fig_index):
     """Plot the dimensionwise means of real and synthetic data and note down the GoF"""
 
@@ -77,15 +78,23 @@ def PlotPCA(reals, fakes,fig_index):
     #plt.show()
     pass
 
+def _shortened_labels(ax_get_ticks):
+    max_label_length = 10
+    labels = [label.get_text()[:max_label_length] + '...' if len(label.get_text()) > max_label_length else label.get_text() for label in ax_get_ticks]
+    return labels
+
 def PlotCORR(mat):
     """Plotting the correlation difference matrix"""
     # Plotting
-    fig, ax = plt.subplots(figsize=(8,8))
-    sns.heatmap(mat, annot=True,fmt='.2f', cmap='RdBu', ax=ax, cbar=True,mask=np.triu(np.ones(mat.shape), k=1))
+    s = max(8,int(np.shape(mat)[0]/3))
+    fig, ax = plt.subplots(figsize=(s,s))
+    if s <= 8: sns.heatmap(mat, annot=True, fmt='.2f', cmap='RdBu', ax=ax, cbar=True, mask=np.triu(np.ones(mat.shape), k=1))
+    else: sns.heatmap(mat, cmap='RdBu', ax=ax, cbar=True, mask=np.triu(np.ones(mat.shape), k=1))
 
-    # Add labels to the plot
-    plt.title(r"\begin{center} Correlation matrix difference \\ \normalsize{}{nummerical values only} \end{center}")
-    ax.set_xticks(ax.get_xticks(), ax.get_xticklabels(), rotation=45, ha='right')
+    plt.title("Correlation matrix difference")
+    labels = _shortened_labels(ax.get_xticklabels())
+    ax.set_xticks(ax.get_xticks(), labels, rotation=45, ha='right')
+    ax.set_yticks(ax.get_yticks(), labels)
     fig.tight_layout()
     plt.savefig('plot_corr.png')
     #plt.show()
@@ -94,12 +103,15 @@ def PlotCORR(mat):
 def PlotMI(mat):
     """Plotting the pairwise mutual information matrix difference"""
     # Plotting
-    fig, ax = plt.subplots(figsize=(8,8))
-    sns.heatmap(mat, annot=True,fmt='.2f', cmap='RdBu', ax=ax, cbar=True,mask=np.triu(np.ones(mat.shape), k=1))
+    s = max(8,int(np.shape(mat)[0]/3))
+    fig, ax = plt.subplots(figsize=(s,s))
+    if s <= 8: sns.heatmap(mat, annot=True, fmt='.2f', cmap='RdBu', ax=ax, cbar=True, mask=np.triu(np.ones(mat.shape), k=1))
+    else: sns.heatmap(mat, cmap='RdBu', ax=ax, cbar=True, mask=np.triu(np.ones(mat.shape), k=1))
 
-    # Add labels to the plot
-    plt.title(r"\begin{center} Mutual information matrix difference \\ \normalsize{}{DataSynthesizer version, all datatypes} \end{center}")
-    ax.set_xticks(ax.get_xticks(), ax.get_xticklabels(), rotation=45, ha='right')
+    plt.title("Mutual information matrix difference")
+    labels = _shortened_labels(ax.get_xticklabels())
+    ax.set_xticks(ax.get_xticks(), labels, rotation=45, ha='right')
+    ax.set_yticks(ax.get_yticks(), labels)
     fig.tight_layout()
     plt.savefig('plot_mi.png')
     #plt.show()

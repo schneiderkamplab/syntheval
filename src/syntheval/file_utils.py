@@ -22,6 +22,15 @@ def stack(real,fake):
 #     df = df.dropna()
 #     return df
 
+def get_cat_variables(df,threshold):
+    cat_variables = []
+    for col in df.columns:
+        if df[col].dtype == 'object':
+            cat_variables.append(col)
+        elif (df[col].dtype == 'int64' or df[col].dtype == 'float64') and df[col].nunique() < threshold:
+            cat_variables.append(col)
+    return cat_variables
+
 class consistent_label_encoding():
     def __init__(self, real, fake, categorical_columns, hout=None) -> None:
         joint_dataframe = pd.concat((real.reset_index(),fake.reset_index()),axis=0)
@@ -33,7 +42,7 @@ class consistent_label_encoding():
 
     def encode(self, data):
         data = data.copy()
-        data[self.cat_cols] = self.encoder.transform(data[self.cat_cols])
+        data[self.cat_cols] = self.encoder.transform(data[self.cat_cols]).astype('int')
         return data
 
 # def convert_nummerical_pair(real,fake,categorical_columns):

@@ -14,12 +14,12 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 
 from .metrics import *
-from .file_utils import empty_dict, create_results_file, add_to_results_file, consistent_label_encoding
+from .file_utils import empty_dict, create_results_file, add_to_results_file, consistent_label_encoding, get_cat_variables
 
 class SynthEval():
-    def __init__(self, real ,hold_out=None, cat_cols=[], save_name = 'SynthEval_result_file', unique_thresh = 10, n_samples=None) -> None:
+    def __init__(self, real ,hold_out=None, cat_cols=None, save_name = 'SynthEval_result_file', unique_thresh = 10) -> None:
         self.real = real
-        
+
         if hold_out is not None:
             self.hold_out = hold_out
 
@@ -30,20 +30,24 @@ class SynthEval():
         else:
             self.hold_out = None
 
+        # Infer categorical columns using unique_thresh
+        if cat_cols is None:
+            cat_cols = get_cat_variables(real, unique_thresh)
+            print('SynthEval: inferred categorical columns...')
+        
+        self.categorical_columns = cat_cols
+        self.numerical_columns = [column for column in real.columns if column not in cat_cols]
+
         ### Options
         self.mixed_correlation = True # Switch of for faster but less sensitive correlation matrix difference.
         self.permutation = True # Switch to False for faster but less sensitive KS test
         self.F1_type = 'micro' # Use {‘micro’, ‘macro’, ‘weighted’}
         self.knn_metric = 'gower' # Use {'gower', 'euclid'}
 
-        self.categorical_columns = cat_cols
-        self.numerical_columns = [column for column in real.columns if column not in cat_cols]
-
         self.save_flag = 0
         self.save_name = save_name + '.csv'
 
         self.fast_eval_flag = 0
-
         pass
     
     def _update_syn_data(self,fake):
@@ -116,7 +120,7 @@ class SynthEval():
 
         if self.hold_out is not None: 
             hout = CLE.encode(self.hold_out)
-            NNAA = adversarial_accuracy(real, fake, self.categorical_columns, self.knn_metric)
+            NNAA = adversarial_accuracy(real, fake, self.categorical_columns, self.numerical_columns, self.knn_metric)
             self.NNAA = NNAA
             self.res_dict['Nearest neighbour adversarial accuracy'] = NNAA
         else: hout = None
@@ -143,6 +147,22 @@ class SynthEval():
         self.save_results()
         return 
 
+    def tuning_eval(self, synthetic_dataframe):
+        self._update_syn_data(synthetic_dataframe)
+        CLE = consistent_label_encoding(self.real,self.fake,self.categorical_columns,self.hold_out)
+        real = CLE.encode(self.real)
+        fake = CLE.encode(self.fake)
+
+        H_dist = featurewise_hellinger_distance(real,fake,self.categorical_columns,self.numerical_columns)
+        self.H_dist = H_dist
+        self.res_dict['Average empirical Hellinger distance'] = H_dist
+
+        eps_idf = epsilon_identifiability(real,fake,self.numerical_columns,self.categorical_columns,self.knn_metric)
+        self.eps_idf = eps_idf
+        self.res_dict['epsilon identifiability risk'] = eps_idf
+
+        return H_dist['avg'], eps_idf
+
     def full_eval(self, synthetic_data, target_col: str):
         """Main function for evaluate synthetic data"""
         ### Initialize the data
@@ -161,16 +181,16 @@ class SynthEval():
         # Early utility analysis
         if len(self.numerical_columns) > 1:
             EARL = self._early_utility_analysis(real,fake,target_col)
-        print("EARL ran sucessfully")
+        print("EARL ran successfully")
         # Quality analysis
         QUAL = self._quality_metrics(real,fake)
-        print("QUAL ran sucessfully")
+        print("QUAL ran successfully")
         # Resemblance analysis
         RESM = self._resemblance_metrics(real, fake)
-        print("RESM ran sucessfully")
+        print("RESM ran successfully")
         # Usability analysis (ML-tests)
         USEA = self._usability_metrics(real, fake, target_col, hout)
-        print("USEA ran sucessfully")
+        print("USEA ran successfully")
         # Primitive privacy
         PRIV = self._simple_privacy_mets(real, fake, hout)
 
@@ -231,7 +251,7 @@ class SynthEval():
         self.res_dict['Propensity Mean Squared Error (pMSE)'] = pMSE
         self.res_dict['Propensity Mean Squared Error (acc)'] =  pMSE_acc
 
-        NNAA = adversarial_accuracy(real, fake, self.categorical_columns, self.knn_metric)
+        NNAA = adversarial_accuracy(real, fake, self.categorical_columns, self.numerical_columns, self.knn_metric)
         self.NNAA = NNAA
         self.res_dict['Nearest neighbour adversarial accuracy'] = NNAA
         return True
@@ -308,12 +328,12 @@ class SynthEval():
         lst.append(1-self.NNAA['avg'])
 
         lst.append(1-np.mean(self.class_diff))
-        lst.append(1-np.mean(self.holdout_diff))
+        if self.hold_out is not None: lst.append(1-np.mean(self.holdout_diff))
 
         # prop_err = 1/10*np.sqrt(self.ks_dist['err']**2+self.CIO['err']**2+self.H_dist['err']**2+(self.pMSE['err']/0.25)**2+self.NNAA['err']**2+(0.25*np.sqrt(sum(self.class_diff_err**2)))**2+(np.std(self.holdout_diff,ddof=1)/np.sqrt(4))**2)
         # print(prop_err)
 
-        res = {'avg':np.mean(lst),'err':np.std(lst,ddof=1)/np.sqrt(10)}
+        res = {'avg':np.mean(lst),'err':np.std(lst,ddof=1)/np.sqrt(len(lst))}
         self.util_score = res
         self.res_dict['Overall utility score'] = res
         return True
@@ -321,7 +341,7 @@ class SynthEval():
     def _simple_privacy_mets(self, real, fake, hout=None):
         """Calculate the mean distance to closest record (DCR) and hitting rate"""
         
-        DCR = distance_to_closest_record(real,fake,self.categorical_columns, self.knn_metric)
+        DCR = distance_to_closest_record(real,fake,self.categorical_columns,self.numerical_columns, self.knn_metric)
         self.DCR = DCR
         self.res_dict['Normed distance to closest record (DCR)'] = DCR
 
@@ -339,7 +359,7 @@ class SynthEval():
 
         ### Privacy losses
         if hout is not None:
-            NNAA_h = adversarial_accuracy(hout[real.columns],fake,self.categorical_columns, self.knn_metric)
+            NNAA_h = adversarial_accuracy(hout, fake, self.categorical_columns, self.numerical_columns, self.knn_metric)
             nnaa_loss_val = NNAA_h['avg'] - self.NNAA['avg']
             nnaa_loss_err = np.sqrt(self.NNAA['err']**2+NNAA_h['err']**2)
             nnaa_loss = {'avg': nnaa_loss_val, 'err': nnaa_loss_err}

@@ -110,7 +110,7 @@ def _cramers_V(var1,var2) :
     stat = chi2_contingency(crosstab)[0] # Keeping of the test statistic of the Chi2 test
     obs = np.sum(crosstab) # Number of observations
     mini = min(crosstab.shape)-1 # Take the minimum value between the columns and the rows of the cross table
-    return (stat/(obs*mini))
+    return (stat/(obs*mini+1e-16))
 
 def _apply_mat(data,func,labs1,labs2):
     """Help function for constructing a matrix based on func accross labels 1 and 2"""
@@ -322,31 +322,31 @@ def propensity_mean_square_error(real, fake):
 
     return {'avg': np.mean(res), 'err': np.std(res,ddof=1)/np.sqrt(len(res))},  {'avg': np.mean(acc), 'err': np.std(acc,ddof=1)/np.sqrt(len(acc))}
 
-def adversarial_accuracy(real, fake, cat_cols, metric, n_batches=30):
+def adversarial_accuracy(real, fake, cat_cols, num_cols, metric, n_batches=30):
     """Implementation heavily inspired by original paper"""
-    r_scaled = MinMaxScaler().fit_transform(real)
-    f_scaled = MinMaxScaler().fit_transform(fake)
-
     bool_cat_cols = [col1 in cat_cols for col1 in real.columns]
+
+    real[num_cols] = MinMaxScaler().fit_transform(real[num_cols])
+    fake[num_cols] = MinMaxScaler().fit_transform(fake[num_cols])
     
-    if len(r_scaled)*2 < len(f_scaled):
+    if len(real)*2 < len(fake):
         aa_lst = []
         for batch in range(n_batches):
-            temp_f = np.array(random.choices(f_scaled, k=len(r_scaled)))
-            aa_lst.append(_adversarial_score(r_scaled,temp_f,bool_cat_cols, metric))
+            temp_f = fake.sample(n=len(real))
+            aa_lst.append(_adversarial_score(real,temp_f,bool_cat_cols, metric))
         return {'avg': np.mean(aa_lst), 'err': np.std(aa_lst,ddof=1)/np.sqrt(len(aa_lst))}
     else:
-        return {'avg': _adversarial_score(r_scaled,f_scaled,cat_cols,metric), 'err': 0.0}
+        return {'avg': _adversarial_score(real,fake,bool_cat_cols,metric), 'err': 0.0}
 
-def distance_to_closest_record(real,fake,cat_cols,metric):
+def distance_to_closest_record(real,fake,cat_cols,num_cols,metric):
     """Distance to closest record, using the same NN stuff as NNAA"""
     bool_cat_cols = [col1 in cat_cols for col1 in real.columns]
     distances = _knn_distance(fake,real,bool_cat_cols,metric)
     in_dists = _knn_distance(real,real,bool_cat_cols,metric)
 
-    int_nn_avg = np.mean(in_dists)
+    int_nn_avg = np.mean(in_dists)#np.median(in_dists)
     int_nn_err = np.std(in_dists,ddof=1)/np.sqrt(len(in_dists))
-    min_dist_avg = np.mean(distances)
+    min_dist_avg = np.mean(distances)#np.median(distances)
     min_dist_err = np.std(distances,ddof=1)/np.sqrt(len(distances))
 
     dcr = min_dist_avg/int_nn_avg
