@@ -68,7 +68,7 @@ class SynthEval():
         add_to_results_file(self.res_dict,self.save_name)
         pass
 
-    def fast_eval(self,synthetic_dataframe, target):
+    def fast_eval(self,synthetic_dataframe, target: str = None):
         """This function is for running the quick version of SynthEval, for model checkpoints etc."""
         self._update_syn_data(synthetic_dataframe)
 
@@ -109,7 +109,7 @@ class SynthEval():
         self.save_results()
         return ks_dist, ks_frac_sig, H_dist, DCR
     
-    def priv_eval(self, synthetic_dataframe, target):
+    def priv_eval(self, synthetic_dataframe, target: str = None):
         """This function is for running only the privacy metrics, for model checkpoints etc."""
         self._update_syn_data(synthetic_dataframe)
 
@@ -163,7 +163,7 @@ class SynthEval():
 
         return H_dist['avg'], eps_idf
 
-    def full_eval(self, synthetic_data, target_col: str):
+    def full_eval(self, synthetic_data, target_col: str = None):
         """Main function for evaluate synthetic data"""
         ### Initialize the data
         self._update_syn_data(synthetic_data)
@@ -189,7 +189,7 @@ class SynthEval():
         RESM = self._resemblance_metrics(real, fake)
         print("RESM ran successfully")
         # Usability analysis (ML-tests)
-        USEA = self._usability_metrics(real, fake, target_col, hout)
+        USEA = None if target_col is None else self._usability_metrics(real, fake, target_col, hout)
         print("USEA ran successfully")
         # Primitive privacy
         PRIV = self._simple_privacy_mets(real, fake, hout)
@@ -203,7 +203,8 @@ class SynthEval():
     def _early_utility_analysis(self,real,fake,target):
         """For sanity-checking the results"""
         dimensionwise_means(real,fake,self.numerical_columns,self.fast_eval_flag)
-        principal_component_analysis(real,fake,self.numerical_columns,target,self.fast_eval_flag)
+        if target is not None:
+            principal_component_analysis(real,fake,self.numerical_columns,target,self.fast_eval_flag)
 
         self.fast_eval_flag += 1
         return True
