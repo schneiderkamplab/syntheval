@@ -22,9 +22,17 @@ classifiers = [
 
 dependencies = [
     'gower',
+    'numpy',
     'seaborn',
 ]
 
 [project.urls]
 "Homepage" = "https://github.com/schneiderkamplab/syntheval"
 "Bug Tracker" = "https://github.com/schneiderkamplab/syntheval/issues"
+
+[tool.hatch.build]
+include = [
+    'src/syntheval',
+    'LICENSE',
+    'README.md',
+]
