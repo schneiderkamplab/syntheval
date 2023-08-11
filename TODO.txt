@@ -1,0 +1,3 @@
+* plots etc. optional
+* return plots as objects
+* no files unless requested
