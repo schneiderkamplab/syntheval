@@ -93,7 +93,7 @@ class SynthEval():
         self.H_dist = H_dist
         self.res_dict['Average empirical Hellinger distance'] = H_dist
 
-        DCR = distance_to_closest_record(real,fake,self.categorical_columns,self.knn_metric)
+        DCR = distance_to_closest_record(real,fake,self.categorical_columns,self.numerical_columns,self.knn_metric)
         self.DCR = DCR
         self.res_dict['Normed distance to closest record (DCR)'] = DCR
 
