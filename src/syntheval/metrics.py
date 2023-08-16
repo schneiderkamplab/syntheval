@@ -344,14 +344,18 @@ def distance_to_closest_record(real,fake,cat_cols,num_cols,metric):
     distances = _knn_distance(fake,real,bool_cat_cols,metric)
     in_dists = _knn_distance(real,real,bool_cat_cols,metric)
 
-    int_nn_avg = np.mean(in_dists)#np.median(in_dists)
-    int_nn_err = np.std(in_dists,ddof=1)/np.sqrt(len(in_dists))
-    min_dist_avg = np.mean(distances)#np.median(distances)
-    min_dist_err = np.std(distances,ddof=1)/np.sqrt(len(distances))
+    # int_nn_avg = np.mean(in_dists)#np.median(in_dists)
+    # int_nn_err = np.std(in_dists,ddof=1)/np.sqrt(len(in_dists))
+    # min_dist_avg = np.mean(distances)#np.median(distances)
+    # min_dist_err = np.std(distances,ddof=1)/np.sqrt(len(distances))
 
-    dcr = min_dist_avg/int_nn_avg
-    dcr_err = np.sqrt((min_dist_err/min_dist_avg)**2+(int_nn_err/int_nn_avg)**2)
-    return {'avg': dcr, 'err': dcr_err}
+    int_nn = np.median(in_dists)
+    mut_nn = np.median(distances)
+
+    #dcr = min_dist_avg/int_nn_avg
+    #dcr_err = np.sqrt((min_dist_err/min_dist_avg)**2+(int_nn_err/int_nn_avg)**2)
+    dcr = mut_nn/int_nn
+    return dcr#{'avg': dcr, 'err': dcr_err}
 
 def nearest_neighbour_distance_ratio(real, fake, num_cols):
     """

@@ -102,7 +102,7 @@ class SynthEval():
                 "| Avg. KS-dist         : %.4f SE(%.4f) |\n" % (ks_dist['avg'], ks_dist['err']),
                 "| frac. of sig. tests  : %d                 |\n"% ks_frac_sig,
                 "| Avg. H-dist          : %.4f SE(%.4f) |\n" % (H_dist['avg'], H_dist['err']),
-                "| Normed DCR           : %.4f SE(%.4f) |\n" % (DCR['avg'], DCR['err']),
+                "| Normed DCR           : %.4f            |\n" % DCR,
                 "+------------------------------------------+\n"       
         )
 
@@ -129,7 +129,7 @@ class SynthEval():
 
         print('SynthEval: privacy evaluation complete\n',
                 "+------------------------------------------+\n",
-                "| Normed DCR           : %.4f SE(%.4f) |\n" % (self.DCR['avg'], self.DCR['err']),
+                "| Normed DCR           : %.4f            |\n" % (self.DCR),
                 "| NN distance ratio    : %.4f SE(%.4f) |\n" % (self.NNDR['avg'],self.NNDR['err']),
                 "| Hitting rate         : %.4f            |\n" % (self.hit_rate),
                 "| epsilon identif.     : %.4f            |\n" % (self.eps_idf),
@@ -455,7 +455,7 @@ class SynthEval():
             print(
                 "Privacy metrics:\n",
                 "+---------------------------------------------------------------+\n",
-                "| Normed distance to closest record (DCR)  :   %.4f  %.4f   |\n" % (self.DCR['avg'], self.DCR['err']),
+                "| Normed distance to closest record (DCR)  :   %.4f           |\n" % (self.DCR),
                 "| Nearest neighbour distance ratio (NNDR)  :   %.4f  %.4f   |\n" % (self.NNDR['avg'], self.NNDR['err']),
                 "| Hitting rate (thres = range(att)/30)     :   %.4f           |\n" % (self.hit_rate),
                 "| Epsilon identifiability risk             :   %.4f           |\n" % (self.eps_idf),
