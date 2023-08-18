@@ -24,21 +24,30 @@ class MetricClass(ABC):
         self.cat_cols = cat_cols
         self.num_cols = num_cols
 
-        if do_preprocessing:
-            preprocess_all()
+        self.results = {}
+
+        # if do_preprocessing:
+        #     preprocess_all()
         pass
-        
-    def print_results():
-        pass
+ 
+    # @staticmethod
+    # @abstractmethod
+    # def type() -> str:
+    #     """choose if metric is used in """
+    #     pass
 
     @staticmethod
     @abstractmethod
     def name() -> str:
         """the name of the metric"""
-        ...
+        pass
 
     @abstractmethod
-    def evaluate(self):
+    def evaluate(self) -> float | dict:
+        pass
+
+    @abstractmethod
+    def format_output(self) -> str:
         pass
 
     

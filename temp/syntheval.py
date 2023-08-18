@@ -20,12 +20,31 @@ class SynthEval():
         self.custom_eval(real,synt,hout,metrics,args)
         pass
 
-    def custom_eval(self,real,synt,hout, components: list, **kwargs):
+    def custom_eval(self, real, synt, hout = None, **kwargs):
         
-        for component in components:
-            if component not in loaded_metric_classes:
-                continue
+        output_txt = ''
 
-            component.evaluate()
-        #TODO: get arguments if any inside
+        methods = kwargs.keys()
+
+        # if method not in loaded_metric_classes:
+        #     raise Exception("Unrecognised keyword:", method)
+        #     continue
+
+        cat_cols = 1
+        num_cols = 2
+
+        for metric in loaded_metric_classes:
+            if metric.name() not in methods:
+                continue
+            
+            M = metric(real,synt,hout,cat_cols,num_cols)
+            _ = M.evaluate(**kwargs[metric.name()])
+            #output_txt += M.format_output()
+
+            
         pass
+
+
+if __name__ == '__main__':
+    S = SynthEval()
+    S.custom_eval('r','f', None, metric_a={'opt1': 1}, metric_b={})
