@@ -333,10 +333,10 @@ def adversarial_accuracy(real, fake, cat_cols, num_cols, metric, n_batches=30):
         aa_lst = []
         for batch in range(n_batches):
             temp_f = fake.sample(n=len(real))
-            aa_lst.append(_adversarial_score(real,temp_f,bool_cat_cols, metric))
-        return {'avg': np.mean(aa_lst), 'err': np.std(aa_lst,ddof=1)/np.sqrt(len(aa_lst))}
+            aa_lst.append(_adversarial_score(real, temp_f, bool_cat_cols, metric))
+        return {'avg': np.mean(aa_lst), 'err': np.std(aa_lst, ddof=1)/np.sqrt(len(aa_lst))}
     else:
-        return {'avg': _adversarial_score(real,fake,bool_cat_cols,metric), 'err': 0.0}
+        return {'avg': _adversarial_score(real, fake, bool_cat_cols, metric), 'err': 0.0}
 
 def distance_to_closest_record(real,fake,cat_cols,num_cols,metric):
     """Distance to closest record, using the same NN stuff as NNAA"""

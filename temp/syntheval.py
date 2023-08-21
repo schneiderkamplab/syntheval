@@ -5,11 +5,14 @@
 import sys
 import json
 
+import numpy as np
+
 sys.path.insert(0,'F:/GitHub repositories/syntheval/temp/')
 from temp.metrics import load_metrics
 
 from pandas import DataFrame
 
+#from utils.nn_distance import nn_distance_metric
 from utils.variable_detection import get_cat_variables
 from utils.preprocessing import consistent_label_encoding
 
@@ -44,6 +47,8 @@ class SynthEval():
         self.categorical_columns = cat_cols
         self.numerical_columns = [column for column in real.columns if column not in cat_cols]
 
+        self.nn_dist = nn_distance
+
         pass
     
     def full_eval(self,synt):
@@ -74,6 +79,30 @@ class SynthEval():
         print('SynthEval: synthetic data read successfully')
         pass
 
+    def format_scores(self, scores):
+
+        print("""\
++---------------------------------------------------------------+              
+
++---------------------------------------------------------------+"""
+        )
+        if not scores['utility']['val'] == []:
+            scores_lst = np.sqrt(sum(np.square(scores['utility']['err'])))/len(scores['utility']['err'])
+            print("""\
+| Average utility score                    :   %.4f  %.4f   |""" % (np.mean(scores['utility']['val']), scores_lst)
+            )
+        
+        if not scores['privacy']['val'] == []:
+            scores_lst = np.sqrt(sum(np.square(scores['privacy']['err'])))/len(scores['privacy']['err'])
+            print("""\
+| Average privacy score                    :   %.4f  %.4f   |""" % (np.mean(scores['privacy']['val']), scores_lst)
+            )
+
+        print("""\
++---------------------------------------------------------------+"""
+        )
+        pass
+
     def custom_eval(self, synthetic_dataframe, **kwargs):
 
         self._update_syn_data(synthetic_dataframe)
@@ -84,41 +113,41 @@ class SynthEval():
         if self.hold_out is not None: hout_data = CLE.encode(self.hold_out)
 
         output_txt = ''
-
         methods = kwargs.keys()
 
-        scores = {'utility':[], 'privacy':[]}
+        #nn_obj = nn_distance_metric(real_data, synt_data, self.categorical_columns, self.nn_dist)
+
+        scores = {'utility':{'val':[],'err':[]}, 'privacy':{'val':[],'err':[]}}
         for method in methods:
             if method not in loaded_metrics.keys():
                 print(f"Unrecognised keyword: {method}")
                 #raise Exception(f"Unrecognised keyword: {method}")
                 continue
             
-            # if load_metrics[method].type() == 'privacy': privacy_metrics.append(method)
-            # if load_metrics[method].type() == 'utility': utility_metrics.append(method)
-            
-            M = loaded_metrics[method](real_data, synt_data, hout_data, self.categorical_columns, self.numerical_columns, do_preprocessing=False)
+            M = loaded_metrics[method](real_data, synt_data, hout_data, self.categorical_columns, self.numerical_columns, self.nn_dist, do_preprocessing=False)
             _ = M.evaluate(**kwargs[method])
-            output_txt += M.format_output()
+            output_txt += M.format_output() + '\n'
+            
+            normalized_result = M.normalize_output()
+            if normalized_result is not None:
+                scores[loaded_metrics[method].type()]["val"].extend(normalized_result["val"])
+                scores[loaded_metrics[method].type()]["err"].extend(normalized_result["err"])
 
-            scores[loaded_metrics[method].type()].append(M.normalize_output())
-
-        print(scores)
+        #print(scores)
 
         print("""\
 
-SynthEval Results
+SynthEval results
 =================================================================
 
 Metric description                            value   error                                 
 +---------------------------------------------------------------+"""
         )
 
-        print(output_txt)
+        print(output_txt.rstrip())
 
-        print("""\
-+---------------------------------------------------------------+"""
-        )
+        self.format_scores(scores)
+
   
         pass
 

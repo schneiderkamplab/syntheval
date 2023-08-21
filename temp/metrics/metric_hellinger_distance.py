@@ -36,8 +36,7 @@ class HellingerDistance(MetricClass):
         return 'utility'
 
     def evaluate(self) -> float | dict:
-        """ Function for evaluating the metric.
-        """
+        """ Function for evaluating the metric"""
         H_dist = []
     
         for category in self.cat_cols:
@@ -66,11 +65,13 @@ class HellingerDistance(MetricClass):
         return string
 
     def normalize_output(self) -> dict:
-        """ To add this metric to utility or privacy scores
-        map the main result(s) to the zero one interval where
-        zero is worst performance and one is best.
+        """ To add this metric to utility or privacy scores map the main 
+        result(s) to the zero one interval where zero is worst performance 
+        and one is best.
         
-        pass if the metric should not be used in such scores.
+        pass or return None if the metric should not be used in such scores.
+
+        Return dictionary of lists 'val' and 'err'
         """
-        return {'avg': 1-self.results['avg'], 'err': self.results['err']}
+        return {'val': [1-self.results['avg']], 'err': [self.results['err']]}
 
