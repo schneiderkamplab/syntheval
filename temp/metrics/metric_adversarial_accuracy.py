@@ -9,12 +9,6 @@ from .core.metric import MetricClass
 from utils.nn_distance import _knn_distance
 from sklearn.preprocessing import MinMaxScaler
 
-# def _adversarial_score(real,fake,cat_cols,nn_obj):
-#     """Function for calculating adversarial score"""
-#     left = np.mean(nn_obj.nn_real_fake()[0] > nn_obj.nn_real_real()[0])
-#     right = np.mean(nn_obj.nn_fake_real()[0] > nn_obj.nn_fake_fake()[0])
-#     return 0.5 * (left + right)
-
 def _adversarial_score(real, fake, cat_cols, metric):
     """Function for calculating adversarial score"""
     left = np.mean(_knn_distance(real, fake, cat_cols, 1, metric)[0] > _knn_distance(real, real, cat_cols, 1, metric)[0])
@@ -44,21 +38,25 @@ class NearestNeighbourAdversarialAccuracy(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'utility'
 
-    def evaluate(self, n_batches=30) -> float | dict:
+    def evaluate(self, real=None, fake=None, n_batches=30) -> dict:
         """Implementation heavily inspired by original paper"""
-        bool_cat_cols = [col1 in self.cat_cols for col1 in self.real_data.columns]
-
-        self.real_data[self.num_cols] = MinMaxScaler().fit_transform(self.real_data[self.num_cols])
-        self.synt_data[self.num_cols] = MinMaxScaler().fit_transform(self.synt_data[self.num_cols])
+        if (real is None and fake is None):
+            real = self.real_data
+            fake = self.synt_data
         
-        if len(self.real_data)*2 < len(self.synt_data):
+        bool_cat_cols = [col1 in self.cat_cols for col1 in real.columns]
+
+        real[self.num_cols] = MinMaxScaler().fit_transform(real[self.num_cols])
+        fake[self.num_cols] = MinMaxScaler().fit_transform(fake[self.num_cols])
+        
+        if len(real)*2 < len(fake):
             aa_lst = []
             for batch in range(n_batches):
-                temp_f = self.synt_data.sample(n=len(self.real_data))
-                aa_lst.append(_adversarial_score(self.real_data, temp_f, bool_cat_cols, self.nn_dist))
+                temp_f = fake.sample(n=len(real))
+                aa_lst.append(_adversarial_score(real, temp_f, bool_cat_cols, self.nn_dist))
             self.results = {'avg': np.mean(aa_lst), 'err': np.std(aa_lst, ddof=1)/np.sqrt(len(aa_lst))}
         else:
-            self.results = {'avg': _adversarial_score(self.real_data, self.synt_data, bool_cat_cols, self.nn_dist), 'err': 0.0}
+            self.results = {'avg': _adversarial_score(real, fake, bool_cat_cols, self.nn_dist), 'err': 0.0}
 
         return self.results
 
@@ -79,3 +77,14 @@ class NearestNeighbourAdversarialAccuracy(MetricClass):
 
         Return dictionary of lists 'val' and 'err' """
         return {'val': [1-self.results['avg']], 'err': [self.results['err']]}
+
+    def privacy_loss(self,n_batches=30) -> tuple:
+        train_res = self.results
+        test_res = self.evaluate(real=self.hout_data,fake=self.synt_data,n_batches=n_batches)
+
+        diff     = abs(test_res['avg'] - train_res['avg'])
+        err_diff = np.sqrt(test_res['err']**2+train_res['err']**2)
+
+        string = """\
+| Privacy loss (diff in NNAA)              :   %.4f  %.4f   |""" % (diff, err_diff)
+        return {'val': [1-diff], 'err': [err_diff]}, string

@@ -22,6 +22,7 @@ class MetricClass(ABC):
             cat_cols: list = None,
             num_cols: list = None,
             nn_dist: str = None,
+            analysis_target : str = None,
             do_preprocessing: bool = True
     ) -> None:
         
@@ -43,6 +44,7 @@ class MetricClass(ABC):
         self.num_cols = num_cols
 
         self.nn_dist = nn_dist
+        self.analysis_target = analysis_target
 
         self.results = {}
 
@@ -82,5 +84,17 @@ class MetricClass(ABC):
         pass or return None if the metric should not be used in such scores.
 
         Return dictionary of lists 'val' and 'err'
+        """
+        pass
+    
+    ### Hooks
+    def privacy_loss(self) -> tuple:
+        """ Extra function for handling privacy loss. I.e. the difference in
+        metric from training data to synthetic data compared to test data.
+        This measure is only relevant for a select few metrics.
+        
+        Privacy loss is always treated as a privacy metric.
+        
+        Returns normalised output and formatted string.
         """
         pass

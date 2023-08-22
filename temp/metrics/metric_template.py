@@ -16,7 +16,8 @@ class MetricClassName(MetricClass):
     self.num_cols  : list of strings
 
     self.nn_dist   : string keyword
-    
+    self.analysis_target: variable name
+
     """
 
     def name() -> str:
@@ -51,6 +52,18 @@ class MetricClassName(MetricClass):
         Return dictionary of lists 'val' and 'err' """
         return {'val': [0], 'err': [0]}
 
+
+    ### Hooks (Extra functions, not required)
+    def privacy_loss(self) -> tuple:
+        """ Extra function for handling privacy loss. I.e. the difference in
+        metric from training data to synthetic data compared to test data.
+        This measure is only relevant for a select few metrics.
+        
+        Privacy loss is always treated as a privacy metric.
+        
+        Returns normalised output and formatted string.
+        """
+        pass
 
 
 

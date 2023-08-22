@@ -7,7 +7,8 @@ import json
 
 import numpy as np
 
-sys.path.insert(0,'F:/GitHub repositories/syntheval/temp/')
+#sys.path.insert(0,'F:/GitHub repositories/syntheval/temp/')
+sys.path.insert(0,'C:/Users/lautrup/Documents/GitHub/syntheval/temp')
 from temp.metrics import load_metrics
 
 from pandas import DataFrame
@@ -18,6 +19,9 @@ from utils.preprocessing import consistent_label_encoding
 
 loaded_metrics = load_metrics()
 print(loaded_metrics)
+
+
+
 
 class SynthEval():
     def __init__(self, 
@@ -51,22 +55,22 @@ class SynthEval():
 
         pass
     
-    def full_eval(self,synt):
+    def full_eval(self, synt, analysis_target_var):
         with open('temp/presets/full_eval.json','r') as fp:
             loaded_preset = json.load(fp)
-        self.custom_eval(synt, **loaded_preset)
+        self.custom_eval(synt, analysis_target_var, **loaded_preset)
         pass
 
-    def fast_eval(self,synt):
+    def fast_eval(self,synt, analysis_target_var):
         with open('temp/presets/fast_eval.json','r') as fp:
             loaded_preset = json.load(fp)
-        self.custom_eval(synt, **loaded_preset)
+        self.custom_eval(synt, analysis_target_var, **loaded_preset)
         pass
 
-    def priv_eval(self,synt):
+    def priv_eval(self,synt, analysis_target_var):
         with open('temp/presets/privacy.json','r') as fp:
             loaded_preset = json.load(fp)
-        self.custom_eval(synt, **loaded_preset)
+        self.custom_eval(synt, analysis_target_var, **loaded_preset)
         pass
 
     def _update_syn_data(self,synt):
@@ -82,8 +86,6 @@ class SynthEval():
     def format_scores(self, scores):
 
         print("""\
-+---------------------------------------------------------------+              
-
 +---------------------------------------------------------------+"""
         )
         if not scores['utility']['val'] == []:
@@ -103,7 +105,7 @@ class SynthEval():
         )
         pass
 
-    def custom_eval(self, synthetic_dataframe, **kwargs):
+    def custom_eval(self, synthetic_dataframe, analysis_target_var, **kwargs):
 
         self._update_syn_data(synthetic_dataframe)
         
@@ -112,11 +114,14 @@ class SynthEval():
         synt_data = CLE.encode(self.synt)
         if self.hold_out is not None: hout_data = CLE.encode(self.hold_out)
 
-        output_txt = ''
+        utility_output_txt = ''
+        privacy_output_txt = ''
+
         methods = kwargs.keys()
 
         #nn_obj = nn_distance_metric(real_data, synt_data, self.categorical_columns, self.nn_dist)
 
+        results = {}
         scores = {'utility':{'val':[],'err':[]}, 'privacy':{'val':[],'err':[]}}
         for method in methods:
             if method not in loaded_metrics.keys():
@@ -124,10 +129,21 @@ class SynthEval():
                 #raise Exception(f"Unrecognised keyword: {method}")
                 continue
             
-            M = loaded_metrics[method](real_data, synt_data, hout_data, self.categorical_columns, self.numerical_columns, self.nn_dist, do_preprocessing=False)
-            _ = M.evaluate(**kwargs[method])
-            output_txt += M.format_output() + '\n'
-            
+            M = loaded_metrics[method](real_data, synt_data, hout_data, self.categorical_columns, self.numerical_columns, self.nn_dist, analysis_target_var, do_preprocessing=False)
+            results[method] = M.evaluate(**kwargs[method])
+
+            if loaded_metrics[method].type() == 'utility':
+                utility_output_txt += M.format_output() + '\n'
+            else:
+                privacy_output_txt += M.format_output() + '\n'
+
+            if self.hold_out is not None:
+                pl = M.privacy_loss(**kwargs[method])
+                if pl is not None:
+                    scores['privacy']["val"].extend(pl[0]["val"])
+                    scores['privacy']["err"].extend(pl[0]["err"])
+                    privacy_output_txt += pl[1]
+
             normalized_result = M.normalize_output()
             if normalized_result is not None:
                 scores[loaded_metrics[method].type()]["val"].extend(normalized_result["val"])
@@ -139,16 +155,30 @@ class SynthEval():
 
 SynthEval results
 =================================================================
+""")
 
-Metric description                            value   error                                 
+        if utility_output_txt != '':
+            print("""\
+Utility metric description                    value   error                                 
 +---------------------------------------------------------------+"""
-        )
+            )
+            print(utility_output_txt.rstrip())
+            print("""\
++---------------------------------------------------------------+
+    """)
 
-        print(output_txt.rstrip())
+        if privacy_output_txt != '':
+            print("""\
+Privacy metric description                    value   error                                 
++---------------------------------------------------------------+"""
+            )
+            print(privacy_output_txt.rstrip())
+            print("""\
++---------------------------------------------------------------+
+    """)
 
         self.format_scores(scores)
 
-  
         pass
 
 
