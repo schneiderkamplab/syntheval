@@ -15,16 +15,16 @@ def _create_matrix_with_ones(indices, num_rows):
     return matrix
 
 def _knn_distance(a, b, cat_cols, num, metric='gower', weights=None):
-    def gower_knn(a, b):
+    def gower_knn(a, b, bool_cat_cols):
             """Function used for finding nearest neighbours"""
             d = []
             if np.array_equal(a,b):
-                matrix = gower.gower_matrix(a,cat_features=cat_cols,weight=weights)+np.eye(len(a))
+                matrix = gower.gower_matrix(a,cat_features=bool_cat_cols,weight=weights)+np.eye(len(a))
                 for _ in range(num):
                     d.append(matrix.min(axis=1))
                     matrix += _create_matrix_with_ones(matrix.argmin(axis=1,keepdims=True),len(a))
             else:
-                matrix = gower.gower_matrix(a,b,cat_features=cat_cols,weight=weights)
+                matrix = gower.gower_matrix(a,b,cat_features=bool_cat_cols,weight=weights)
                 for _ in range(num):
                     d.append(matrix.min(axis=1))
                     matrix += _create_matrix_with_ones(matrix.argmin(axis=1,keepdims=True),len(b))
@@ -47,7 +47,8 @@ def _knn_distance(a, b, cat_cols, num, metric='gower', weights=None):
             return d
 
     if metric=='gower':
-        return gower_knn(a,b)
+        bool_cat_cols = [col1 in cat_cols for col1 in a.columns]
+        return gower_knn(a,b,bool_cat_cols)
     if metric=='euclid':
         return eucledian_knn(a,b)
     else: raise Exception("Unknown metric; options are 'gower' or 'euclid'")

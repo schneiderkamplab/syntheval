@@ -7,8 +7,8 @@ import json
 
 import numpy as np
 
-#sys.path.insert(0,'F:/GitHub repositories/syntheval/temp/')
-sys.path.insert(0,'C:/Users/lautrup/Documents/GitHub/syntheval/temp')
+sys.path.insert(0,'F:/GitHub repositories/syntheval/temp/')
+#sys.path.insert(0,'C:/Users/lautrup/Documents/GitHub/syntheval/temp')
 from temp.metrics import load_metrics
 
 from pandas import DataFrame
@@ -55,19 +55,19 @@ class SynthEval():
 
         pass
     
-    def full_eval(self, synt, analysis_target_var):
+    def full_eval(self, synt, analysis_target_var=None):
         with open('temp/presets/full_eval.json','r') as fp:
             loaded_preset = json.load(fp)
         self.custom_eval(synt, analysis_target_var, **loaded_preset)
         pass
 
-    def fast_eval(self,synt, analysis_target_var):
+    def fast_eval(self,synt, analysis_target_var=None):
         with open('temp/presets/fast_eval.json','r') as fp:
             loaded_preset = json.load(fp)
         self.custom_eval(synt, analysis_target_var, **loaded_preset)
         pass
 
-    def priv_eval(self,synt, analysis_target_var):
+    def priv_eval(self,synt, analysis_target_var=None):
         with open('temp/presets/privacy.json','r') as fp:
             loaded_preset = json.load(fp)
         self.custom_eval(synt, analysis_target_var, **loaded_preset)
@@ -91,13 +91,13 @@ class SynthEval():
         if not scores['utility']['val'] == []:
             scores_lst = np.sqrt(sum(np.square(scores['utility']['err'])))/len(scores['utility']['err'])
             print("""\
-| Average utility score                    :   %.4f  %.4f   |""" % (np.mean(scores['utility']['val']), scores_lst)
+| Average utility score (%2d metrics)       :   %.4f  %.4f   |""" % (len(scores['utility']['val']),np.mean(scores['utility']['val']), scores_lst)
             )
         
         if not scores['privacy']['val'] == []:
             scores_lst = np.sqrt(sum(np.square(scores['privacy']['err'])))/len(scores['privacy']['err'])
             print("""\
-| Average privacy score                    :   %.4f  %.4f   |""" % (np.mean(scores['privacy']['val']), scores_lst)
+| Average privacy score (%2d metrics)       :   %.4f  %.4f   |""" % (len(scores['privacy']['val']),np.mean(scores['privacy']['val']), scores_lst)
             )
 
         print("""\
@@ -105,7 +105,7 @@ class SynthEval():
         )
         pass
 
-    def custom_eval(self, synthetic_dataframe, analysis_target_var, **kwargs):
+    def custom_eval(self, synthetic_dataframe, analysis_target_var=None, **kwargs):
 
         self._update_syn_data(synthetic_dataframe)
         
@@ -132,24 +132,24 @@ class SynthEval():
             M = loaded_metrics[method](real_data, synt_data, hout_data, self.categorical_columns, self.numerical_columns, self.nn_dist, analysis_target_var, do_preprocessing=False)
             results[method] = M.evaluate(**kwargs[method])
 
-            if loaded_metrics[method].type() == 'utility':
-                utility_output_txt += M.format_output() + '\n'
-            else:
-                privacy_output_txt += M.format_output() + '\n'
+            string = M.format_output()
+            if string is not None:
+                if loaded_metrics[method].type() == 'utility':
+                    utility_output_txt += string + '\n'
+                else:
+                    privacy_output_txt += string + '\n'
 
             if self.hold_out is not None:
-                pl = M.privacy_loss(**kwargs[method])
+                pl = M.privacy_loss()
                 if pl is not None:
                     scores['privacy']["val"].extend(pl[0]["val"])
                     scores['privacy']["err"].extend(pl[0]["err"])
-                    privacy_output_txt += pl[1]
+                    privacy_output_txt += pl[1] + '\n'
 
             normalized_result = M.normalize_output()
             if normalized_result is not None:
                 scores[loaded_metrics[method].type()]["val"].extend(normalized_result["val"])
                 scores[loaded_metrics[method].type()]["err"].extend(normalized_result["err"])
-
-        #print(scores)
 
         print("""\
 

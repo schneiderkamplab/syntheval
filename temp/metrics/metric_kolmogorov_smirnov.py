@@ -16,11 +16,7 @@ def _discrete_ks_statistic(x, y):
 def _discrete_ks(x, y, n_perms=1000):
     """Function for doing permutation test of discrete values in the KS test"""
     res = permutation_test((x, y), _discrete_ks_statistic, n_resamples=n_perms, vectorized=False, permutation_type='independent', alternative='greater')
-    # plt.figure()
-    # plt.hist(res.null_distribution, bins=50)
-    # plt.axvline(x=res.statistic, color='red', linestyle='--')
-    # plt.savefig('permutation_test')
-    # plt.close()
+
     return res.statistic, res.pvalue
 
 def featurewise_ks_test(real, fake, cat_cols, sig_lvl=0.05, do_permutation = True, n_perms = 1000):
@@ -128,7 +124,7 @@ class KolmogorovSmirnovTest(MetricClass):
 | Kolmogorov–Smirnov test                                       |
 |   -> avg. Kolmogorov–Smirnov distance    :   %.4f  %.4f   |
 |   -> avg. Kolmogorov–Smirnov p-value     :   %.4f  %.4f   |
-|   -> # significant tests at a=0.05       :   %d                |
+|   -> # significant tests at a=0.05       :   %2d               |
 |   -> fraction of significant tests       :   %.4f           |""" % (R['avg stat'], 
                                                                       R['stat err'], 
                                                                       R['avg pval'], 

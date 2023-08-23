@@ -13,23 +13,23 @@ from scipy.optimize import curve_fit
 #           }
 # plt.rcParams.update(params) 
 
-def PlotDWM(means, sem, labels, fig_index):
+def plot_dimensionwise_means(means, sem, labels):
     """Plot the dimensionwise means of real and synthetic data and note down the GoF"""
 
     if len(means) < 10:
         m_diff = means[:,0]-means[:,1]
-        pr_sem = np.sum(sem,axis=1)
+        pr_sem = np.sqrt(np.sum(sem**2,axis=1))
         fig, ax = plt.subplots(figsize=(7,5))
         #plt.scatter(m_diff,range(len(m_diff)))
         plt.errorbar(m_diff,range(len(m_diff)),xerr=np.array(pr_sem)*1.96,marker='o',linestyle='none', capsize=6, markersize="6")
         plt.yticks(range(len(m_diff)), labels)
         plt.vlines(0,-0.5,len(means)-0.5,colors='k',alpha=0.5)
         
-        plt.title(r"\begin{center} Differences in means \\ \normalsize{}{95\% confidence intervals} \end{center}")
+        plt.title(r"Dimensionwise means (95% confidence intervals)")
         plt.xlabel('mean difference')
         plt.tight_layout()
         plt.grid(linestyle='--', alpha=0.5)
-        plt.savefig('plot_dwm_'+str(fig_index)+'.png')
+        plt.savefig('dwm.png')
         #plt.show()
     else:
         y = lambda x, a : a*x
@@ -43,7 +43,7 @@ def PlotDWM(means, sem, labels, fig_index):
                             marker='o',linestyle='none', capsize=2, markersize="2")
         plt.plot(xline,y(xline,1))
 
-        plt.title(r"\begin{center} Dimensionwise means \\ \normalsize{}{95\% confidence intervals} \end{center}")
+        plt.title(r"Dimensionwise means (95% confidence intervals)")
         plt.xlabel('real data')
         plt.ylabel('synthetic data')
         ax.text(0.95, 0.01, ('CC = ' + str(np.round(popt[0],3))),
@@ -52,11 +52,11 @@ def PlotDWM(means, sem, labels, fig_index):
 
         plt.tight_layout()
         plt.grid(linestyle='--', alpha=0.3)
-        plt.savefig('plot_dwm_'+str(fig_index)+'.png')
+        plt.savefig('dwm.png')
         #plt.show()
     pass
 
-def PlotPCA(reals, fakes, fig_index):
+def plot_principal_components(reals, fakes):
     """Plot first two PCA components of real and synthetic data side by side"""
     class_num = len(np.unique(reals['target']))
 
@@ -73,7 +73,7 @@ def PlotPCA(reals, fakes, fig_index):
     fig.legend(handles, labels, title = 'class', loc='center right')
     fig.tight_layout()
     fig.subplots_adjust(right=0.85)
-    plt.savefig('plot_pca_'+str(fig_index)+'.png')
+    plt.savefig('pca.png')
     #plt.show()
     pass
 

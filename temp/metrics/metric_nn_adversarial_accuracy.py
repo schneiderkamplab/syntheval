@@ -38,25 +38,24 @@ class NearestNeighbourAdversarialAccuracy(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'utility'
 
-    def evaluate(self, real=None, fake=None, n_batches=30) -> dict:
+    def evaluate(self, real=None, fake=None, n_resample=30) -> dict:
         """Implementation heavily inspired by original paper"""
+        self.n_resample = n_resample
         if (real is None and fake is None):
             real = self.real_data
             fake = self.synt_data
-        
-        bool_cat_cols = [col1 in self.cat_cols for col1 in real.columns]
 
         real[self.num_cols] = MinMaxScaler().fit_transform(real[self.num_cols])
         fake[self.num_cols] = MinMaxScaler().fit_transform(fake[self.num_cols])
         
         if len(real)*2 < len(fake):
             aa_lst = []
-            for batch in range(n_batches):
+            for batch in range(n_resample):
                 temp_f = fake.sample(n=len(real))
-                aa_lst.append(_adversarial_score(real, temp_f, bool_cat_cols, self.nn_dist))
+                aa_lst.append(_adversarial_score(real, temp_f, self.cat_cols, self.nn_dist))
             self.results = {'avg': np.mean(aa_lst), 'err': np.std(aa_lst, ddof=1)/np.sqrt(len(aa_lst))}
         else:
-            self.results = {'avg': _adversarial_score(real, fake, bool_cat_cols, self.nn_dist), 'err': 0.0}
+            self.results = {'avg': _adversarial_score(real, fake, self.cat_cols, self.nn_dist), 'err': 0.0}
 
         return self.results
 
@@ -78,13 +77,13 @@ class NearestNeighbourAdversarialAccuracy(MetricClass):
         Return dictionary of lists 'val' and 'err' """
         return {'val': [1-self.results['avg']], 'err': [self.results['err']]}
 
-    def privacy_loss(self,n_batches=30) -> tuple:
+    def privacy_loss(self) -> tuple:
         train_res = self.results
-        test_res = self.evaluate(real=self.hout_data,fake=self.synt_data,n_batches=n_batches)
+        test_res = self.evaluate(real=self.hout_data,fake=self.synt_data,n_resample=self.n_resample)
 
         diff     = abs(test_res['avg'] - train_res['avg'])
         err_diff = np.sqrt(test_res['err']**2+train_res['err']**2)
 
         string = """\
-| Privacy loss (diff in NNAA)              :   %.4f  %.4f   |""" % (diff, err_diff)
+| Privacy loss (diff. in NNAA)             :   %.4f  %.4f   |""" % (diff, err_diff)
         return {'val': [1-diff], 'err': [err_diff]}, string

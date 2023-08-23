@@ -1,4 +1,8 @@
 {
-    "metric_a": {"opt1": 1}, 
-    "metric_b": {}
+    "p_mse"     : {"k_folds": 5},
+    "nndr"      : {},
+    "nnaa"      : {"n_resample": 30},
+    "dcr"       : {},
+    "hit_rate"  : {"thres_percent": 0.0333},
+    "eps_risk"  : {}
 }

@@ -16,7 +16,7 @@ def load_metrics():
         for attribute_name in dir(module):
             attribute = getattr(module, attribute_name)
             if (
-                isinstance(attribute,type) 
+                isinstance(attribute,type)
                 and issubclass(attribute, MetricClass)
                 and attribute != MetricClass
             ):
