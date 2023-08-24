@@ -10,43 +10,6 @@ from scipy.stats import entropy
 
 from utils.nn_distance import _knn_distance
 
-def epsilon_identifiability(real, fake, num_cols, cat_cols, metric):
-    """Function for computing the epsilon identifiability risk
-
-    Adapted from:
-    Yoon, J., Drumright, L. N., & van der Schaar, M. (2020). Anonymization Through Data Synthesis Using Generative Adversarial Networks (ADS-GAN). 
-    IEEE Journal of Biomedical and Health Informatics, 24(8), 2378–2388. [doi:10.1109/JBHI.2020.2980262] 
-    """
-
-    # Entropy computation
-    def column_entropy(labels):
-        value, counts = np.unique(np.round(labels), return_counts=True)
-        return entropy(counts)
-
-    bool_cat_cols = [col1 in cat_cols for col1 in real.columns]
-
-    if metric == 'euclid':
-        real = np.asarray(real[num_cols])
-        fake = np.asarray(fake[num_cols])
-    else: 
-        real, fake = np.asarray(real), np.asarray(fake)
-
-    no, x_dim = np.shape(real)
-    W = [column_entropy(real[:, i]) for i in range(x_dim)]
-    W_adjust = 1/(np.array(W)+1e-16)
-
-    # for i in range(x_dim):
-    #     real_hat[:, i] = real[:, i] * 1. / W[i]
-    #     fake_hat[:, i] = fake[:, i] * 1. / W[i]
-
-    in_dists = _knn_distance(real,real,bool_cat_cols,metric,W_adjust)
-    ext_distances = _knn_distance(real,fake,bool_cat_cols,metric,W_adjust)
-
-    R_Diff = ext_distances - in_dists
-    identifiability_value = np.sum(R_Diff < 0) / float(no)
-
-    return identifiability_value
-
 def _column_entropy(labels):
         value, counts = np.unique(np.round(labels), return_counts=True)
         return entropy(counts)

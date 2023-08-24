@@ -7,20 +7,17 @@ import json
 
 import numpy as np
 
-sys.path.insert(0,'F:/GitHub repositories/syntheval/temp/')
-#sys.path.insert(0,'C:/Users/lautrup/Documents/GitHub/syntheval/temp')
+#sys.path.insert(0,'F:/GitHub repositories/syntheval/temp/')
+sys.path.insert(0,'C:/Users/lautrup/Documents/GitHub/syntheval/temp')
 from temp.metrics import load_metrics
 
 from pandas import DataFrame
 
-#from utils.nn_distance import nn_distance_metric
 from utils.variable_detection import get_cat_variables
 from utils.preprocessing import consistent_label_encoding
 
 loaded_metrics = load_metrics()
-print(loaded_metrics)
-
-
+#print(loaded_metrics)
 
 
 class SynthEval():
@@ -52,28 +49,24 @@ class SynthEval():
         self.numerical_columns = [column for column in real.columns if column not in cat_cols]
 
         self.nn_dist = nn_distance
-
         pass
     
     def full_eval(self, synt, analysis_target_var=None):
         with open('temp/presets/full_eval.json','r') as fp:
             loaded_preset = json.load(fp)
-        self.custom_eval(synt, analysis_target_var, **loaded_preset)
-        pass
+        return self.custom_eval(synt, analysis_target_var, **loaded_preset)
 
-    def fast_eval(self,synt, analysis_target_var=None):
+    def fast_eval(self, synt, analysis_target_var=None):
         with open('temp/presets/fast_eval.json','r') as fp:
             loaded_preset = json.load(fp)
-        self.custom_eval(synt, analysis_target_var, **loaded_preset)
-        pass
+        return self.custom_eval(synt, analysis_target_var, **loaded_preset)
 
-    def priv_eval(self,synt, analysis_target_var=None):
+    def priv_eval(self, synt, analysis_target_var=None):
         with open('temp/presets/privacy.json','r') as fp:
             loaded_preset = json.load(fp)
-        self.custom_eval(synt, analysis_target_var, **loaded_preset)
-        pass
+        return self.custom_eval(synt, analysis_target_var, **loaded_preset)
 
-    def _update_syn_data(self,synt):
+    def _update_syn_data(self, synt):
         """Function for adding/updating the synthetic data"""
         self.synt = synt
 
@@ -106,7 +99,6 @@ class SynthEval():
         pass
 
     def custom_eval(self, synthetic_dataframe, analysis_target_var=None, **kwargs):
-
         self._update_syn_data(synthetic_dataframe)
         
         CLE = consistent_label_encoding(self.real, self.synt, self.categorical_columns, self.hold_out)
@@ -178,11 +170,10 @@ Privacy metric description                    value   error
     """)
 
         self.format_scores(scores)
+        return results
 
-        pass
 
-
-if __name__ == '__main__':
-    S = SynthEval('r', cat_cols=1)
-    #S.custom_eval('f', metric_a={'opt1': 1}, metric_b={})
-    S.priv_eval('f')
+# if __name__ == '__main__':
+#     S = SynthEval('r', cat_cols=1)
+#     #S.custom_eval('f', metric_a={'opt1': 1}, metric_b={})
+#     S.priv_eval('f')

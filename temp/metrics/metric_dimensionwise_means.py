@@ -46,7 +46,7 @@ class MetricClassName(MetricClass):
         diff_error = np.sqrt(np.sum(mean_errors**2,axis=1))
 
         plot_dimensionwise_means(dim_means, mean_errors, self.num_cols)
-        self.results = {'avg': np.mean(means_diff), 'err': np.sqrt(sum(diff_error**2))/len(diff_error)}
+        self.results = {'avg': np.mean(abs(means_diff)), 'err': np.sqrt(sum(diff_error**2))/len(diff_error)}
         return self.results
 
     def format_output(self) -> str:

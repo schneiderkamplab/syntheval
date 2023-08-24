@@ -2,6 +2,8 @@
 # Author: Anton D. Lautrup
 # Date: 01-02-2023
 
+import time
+
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -19,9 +21,10 @@ def plot_dimensionwise_means(means, sem, labels):
     if len(means) < 10:
         m_diff = means[:,0]-means[:,1]
         pr_sem = np.sqrt(np.sum(sem**2,axis=1))
-        fig, ax = plt.subplots(figsize=(7,5))
+        fig, ax = plt.subplots(figsize=(6,5))
         #plt.scatter(m_diff,range(len(m_diff)))
         plt.errorbar(m_diff,range(len(m_diff)),xerr=np.array(pr_sem)*1.96,marker='o',linestyle='none', capsize=6, markersize="6")
+        labels = [label[:10] + '...' if len(label) > 10 else label for label in labels]
         plt.yticks(range(len(m_diff)), labels)
         plt.vlines(0,-0.5,len(means)-0.5,colors='k',alpha=0.5)
         
@@ -29,7 +32,7 @@ def plot_dimensionwise_means(means, sem, labels):
         plt.xlabel('mean difference')
         plt.tight_layout()
         plt.grid(linestyle='--', alpha=0.5)
-        plt.savefig('dwm.png')
+        plt.savefig('SE_dwm_' +str(int(time.time()))+'.png')
         #plt.show()
     else:
         y = lambda x, a : a*x
@@ -52,7 +55,7 @@ def plot_dimensionwise_means(means, sem, labels):
 
         plt.tight_layout()
         plt.grid(linestyle='--', alpha=0.3)
-        plt.savefig('dwm.png')
+        plt.savefig('SE_dwm_' +str(int(time.time()))+'.png')
         #plt.show()
     pass
 
@@ -61,19 +64,19 @@ def plot_principal_components(reals, fakes):
     class_num = len(np.unique(reals['target']))
 
     # Plotting
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5), sharey=True)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 5), sharey=True)
     sns.scatterplot(x=reals['PC1'], y=reals['PC2'], hue=reals['target'], ax=ax1, palette=sns.color_palette("colorblind",class_num))
     sns.scatterplot(x=fakes['PC1'], y=fakes['PC2'], hue=fakes['target'], ax=ax2, palette=sns.color_palette("colorblind",class_num))
 
     ax1.set_title('real data'),ax1.legend().remove()
-    ax2.set_title('fake data'),ax2.legend().remove()
+    ax2.set_title('synthetic data'),ax2.legend().remove()
 
     # Create a single legend for both subplots
     handles, labels = ax1.get_legend_handles_labels()
     fig.legend(handles, labels, title = 'class', loc='center right')
     fig.tight_layout()
     fig.subplots_adjust(right=0.85)
-    plt.savefig('pca.png')
+    plt.savefig('SE_pca_' +str(int(time.time()))+'.png')
     #plt.show()
     pass
 
@@ -94,7 +97,7 @@ def plot_matrix_heatmap(mat,title,file_name):
     ax.set_xticks(ax.get_xticks(), labels, rotation=45, ha='right')
     ax.set_yticks(ax.get_yticks(), labels)
     fig.tight_layout()
-    plt.savefig(file_name + '.png')
+    plt.savefig('SE_' +file_name +'_' +str(int(time.time()))+ '.png')
 
     pass
 

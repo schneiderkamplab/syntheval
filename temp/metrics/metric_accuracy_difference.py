@@ -157,7 +157,7 @@ avgs[0,2],avgs[1,2],diff[2],err[2],
 avgs[0,3],avgs[1,3],diff[3],err[3],
 np.mean(avgs[0,:]),np.mean(avgs[1,:]),self.results['avg diff'], self.results['avg diff err']
 )
-        if self.hout_data is not None:
+        if (self.results != {} and self.hout_data is not None):
             hres = self.holdout_res
             hdiff = self.results['diffs hout']
             string += """\
@@ -190,9 +190,10 @@ np.mean(hres[:,0]), np.mean(hres[:,1]), self.results['avg diff hout'], self.resu
         pass or return None if the metric should not be used in such scores.
 
         Return dictionary of lists 'val' and 'err' """
-        if self.hout_data is not None:
+        if (self.results != {} and self.hout_data is not None):
             output = {'val': [1-self.results['avg diff'], 1-self.results['avg diff hout']], 
                       'err': [self.results['avg diff err'], self.results['avg diff err hout']]}
-        else:
+        elif (self.results != {}): 
             output = {'val': [1-self.results['avg diff']], 'err': [self.results['avg diff err']]}
+        else: pass
         return output
