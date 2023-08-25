@@ -4,7 +4,7 @@
 The SynthEval library is a tool made for evaluating the quality of tabularised synthetic data compared with real data. Synthetic data is microdata that is artificially generated and thus does not directly correspond to real-world individuals, making it a possible alternative to regular data anonymity. This tool builds on many previous works, and compile them in a single tool to make evaluation of synthetic data utility easier for data scientists and reasearchers alike.
 
 ## Latest version
-The current version of the tool offers a wide selection of utility metrics, to evaluate how well your synthetic data aligns on quality, resemblance and usability. In the current version we include only three high level privacy tools, but it is the aim to provide a more extensive assesment of disclosure risk in a future version. 
+The current version of the tool offers a wide selection of utility metrics, to evaluate how well your synthetic data aligns on quality, resemblance and usability. In the current version we include only six privacy metrics, but it is the aim to provide a more extensive assesment of disclosure risk in a future version. 
 
 ## Installation
 Installation with PyPI using
@@ -19,11 +19,9 @@ In Python the library is acessed and run in the following way;
 from syntheval import SynthEval
 
 evaluator = Syntheval(df_real, hold_out = df_test, cat_cols = class_cat_col)
-evaluator.full_eval(df_fake, class_lab_col)
+evaluator.evaluate(df_fake, class_lab_col, presets_file = "full_eval", **kwargs)
 ```
-Where the user supply <code>df_real, df_test, df_fake</code> as pandas dataframes, as well as the <code>class_cat_col</code> list of column names for the categorical variables and <code>class_lab_col</code> string for designating one column with discrete values as target for usability predictions and coloration. 
-
-Results are saved to a csv file, multiple runs of the same SynthEval instance with different synthetic data files will save new rows allowing for various uses such as snapshots, checkpoints and benchmarking.
+Where the user supply <code>df_real, df_test, df_fake</code> as pandas dataframes, the <code>class_cat_col</code> is a complete list of column names or can be omitted for categoricals to be automatically inferred. Some metrics require a target class, so <code>class_lab_col</code> is a string for designating one column with discrete values as target for usability predictions and coloration. In the evaluate function, a presets file can be chosen ("full_eval", "fast_eval", or "privacy") or alternatively a filepath can be supplied to a json file with select metrics keywords. Finally, instead of (or in addition to), keyword arguments can be added in the end with additional metrics and their options. 
 
 ### Command line interface
 SynthEval can also be run from the commandline with the following syntax:
@@ -31,36 +29,37 @@ SynthEval can also be run from the commandline with the following syntax:
 > SynthEval [OPTIONS] [EVALUATE]
 
 Options:
-  -r, --real-data-file PATH   Path to csv file with real data.
-  -s, --synt-data-file PATH   Path to csv file with synthetic data.
-  -h, --test-data-file PATH   Path to csv file with real data that wasn't used
-                              for training.
-  -l, --category-labels PATH  Path to txt file with comma separated labels.
-  -c, --class-label TEXT      Label to use for prediction usability and
-                              coloring on plots.
-  --help                      Show this message and exit.
+  -r, --real-data-file PATH     Path to csv file with real data.
+  -s, --synt-data-file PATH     Path to csv file with synthetic data.
+  -h, --test-data-file PATH     Path to csv file with real data that wasn't
+                                used for training.
+  -j, --evaluation-config TEXT  Name of preset file or filepath to custom json
+                                config file.
+  -l, --category-labels PATH    Path to txt file with comma separated labels.
+  -c, --class-label TEXT        Label to use for prediction usability and
+                                coloring on plots.
+  --help                        Show this message and exit.
 ```
 
 ## Included metrics overview
-The SynthEval library comes equipped with a broard selection of metrics to evaluate various aspects of synthetic tabular data.
+The SynthEval library comes equipped with a broard selection of metrics to evaluate various aspects of synthetic tabular data. Some of the more intresting properties that makes SynthEval stand out is that many of the metrics have been carefully adapted to accept heterogeneous data. Distances between datapoints is (by default) handled using Gower's distance/similarity measure rather than the eucledian distance, which negates any requirement of special data encoding.
 
-### Quality evaluation
-Quality metrics are used for checking if the statistical properties of the real data carries over into the synthetic version. This is mainly done by checking pairwise properties, such as correlation and distributional similarity. 
+### Utility Metrics
+Utility analysis entails resemblace, quality and usability metrics testing how well the synthetic data looks like, behaves like, and substitutes like the real data.
 
 In the code we implemented:
-- Correlation matrix difference (for the nummericals only)
-- Pairwise mutual information matrix difference (for all datatypes)
+- Dimension-Wise Means (nums. only, avg. value and plot)
+- Principal Components Analysis (nums. only, plot of first two components)
+- Confidence Interval Overlap (nums. only, number and fraction of significant tests)
+- Correlation Matrix Difference (nums. only or mixed correlation)
+- Mutual Information Matrix Difference
 - Kolmogorov–Smirnov test (avg. distance, avg. p-value and number and fraction of significant tests)
+- Hellinger Distance (avg. distance)
+- Propensity Mean Squared Error (pMSE and accuracy)
+- Nearest Neighbour Adversarial Accuracy (NNAA) 
 
-### Resemblance evaluation
-Resemblance metrics are for assessing if the synthetic data can be distinguished from the real data. While the preliminary tests already are visualizing the data, additional tools are used in checking synthetic data resemblance. We include:
-- Confidence interval overlap (average and count of nonoverlaps)
-- Hellinger distance (average)
-- propensity mean squared error
-- Nearest neighbour adversarial accuracy 
-
-### Usability evaluation
-Useability is a core attribute of utility, and entails how well the synthetic data can act as a replacement for real data and provide a similar analysis. In this tool we test useability by training four different <code>sklearn</code> classifiers on real and synthetic data with 5-fold cross-validation (testing both models on the real validation fold). 
+### classification accuracy
+In this tool we test useability by training four different <code>sklearn</code> classifiers on real and synthetic data with 5-fold cross-validation (testing both models on the real validation fold). 
 - DecisionTreeClassifier
 - AdaBoostClassifier
 - RandomForestClassifier
@@ -70,12 +69,16 @@ The average accuracy is reported together with the accuracy difference from mode
 
 By default the results are given in terms of accuracy (micro F1 scores). To change, use {‘micro’, ‘macro’, ‘weighted’} for the <code>SynthEval.F1_type</code> attribute.
 
-### Utility score
-finally, a summary utility score is calculated based on the tests described above. Specifically we calculate the utility score in the following way
-$$\mathrm{UTIL} = \frac{1}{10} [ (1-\tanh{\mathrm{corr. diff.}})+(1-\tanh{\mathrm{MI diff.}})+ (1-\mathrm{KS dist.}) + (1-\mathrm{KS sig.frac.}) + \mathrm{CIO}+ (1-\mathrm{H dist.}) + \left(1-\frac{\mathrm{pMSE}}{0.25}\right) +(1-\mathrm{NNAA})+ (1-\mathrm{train F1 diff.})+(1-\mathrm{test F1 diff.})]$$
-
-### Privacy evaluation
+### Privacy Metrics
 Privacy is a crucial aspect of evaluating synthetic data, we include only three highlevel metrics with more to be added in the future.
-- average distance to closest record (normed, and divided by avg. NN dist)
-- hitting rate (for nummericals defined to be within the attribute range / 30)
-- privacy loss (difference in NNAA between test and training set, also works for checking overfitting)
+- Nearest Neighbour Distance Ratio (NNDR)
+- Privacy Losses (difference in NNAA and NNDR between test and training sets, good for checking overfitting too.)
+- Median Distance to Closest Record (normalised by internal NN distance.)
+- Hitting Rate (for nummericals defined to be within the attribute range / 30)
+- Epsilon identifiability risk (calculated using weighted NN distance)
+
+### Average Utility and Privacy Score
+As a way to condense the results of all metrics down to a single number that can be used for ranking and comparing datasets with similar level of utility or privacy, a key feature of SynthEval is mapping most included metrics to the same scale, for an averate to be carried out. This metric is not to be taken too seriously since it is mearly an unweighted average of a non-predefined set of metrics, and can exclusively be used internally in an experiment. As an additional warning the number of values used in the averages are shown, so as to indicate that a good score on few metrics are less valuable than a less good score on many more metrics. 
+
+## Creating new metrics
+SynthEval is designed with modularity in mind. Creating new, custom metrics is as easy as copying the metrics template file, and filling in the five required functions. Because, SynthEval has very little hardcoding wrt. the metrics, making new metrics work locally should require no changes other than adding the metrics script in the metrics folder.
