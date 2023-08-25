@@ -4,9 +4,9 @@
 
 import numpy as np
 
-from .core.metric import MetricClass
+from ..core.metric import MetricClass
 
-from utils.nn_distance import _knn_distance
+from ...utils.nn_distance import _knn_distance
 
 class NearestNeighbourDistanceRatio(MetricClass):
     """The Metric Class is an abstract class that interfaces with 

@@ -6,7 +6,7 @@ import numpy as np
 
 from scipy.stats import sem
 
-from .core.metric import MetricClass
+from ..core.metric import MetricClass
 
 class ConfidenceIntervalOverlap(MetricClass):
     """The Metric Class is an abstract class that interfaces with 

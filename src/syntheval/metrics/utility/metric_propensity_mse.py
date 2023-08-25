@@ -5,7 +5,7 @@
 import numpy as np
 import pandas as pd
 
-from .core.metric import MetricClass
+from ..core.metric import MetricClass
 
 from sklearn.model_selection import KFold
 from sklearn.neural_network import MLPClassifier

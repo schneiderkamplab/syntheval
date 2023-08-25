@@ -4,12 +4,12 @@
 
 import pandas as pd
 
-from .core.metric import MetricClass
+from ..core.metric import MetricClass
 
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
-from utils.plot_metrics import plot_principal_components
+from ...utils.plot_metrics import plot_principal_components
 
 class PrincipalComponentAnalysis(MetricClass):
     """The Metric Class is an abstract class that interfaces with 

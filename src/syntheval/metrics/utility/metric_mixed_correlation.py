@@ -5,10 +5,10 @@
 import numpy as np
 import pandas as pd
 
-from .core.metric import MetricClass
+from ..core.metric import MetricClass
 
 from scipy.stats import chi2_contingency
-from utils.plot_metrics import plot_matrix_heatmap
+from ...utils.plot_metrics import plot_matrix_heatmap
 
 def _cramers_V(var1,var2) :
     """function for calculating Cramers V between two categorial variables

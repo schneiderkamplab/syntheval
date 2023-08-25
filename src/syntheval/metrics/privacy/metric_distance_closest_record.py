@@ -1,17 +1,14 @@
-# Description: Dimensionwise means difference
+# Description: Distance to closest record metric
 # Author: Anton D. Lautrup
 # Date: 23-08-2023
 
 import numpy as np
 
-from .core.metric import MetricClass
+from ..core.metric import MetricClass
 
-from scipy.stats import sem
-from sklearn.preprocessing import MinMaxScaler
+from ...utils.nn_distance import _knn_distance
 
-from utils.plot_metrics import plot_dimensionwise_means
-
-class MetricClassName(MetricClass):
+class MedianDistanceToClosestRecord(MetricClass):
     """The Metric Class is an abstract class that interfaces with 
     SynthEval. When initialised the class has the following attributes:
 
@@ -28,25 +25,23 @@ class MetricClassName(MetricClass):
 
     def name() -> str:
         """ Name/keyword to reference the metric"""
-        return 'dwm'
+        return 'dcr'
 
     def type() -> str:
         """ Set to 'privacy' or 'utility' """
-        return 'utility'
+        return 'privacy'
 
     def evaluate(self) -> float | dict:
-        """Function for calculating DWM, plotting an appropriate diagram"""
-        r_scaled = MinMaxScaler().fit_transform(self.real_data[self.num_cols])
-        f_scaled = MinMaxScaler().fit_transform(self.synt_data[self.num_cols])
-
-        dim_means = np.array([np.mean(r_scaled,axis=0),np.mean(f_scaled,axis=0)]).T
-        means_diff = dim_means[:,0]-dim_means[:,1]
+        """Distance to closest record, using the same NN stuff as NNAA"""
         
-        mean_errors = np.array([sem(r_scaled),sem(f_scaled)]).T
-        diff_error = np.sqrt(np.sum(mean_errors**2,axis=1))
+        distances = _knn_distance(self.synt_data,self.real_data,self.cat_cols,1,self.nn_dist)
+        in_dists = _knn_distance(self.real_data,self.real_data,self.cat_cols,1,self.nn_dist)
 
-        plot_dimensionwise_means(dim_means, mean_errors, self.num_cols)
-        self.results = {'avg': np.mean(abs(means_diff)), 'err': np.sqrt(sum(diff_error**2))/len(diff_error)}
+        int_nn = np.median(in_dists)
+        mut_nn = np.median(distances)
+
+        dcr = mut_nn/int_nn
+        self.results = {'mDCR': dcr}
         return self.results
 
     def format_output(self) -> str:
@@ -54,7 +49,7 @@ class MetricClassName(MetricClass):
         metric is part of SynthEval. 
 |                                          :                    |"""
         string = """\
-| Average dimensionwise means diff. (nums) :   %.4f  %.4f   |""" % (self.results['avg'], self.results['err'])
+| Median distance to closest record        :   %.4f           |""" % (self.results['mDCR'])
         return string
 
     def normalize_output(self) -> dict:
@@ -65,4 +60,4 @@ class MetricClassName(MetricClass):
         pass or return None if the metric should not be used in such scores.
 
         Return dictionary of lists 'val' and 'err' """
-        return {'val': [1-self.results['avg']], 'err': [self.results['err']]}
+        return {'val': [np.tanh(self.results['mDCR'])], 'err': [0]}

@@ -4,9 +4,9 @@
 
 import numpy as np
 
-from .core.metric import MetricClass
+from ..core.metric import MetricClass
 
-from utils.nn_distance import _knn_distance
+from ...utils.nn_distance import _knn_distance
 from sklearn.preprocessing import MinMaxScaler
 
 def _adversarial_score(real, fake, cat_cols, metric):

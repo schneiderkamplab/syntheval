@@ -5,8 +5,8 @@
 from pandas import DataFrame
 from abc import ABC, abstractmethod
 
-from utils.variable_detection import get_cat_variables
-from utils.preprocessing import consistent_label_encoding
+from ...utils.variable_detection import get_cat_variables
+from ...utils.preprocessing import consistent_label_encoding
 
 class MetricClass(ABC):
     """

@@ -2,7 +2,7 @@
 # Author: Anton D. Lautrup
 # Date: 23-08-2023
 
-from .core.metric import MetricClass
+from ..core.metric import MetricClass
 
 class HittingRate(MetricClass):
     """The Metric Class is an abstract class that interfaces with 

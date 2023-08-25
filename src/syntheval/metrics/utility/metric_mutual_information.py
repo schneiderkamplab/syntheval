@@ -5,9 +5,9 @@
 import numpy as np
 import pandas as pd
 
-from .core.metric import MetricClass
+from ..core.metric import MetricClass
 
-from utils.plot_metrics import plot_matrix_heatmap
+from ...utils.plot_metrics import plot_matrix_heatmap
 from sklearn.metrics import normalized_mutual_info_score
 
 def _pairwise_attributes_mutual_information(data):

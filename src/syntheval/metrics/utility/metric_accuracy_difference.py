@@ -4,7 +4,7 @@
 
 import numpy as np
 
-from .core.metric import MetricClass
+from ..core.metric import MetricClass
 
 from tqdm import tqdm
 

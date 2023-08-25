@@ -4,7 +4,7 @@
 
 import numpy as np
 
-from .core.metric import MetricClass
+from ..core.metric import MetricClass
 
 def _scott_ref_rule(set1,set2):
     """Function for doing the Scott reference rule to calcualte number of bins needed to 

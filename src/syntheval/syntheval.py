@@ -2,20 +2,20 @@
 # Author: Anton D. Lautrup
 # Date: 16-08-2023
 
-import sys
+#import sys
 import json
 
 import numpy as np
 
-sys.path.insert(0,'F:/GitHub repositories/syntheval/src/syntheval/')
+#sys.path.insert(0,'F:/GitHub repositories/syntheval/src/syntheval/')
 #sys.path.insert(0,'C:/Users/lautrup/Documents/GitHub/syntheval/temp')
-from metrics import load_metrics
+from .metrics import load_metrics
 
 from pandas import DataFrame
 
-from utils.variable_detection import get_cat_variables
-from utils.preprocessing import consistent_label_encoding
-from utils.console_output import print_results_to_console
+from .utils.variable_detection import get_cat_variables
+from .utils.preprocessing import consistent_label_encoding
+from .utils.console_output import print_results_to_console
 
 loaded_metrics = load_metrics()
 #print(loaded_metrics)

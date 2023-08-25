@@ -4,11 +4,11 @@
 
 import numpy as np
 
-from .core.metric import MetricClass
+from ..core.metric import MetricClass
 
 from scipy.stats import entropy
 
-from utils.nn_distance import _knn_distance
+from ...utils.nn_distance import _knn_distance
 
 def _column_entropy(labels):
         value, counts = np.unique(np.round(labels), return_counts=True)
