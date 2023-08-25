@@ -7,10 +7,10 @@ from .core.metric import MetricClass
 
 def load_metrics():
     loaded_metrics = {}
-    metric_files = glob.glob("*/metrics/metric_*.py")
-    
+    metric_files = glob.glob("src/syntheval/metrics/metric_*.py")
+
     for metric_file in metric_files:
-        module_name = os.path.splitext(metric_file)[0].replace(os.path.sep,'.')#.replace("temp.","")
+        module_name = os.path.splitext(metric_file)[0].replace(os.path.sep,'.').replace("src/syntheval/","")
         module = importlib.import_module(module_name)
 
         for attribute_name in dir(module):
