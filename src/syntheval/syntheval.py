@@ -2,20 +2,16 @@
 # Author: Anton D. Lautrup
 # Date: 16-08-2023
 
-#import sys
 import json
+import os
 
 import numpy as np
-
-#sys.path.insert(0,'F:/GitHub repositories/syntheval/src/syntheval/')
-#sys.path.insert(0,'C:/Users/lautrup/Documents/GitHub/syntheval/temp')
-from .metrics import load_metrics
-
 from pandas import DataFrame
 
-from .utils.variable_detection import get_cat_variables
-from .utils.preprocessing import consistent_label_encoding
+from .metrics import load_metrics
 from .utils.console_output import print_results_to_console
+from .utils.preprocessing import consistent_label_encoding
+from .utils.variable_detection import get_cat_variables
 
 loaded_metrics = load_metrics()
 #print(loaded_metrics)
@@ -84,12 +80,15 @@ class SynthEval():
         
         loaded_preset = {}
         if presets_file is not None:
+            ext = presets_file.split(".")[-1].lower()
             if _has_not_slash_or_backslash(presets_file):
-                with open('src/syntheval/presets/'+presets_file+'.json','r') as fp:
+                with open(os.path.dirname(__file__)+'/presets/'+presets_file+'.json','r') as fp:
                     loaded_preset = json.load(fp)
-            else:
+            elif (ext == "json"):
                 with open(presets_file,'r') as fp:
                     loaded_preset = json.load(fp)
+            else:
+                raise Exception("Error: unrecognised preset keyword or file format!")
         
         evaluation_config = {**loaded_preset, **kwargs}
 
