@@ -18,7 +18,7 @@ In Python the library is acessed and run in the following way;
 ```python
 from syntheval import SynthEval
 
-evaluator = Syntheval(df_real, hold_out = df_test, cat_cols = class_cat_col)
+evaluator = SynthEval(df_real, hold_out = df_test, cat_cols = class_cat_col)
 evaluator.evaluate(df_fake, class_lab_col, presets_file = "full_eval", **kwargs)
 ```
 Where the user supply <code>df_real, df_test, df_fake</code> as pandas dataframes, the <code>class_cat_col</code> is a complete list of column names or can be omitted for categoricals to be automatically inferred. Some metrics require a target class, so <code>class_lab_col</code> is a string for designating one column with discrete values as target for usability predictions and coloration. In the evaluate function, a presets file can be chosen ("full_eval", "fast_eval", or "privacy") or alternatively a filepath can be supplied to a json file with select metrics keywords. Finally, instead of (or in addition to), keyword arguments can be added in the end with additional metrics and their options. 
@@ -26,7 +26,7 @@ Where the user supply <code>df_real, df_test, df_fake</code> as pandas dataframe
 ### Command line interface
 SynthEval can also be run from the commandline with the following syntax:
 ```
-> SynthEval [OPTIONS] [EVALUATE]
+> syntheval [OPTIONS] [EVALUATE]
 
 Options:
   -r, --real-data-file PATH     Path to csv file with real data.
