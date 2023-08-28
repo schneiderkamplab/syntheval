@@ -75,12 +75,12 @@ class NearestNeighbourDistanceRatio(MetricClass):
         train_res = self.results
         test_res = self.evaluate(real=self.hout_data,fake=self.synt_data)
 
-        diff     = abs(test_res['avg'] - train_res['avg'])
+        diff     = test_res['avg'] - train_res['avg']
         err_diff = np.sqrt(test_res['err']**2+train_res['err']**2)
 
         string = """\
 | Privacy loss (diff. in NNDR)             :   %.4f  %.4f   |""" % (diff, err_diff)
-        return {'val': [1-diff], 'err': [err_diff]}, string
+        return {'val': [1-max(0,diff)], 'err': [err_diff]}, string
 
 
 
