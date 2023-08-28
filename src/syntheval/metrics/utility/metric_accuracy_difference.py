@@ -3,18 +3,15 @@
 # Date: 22-08-2023
 
 import numpy as np
+from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import f1_score
+from sklearn.model_selection import KFold
+from sklearn.tree import DecisionTreeClassifier
+from tqdm import tqdm
 
 from ..core.metric import MetricClass
 
-from tqdm import tqdm
-
-from sklearn.model_selection import KFold
-
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
-
-from sklearn.metrics import f1_score
 
 def class_test(real_models, fake_models, real, fake, test, F1_type):
     """Function for running a training session and getting predictions 
@@ -177,9 +174,9 @@ hres[0,2], hres[1,2], hdiff[2],
 hres[0,3], hres[1,3], hdiff[3],
 np.mean(hres[:,0]), np.mean(hres[:,1]), self.results['avg diff hout'], self.results['avg diff err hout']
 )
-        else:
-            string += """\
-+---------------------------------------------------------------+"""
+#         else:
+#             string += """\
+# +---------------------------------------------------------------+"""
         return string
 
     def normalize_output(self) -> dict:
