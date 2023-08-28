@@ -1,7 +1,9 @@
-from click import argument, command, option, Path
 from sys import argv
 
-from syntheval import SynthEval
+from click import Path, argument, command, option
+
+from . import SynthEval
+
 
 @command()
 @argument(
@@ -51,7 +53,7 @@ from syntheval import SynthEval
     type=str,
     help="""Label to use for prediction usability and coloring on plots."""
 )
-def main(evaluate,real_data_file,synt_data_file,test_data_file,evaluation_config,category_labels,class_label):
+def cli(evaluate,real_data_file,synt_data_file,test_data_file,evaluation_config,category_labels,class_label):
     from syntheval import SynthEval
     ext = real_data_file.split(".")[-1].lower()
     if ext == "csv":
@@ -73,4 +75,4 @@ def main(evaluate,real_data_file,synt_data_file,test_data_file,evaluation_config
     evaluator = SynthEval(df_real, hold_out=df_test, cat_cols=category_labels)
     evaluator.evaluate(df_fake, class_label, evaluation_config)
     
-main()
+#cli()

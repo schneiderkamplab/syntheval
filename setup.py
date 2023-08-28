@@ -1,16 +1,16 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='SynthEval',
-    version='0.1.0',
-    packages=find_packages(),
+    name='syntheval',
+    version='1.2',
+    packages=['syntheval'],#find_packages(),
     include_package_data=True,
     install_requires=[
         'Click',
     ],
     entry_points={
         'console_scripts': [
-            'SynthEval = syntheval.src.__main__:cli',
+            'SynthEval = syntheval.__main__:main',
         ],
     },
 )
