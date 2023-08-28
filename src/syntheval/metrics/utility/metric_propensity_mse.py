@@ -8,7 +8,8 @@ import pandas as pd
 from ..core.metric import MetricClass
 
 from sklearn.model_selection import KFold
-from sklearn.neural_network import MLPClassifier
+#from sklearn.neural_network import MLPClassifier
+from sklearn.linear_model import LogisticRegression
 
 from sklearn.metrics import f1_score
 
@@ -42,10 +43,10 @@ class PropensityMeanSquaredError(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'utility'
 
-    def evaluate(self,k_folds=5) -> float | dict:
+    def evaluate(self,k_folds=5,max_iter=1000) -> float | dict:
         """Train a a discriminator to distinguish between real and fake data."""
 
-        discriminator = MLPClassifier(random_state=42)
+        discriminator = LogisticRegression(random_state=42,max_iter=max_iter)
         Df = stack(self.real_data,self.synt_data).drop(['index'], axis=1)
 
         Xs, ys = Df.drop(['real'], axis=1), Df['real']
