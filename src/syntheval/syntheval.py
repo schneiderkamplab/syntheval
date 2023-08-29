@@ -16,8 +16,8 @@ from .utils.variable_detection import get_cat_variables
 loaded_metrics = load_metrics()
 #print(loaded_metrics)
 
-def _has_not_slash_or_backslash(input_string):
-    return not ('/' in input_string or '\\' in input_string)
+def _has_not_slash_backslash_or_dot(input_string):
+    return not ('/' in input_string or '\\' in input_string or '.' in input_string)
 
 class SynthEval():
     def __init__(self, 
@@ -81,7 +81,7 @@ class SynthEval():
         loaded_preset = {}
         if presets_file is not None:
             ext = presets_file.split(".")[-1].lower()
-            if _has_not_slash_or_backslash(presets_file):
+            if _has_not_slash_backslash_or_dot(presets_file):
                 with open(os.path.dirname(__file__)+'/presets/'+presets_file+'.json','r') as fp:
                     loaded_preset = json.load(fp)
             elif (ext == "json"):
