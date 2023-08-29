@@ -47,12 +47,10 @@ class PropensityMeanSquaredError(MetricClass):
     def evaluate(self,k_folds=5,max_iter=1000) -> float | dict:
         """Train a a discriminator to distinguish between real and fake data."""
 
-        self.real_data[self.num_cols] = StandardScaler().fit_transform(self.real_data[self.num_cols])
-        self.synt_data[self.num_cols] = StandardScaler().fit_transform(self.synt_data[self.num_cols])
-
         discriminator = LogisticRegression(random_state=42,max_iter=max_iter)
         Df = stack(self.real_data,self.synt_data).drop(['index'], axis=1)
 
+        Df[self.num_cols] = StandardScaler().fit_transform(Df[self.num_cols])
         Xs, ys = Df.drop(['real'], axis=1), Df['real']
 
         ### Run 5-fold cross-validation
