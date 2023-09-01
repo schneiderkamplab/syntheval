@@ -2,6 +2,7 @@
 # Author: Anton D. Lautrup
 # Date: 23-08-2023
 
+import numpy as np
 from ..core.metric import MetricClass
 
 class HittingRate(MetricClass):
@@ -58,4 +59,7 @@ class HittingRate(MetricClass):
         pass or return None if the metric should not be used in such scores.
 
         Return dictionary of lists 'val' and 'err' """
-        return {'val': [1 - self.results['hit rate']], 'err': [0]}
+
+        val_non_lin = np.exp(-5*self.results['hit rate'])#max(0,-10*self.results['hit rate'])
+
+        return {'val': [val_non_lin], 'err': [0]}

@@ -77,8 +77,8 @@ Privacy is a crucial aspect of evaluating synthetic data, we include only three 
 - Hitting Rate (for nummericals defined to be within the attribute range / 30)
 - Epsilon identifiability risk (calculated using weighted NN distance)
 
-### Average Utility and Privacy Score
-As a way to condense the results of all metrics down to a single number that can be used for ranking and comparing datasets with similar level of utility or privacy, a key feature of SynthEval is mapping most included metrics to the same scale, for an averate to be carried out. This metric is not to be taken too seriously since it is mearly an unweighted average of a non-predefined set of metrics, and can exclusively be used internally in an experiment. As an additional warning the number of values used in the averages are shown, so as to indicate that a good score on few metrics are less valuable than a less good score on many more metrics. 
+### Utility and Privacy Indexes
+As a way to condense the results of all metrics down to a single number that can be used for ranking and comparing datasets with similar level of utility or privacy, a key feature of SynthEval is mapping most included metrics to the same scale, for an average to be carried out. This index is not to be taken too seriously since it is mearly an unweighted average of a non-predefined set of metrics, and can exclusively be used internally in an experiment. As an additional warning the number of values used in the averages are shown, so as to indicate that a good score on few metrics are less valuable than a less good score on many more metrics. 
 
 ## Creating new metrics
 SynthEval is designed with modularity in mind. Creating new, custom metrics is as easy as copying the metrics template file, and filling in the five required functions. Because, SynthEval has very little hardcoding wrt. the metrics, making new metrics work locally should require no changes other than adding the metrics script in the metrics folder.

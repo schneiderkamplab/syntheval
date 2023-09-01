@@ -36,13 +36,13 @@ Privacy metric description                    value   error
     if not scores['utility']['val'] == []:
         scores_lst = np.sqrt(sum(np.square(scores['utility']['err'])))/len(scores['utility']['err'])
         print("""\
-| Average utility score (%2d metrics)       :   %.4f  %.4f   |""" % (len(scores['utility']['val']),np.mean(scores['utility']['val']), scores_lst)
+| Utility index (avg. of %2d scores)        :   %.4f  %.4f   |""" % (len(scores['utility']['val']),np.mean(scores['utility']['val']), scores_lst)
         )
         
     if not scores['privacy']['val'] == []:
         scores_lst = np.sqrt(sum(np.square(scores['privacy']['err'])))/len(scores['privacy']['err'])
         print("""\
-| Average privacy score (%2d metrics)       :   %.4f  %.4f   |""" % (len(scores['privacy']['val']),np.mean(scores['privacy']['val']), scores_lst)
+| Privacy index (avg. of %2d scores)        :   %.4f  %.4f   |""" % (len(scores['privacy']['val']),np.mean(scores['privacy']['val']), scores_lst)
         )
 
     print("""\

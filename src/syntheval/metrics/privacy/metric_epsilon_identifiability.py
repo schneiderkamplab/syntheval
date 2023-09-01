@@ -85,4 +85,5 @@ class EpsilonIdentifiability(MetricClass):
         pass or return None if the metric should not be used in such scores.
 
         Return dictionary of lists 'val' and 'err' """
-        return {'val': [1-self.results['eps_risk']], 'err': [0]}
+        val_non_lin = np.exp(-5*self.results['eps_risk'])
+        return {'val': [val_non_lin], 'err': [0]}

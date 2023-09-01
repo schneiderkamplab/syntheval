@@ -49,7 +49,7 @@ class PrincipalComponentAnalysis(MetricClass):
             f_pca = pd.DataFrame(f_pca,columns=['PC1', 'PC2'])
             r_pca['target'] = self.real_data[self.analysis_target]
             f_pca['target'] = self.synt_data[self.analysis_target]
-            plot_principal_components(r_pca,f_pca)
+            if self.verbose: plot_principal_components(r_pca,f_pca)
             pass
         elif self.analysis_target is None: 
             print('Error: Principal component analysis did not run, analysis class variable not set!')

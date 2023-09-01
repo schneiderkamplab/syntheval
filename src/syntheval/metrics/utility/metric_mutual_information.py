@@ -38,7 +38,7 @@ class MutualInformation(MetricClass):
         f_mi = _pairwise_attributes_mutual_information(self.synt_data)
 
         mi_mat = r_mi - f_mi
-        plot_matrix_heatmap(mi_mat,'Mutual information matrix difference', 'mi')
+        if self.verbose: plot_matrix_heatmap(mi_mat,'Mutual information matrix difference', 'mi')
         
         self.results = {'mutual_inf_diff': np.linalg.norm(mi_mat, ord='fro')}
         return self.results

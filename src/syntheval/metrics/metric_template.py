@@ -18,6 +18,8 @@ class MetricClassName(MetricClass):
     self.nn_dist   : string keyword
     self.analysis_target: variable name
 
+    self.verbose   : bool (mainly for supressing prints and plots)
+
     """
 
     def name() -> str:

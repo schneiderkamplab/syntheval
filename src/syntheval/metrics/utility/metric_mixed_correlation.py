@@ -92,12 +92,12 @@ class MixedCorrelation(MetricClass):
             r_corr = mixed_correlation(self.real_data,self.num_cols,self.cat_cols)
             f_corr = mixed_correlation(self.synt_data,self.num_cols,self.cat_cols)
             corr_mat = r_corr-f_corr
-            plot_matrix_heatmap(corr_mat,'Mixed correlation matrix difference', 'corr')
+            if self.verbose: plot_matrix_heatmap(corr_mat,'Mixed correlation matrix difference', 'corr')
         else:
             r_corr = self.real_data[self.num_cols].corr()
             f_corr = self.synt_data[self.num_cols].corr()
             corr_mat = r_corr-f_corr
-            plot_matrix_heatmap(corr_mat,'Correlation matrix difference (nums only)', 'corr')
+            if self.verbose: plot_matrix_heatmap(corr_mat,'Correlation matrix difference (nums only)', 'corr')
         
         self.results = {'corr_mat_diff': np.linalg.norm(corr_mat,ord='fro')}
         return self.results

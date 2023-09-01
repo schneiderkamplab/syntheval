@@ -73,5 +73,9 @@ class HellingerDistance(MetricClass):
 
         Return dictionary of lists 'val' and 'err'
         """
-        return {'val': [1-self.results['avg']], 'err': [self.results['err']]}
+        power = np.exp(10*(self.results['avg']-0.25))
+        val_non_lin     = 1/(1+power)
+        val_non_lin_err = 10*power/((1+power)**2)*self.results['err']
+
+        return {'val': [val_non_lin], 'err': [val_non_lin_err]}
 

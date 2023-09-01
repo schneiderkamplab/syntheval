@@ -89,5 +89,8 @@ class ConfidenceIntervalOverlap(MetricClass):
 
         Return dictionary of lists 'val' and 'err' """
         if self.results != {}:
-            return {'val': [self.results['avg overlap']], 'err': [self.results['overlap err']]}
+            power = np.exp(-8*(self.results['avg overlap']-0.5))
+            val_non_lin     = 1/(1+power)
+            val_non_lin_err = 8*power/((1+power)**2)*self.results['overlap err']
+            return {'val': [val_non_lin], 'err': [val_non_lin_err]}
         else: pass

@@ -142,4 +142,8 @@ class KolmogorovSmirnovTest(MetricClass):
 
         Return dictionary of lists 'val' and 'err' """
         R = self.results
-        return {'val': [1-R['avg stat'], 1- R['frac sigs']], 'err': [R['stat err'], 0]}
+
+        val_non_lin     = np.exp(-8*R['avg stat'])
+        val_non_lin_err = 8*val_non_lin*R['stat err']
+
+        return {'val': [val_non_lin, 1- R['frac sigs']], 'err': [val_non_lin_err, 0]}

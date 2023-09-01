@@ -23,7 +23,8 @@ class MetricClass(ABC):
             num_cols: list = None,
             nn_dist: str = None,
             analysis_target : str = None,
-            do_preprocessing: bool = True
+            do_preprocessing: bool = True,
+            verbose: bool = True
     ) -> None:
         
         if do_preprocessing:
@@ -47,6 +48,8 @@ class MetricClass(ABC):
         self.analysis_target = analysis_target
 
         self.results = {}
+
+        self.verbose = verbose
 
         pass
 
