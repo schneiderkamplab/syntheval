@@ -47,7 +47,12 @@ class MetricClassName(MetricClass):
     def normalize_output(self) -> dict:
         """ To add this metric to utility or privacy scores map the main 
         result(s) to the zero one interval where zero is worst performance 
-        and one is best.
+        and one is best. 
+        
+        Depending on the metric, you may want to check what scores are actually
+        realistically possible and adjust this scale using nonlinearities so that 
+        values below 0.95 are actually possible and that the metric does not 
+        universally drag the average up. See the existing metrics for examples.
         
         pass or return None if the metric should not be used in such scores.
 
