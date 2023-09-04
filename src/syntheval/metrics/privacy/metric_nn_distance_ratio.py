@@ -61,7 +61,11 @@ class NearestNeighbourDistanceRatio(MetricClass):
         pass or return None if the metric should not be used in such scores.
 
         Return dictionary of lists 'val' and 'err' """
-        return {'val': [self.results['avg']], 'err': [self.results['err']]}
+
+        val_non_lin     = self.results['avg']**3
+        val_non_lin_err = 3*self.results['avg']**2*self.results['err']
+
+        return {'val': [val_non_lin], 'err': [val_non_lin_err]}
 
     def privacy_loss(self) -> tuple:
         """ Extra function for handling privacy loss. I.e. the difference in
@@ -78,8 +82,8 @@ class NearestNeighbourDistanceRatio(MetricClass):
         diff     = test_res['avg'] - train_res['avg']
         err_diff = np.sqrt(test_res['err']**2+train_res['err']**2)
 
-        val_non_lin     = np.exp(-8*max(0,diff))
-        val_non_lin_err = 8*val_non_lin*err_diff
+        val_non_lin     = np.exp(-10*max(0,diff))
+        val_non_lin_err = 10*val_non_lin*err_diff
 
         string = """\
 | Privacy loss (diff. in NNDR)             :   %.4f  %.4f   |""" % (diff, err_diff)

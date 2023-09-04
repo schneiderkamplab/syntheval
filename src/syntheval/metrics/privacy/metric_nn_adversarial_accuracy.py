@@ -84,8 +84,8 @@ class NearestNeighbourAdversarialAccuracy(MetricClass):
         diff     = test_res['avg'] - train_res['avg']
         err_diff = np.sqrt(test_res['err']**2+train_res['err']**2)
 
-        val_non_lin     = np.exp(-8*max(0,diff))
-        val_non_lin_err = 8*val_non_lin*err_diff
+        val_non_lin     = np.exp(-10*max(0,diff))
+        val_non_lin_err = 10*val_non_lin*err_diff
 
         string = """\
 | Privacy loss (diff. in NNAA)             :   %.4f  %.4f   |""" % (diff, err_diff)
