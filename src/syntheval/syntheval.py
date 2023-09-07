@@ -114,9 +114,10 @@ class SynthEval():
             if self.hold_out is not None:
                 pl = M.privacy_loss()
                 if pl is not None:
-                    scores['privacy']["val"].extend(pl[0]["val"])
-                    scores['privacy']["err"].extend(pl[0]["err"])
-                    privacy_output_txt += pl[1] + '\n'
+                    results[method].update(pl[0])
+                    scores['privacy']["val"].extend(pl[1]["val"])
+                    scores['privacy']["err"].extend(pl[1]["err"])
+                    privacy_output_txt += pl[2] + '\n'
 
             if normalized_result is not None:
                 scores[loaded_metrics[method].type()]["val"].extend(normalized_result["val"])

@@ -89,4 +89,4 @@ class NearestNeighbourAdversarialAccuracy(MetricClass):
 
         string = """\
 | Privacy loss (diff. in NNAA)             :   %.4f  %.4f   |""" % (diff, err_diff)
-        return {'val': [val_non_lin], 'err': [val_non_lin_err]}, string
+        return {'priv_loss': diff, 'priv_loss_err': err_diff}, {'val': [val_non_lin], 'err': [val_non_lin_err]}, string

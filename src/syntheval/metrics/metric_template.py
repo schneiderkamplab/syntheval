@@ -68,7 +68,7 @@ class MetricClassName(MetricClass):
         
         Privacy loss is always treated as a privacy metric.
         
-        Returns normalised output and formatted string.
+        Returns output, normalised output and formatted string in that order.
         """
         pass
 
