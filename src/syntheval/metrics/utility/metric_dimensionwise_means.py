@@ -69,7 +69,7 @@ class MetricClassName(MetricClass):
 
         Return dictionary of lists 'val' and 'err' """
 
-        val_non_lin     = np.exp(-20*self.results['avg'])
-        val_non_lin_err = 20*val_non_lin*self.results['err']
+        val_non_lin     = np.exp(-25*self.results['avg'])
+        val_non_lin_err = 25*val_non_lin*self.results['err']
 
         return {'val': [val_non_lin], 'err': [val_non_lin_err]}

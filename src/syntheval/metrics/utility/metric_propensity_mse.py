@@ -96,4 +96,8 @@ class PropensityMeanSquaredError(MetricClass):
         pass or return None if the metric should not be used in such scores.
 
         Return dictionary of lists 'val' and 'err' """
-        return {'val': [1-4*self.results['avg pMSE']], 'err': [4*self.results['pMSE err']]}
+
+        val_non_lin = np.exp(-10*self.results['avg pMSE'])
+        val_non_lin_err = 10*val_non_lin*self.results['pMSE err']
+
+        return {'val': [val_non_lin], 'err': [val_non_lin_err]}
