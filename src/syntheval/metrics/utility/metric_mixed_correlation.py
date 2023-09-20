@@ -56,7 +56,7 @@ def mixed_correlation(data,num_cols,cat_cols):
     top_row = pd.concat([corr_cat_cat,corr_cat_num],axis=1)
     bot_row = pd.concat([corr_cat_num.transpose(),corr_num_num],axis=1)
     corr = pd.concat([top_row,bot_row],axis=0)
-    return corr
+    return corr + np.diag(1-np.diag(corr))
 
 class MixedCorrelation(MetricClass):
     """The Metric Class is an abstract class that interfaces with 
@@ -81,7 +81,7 @@ class MixedCorrelation(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'utility'
 
-    def evaluate(self, mixed_corr=True) -> dict:
+    def evaluate(self, mixed_corr=True, return_mats=False) -> dict:
         """Function for calculating the (mixed) correlation matrix difference.
         This calculation uses spearmans rho for numerical-numerical, Cramer's V for categories,
         and correlation ratio (eta) for numerical-categorials.
@@ -100,6 +100,9 @@ class MixedCorrelation(MetricClass):
             if self.verbose: plot_matrix_heatmap(corr_mat,'Correlation matrix difference (nums only)', 'corr')
         
         self.results = {'corr_mat_diff': np.linalg.norm(corr_mat,ord='fro')}
+        if return_mats: self.results['real_cor_mat'] = r_corr
+        if return_mats: self.results['synt_cor_mat'] = f_corr
+        if return_mats: self.results['diff_cor_mat'] = corr_mat
         return self.results
 
     def format_output(self) -> str:
