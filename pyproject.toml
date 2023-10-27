@@ -29,3 +29,12 @@ classifiers = [
 
 [project.scripts]
 syntheval = "syntheval.__main__:cli"
+
+[tool.hatch.build]
+include = [
+    'src/syntheval',
+    'LICENSE',
+    'README.md',
+]
+[tool.hatch.build.targets.wheel]
+packages = ["src/syntheval"]
