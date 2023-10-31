@@ -56,8 +56,8 @@ class MIAClassifier(MetricClass):
         hout_train, hout_test = train_test_split(hout, test_size=0.5, random_state=42)
         
         # Create training data consisting of synthetic and holdout data
-        X_train = pd.concat([syn, hout_train], axis=0)
-        y_train = pd.Series([1] * len(syn) + [0] * len(hout_train))
+        X_train = pd.concat([syn.sample(len(hout_train),random_state = 42), hout_train], axis=0)
+        y_train = pd.Series([1] * len(hout_train) + [0] * len(hout_train))
 
         # Create test set by combining some random data from the real and holdout data with an equal number of records from each dataframe
         X_test = pd.concat(
@@ -80,7 +80,7 @@ class MIAClassifier(MetricClass):
         # Calculate precision, recall, and F1-score
         precision = precision_score(y_test, hout_prediction)
         recall = recall_score(y_test, hout_prediction)
-        f1 = f1_score(y_test, hout_prediction, average="macro")
+        f1 = f1_score(y_test, hout_prediction, average="micro")
 
         self.results = {
             "MIA precision": precision,
@@ -95,8 +95,12 @@ class MIAClassifier(MetricClass):
                 metric is part of SynthEval.
         |                                          :                    |"""
         string = """\
-| MIA Classifier F1             :   %.4f           |""" % (
-            self.results["MIA macro F1"]
+| Membership inference attack Classifier F1:   %.4f           |
+|   -> Precision                           :   %.4f           |
+|   -> Recall                              :   %.4f           |""" % (
+            self.results["MIA macro F1"],
+            self.results["MIA precision"],
+            self.results["MIA recall"]
         )
         return string
 
