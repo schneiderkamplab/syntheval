@@ -80,7 +80,7 @@ class MIAClassifier(MetricClass):
         # Calculate precision, recall, and F1-score
         precision = precision_score(y_test, hout_prediction)
         recall = recall_score(y_test, hout_prediction)
-        f1 = f1_score(y_test, hout_prediction, average="micro")
+        f1 = f1_score(y_test, hout_prediction, average="macro")
 
         self.results = {
             "MIA precision": precision,
