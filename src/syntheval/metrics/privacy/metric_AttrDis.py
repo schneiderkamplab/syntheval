@@ -47,7 +47,7 @@ class MIAClassifier(MetricClass):
 
             combined_data = pd.concat([self.real_data, self.synt_data], ignore_index=True)
             target = combined_data[column]
-            predictors = combined_data[remaining_cat_cols]
+            predictors = combined_data.loc[:, combined_data.columns != column]
 
             # Label encode categorical columns
             target = LabelEncoder().fit_transform(target)
