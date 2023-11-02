@@ -34,7 +34,7 @@ class MIAClassifier(MetricClass):
         """Set to 'privacy' or 'utility'"""
         return "privacy"
 
-    def evaluate(self) -> float | dict:
+    def evaluate(self, num_eval_iter=5) -> float | dict:
         """Function for computing the precision, recall, and F1-score of a membership inference attack using a Random Forest classifier"""
 
         # One-hot encode. All data is combined to ensure consitent encoding
@@ -52,40 +52,62 @@ class MIAClassifier(MetricClass):
         ]
         hout = combined_data_encoded.iloc[len(self.real_data) + len(self.synt_data) :]
 
-        # Split the holdout set for training and testing
-        hout_train, hout_test = train_test_split(hout, test_size=0.5, random_state=42)
-        
-        # Create training data consisting of synthetic and holdout data
-        X_train = pd.concat([syn.sample(len(hout_train),random_state = 42), hout_train], axis=0)
-        y_train = pd.Series([1] * len(hout_train) + [0] * len(hout_train))
+        # Run classifier multiple times and average the results
+        pre_results = {
+            "precision": [],
+            "recall": [],
+            "f1": [],
+        }
+        for _ in range(num_eval_iter):
+            hout_train, hout_test = train_test_split(hout, test_size=0.5)
 
-        # Create test set by combining some random data from the real and holdout data with an equal number of records from each dataframe
-        X_test = pd.concat(
-            [
-                real.sample(n=len(hout_test), random_state=42),
-                hout_test,
-            ],
-            axis=0,
-        )
-        y_test = pd.Series([1] * len(hout_test) + [0] * len(hout_test))
+            # Create training data consisting of synthetic and holdout data
+            X_train = pd.concat([syn, hout_train], axis=0)
+            y_train = pd.Series([1] * len(syn) + [0] * len(hout_train))
 
-        # Train the classifier on all the data
-        rf_classifier = RandomForestClassifier(n_estimators=100, random_state=42).fit(
-            X_train, y_train
-        )
+            # Create test set by combining some random data from the real and holdout data with an equal number of records from each dataframe
+            X_test = pd.concat(
+                [
+                    real.sample(n=len(hout_test)),
+                    hout_test,
+                ],
+                axis=0,
+            )
+            y_test = pd.Series([1] * len(hout_test) + [0] * len(hout_test))
 
-        # Get predictions
-        hout_prediction = rf_classifier.predict(X_test)
+            # Train the classifier on all the data
+            rf_classifier = RandomForestClassifier(n_estimators=100).fit(
+                X_train, y_train
+            )
 
-        # Calculate precision, recall, and F1-score
-        precision = precision_score(y_test, hout_prediction)
-        recall = recall_score(y_test, hout_prediction)
-        f1 = f1_score(y_test, hout_prediction, average="macro")
+            # Get predictions
+            holdout_predictions = rf_classifier.predict(X_test)
+
+            # Calculate precision, recall, and F1-score
+            pre_results["precision"].append(
+                precision_score(y_test, holdout_predictions)
+            )
+            pre_results["recall"].append(recall_score(y_test, holdout_predictions))
+            pre_results["f1"].append(
+                f1_score(y_test, holdout_predictions, average="macro")
+            )
+
+        precision = np.mean(pre_results["precision"])
+        precision_se = np.std(pre_results["precision"]) / np.sqrt(num_eval_iter)
+
+        recall = np.mean(pre_results["recall"])
+        recall_se = np.std(pre_results["recall"]) / np.sqrt(num_eval_iter)
+
+        f1 = np.mean(pre_results["f1"])
+        f1_se = np.std(pre_results["f1"]) / np.sqrt(num_eval_iter)
 
         self.results = {
             "MIA precision": precision,
+            "MIA precision se": precision_se,
             "MIA recall": recall,
+            "MIA recall se": recall_se,
             "MIA macro F1": f1,
+            "MIA macro F1 se": f1_se,
         }
 
         return self.results
