@@ -28,7 +28,7 @@ class MIAClassifier(MetricClass):
 
     def name() -> str:
         """Name/keyword to reference the metric"""
-        return "attribute_disclosure_risk"
+        return "attr_discl_cats"
 
     def type() -> str:
         """Set to 'privacy' or 'utility'"""
@@ -75,15 +75,15 @@ class MIAClassifier(MetricClass):
 
         # Compute mean precision, recall, and F1-score with accompanying standard errors
         precision = np.mean(pre_results["precision"])
-        precision_se = np.std(pre_results["precision"]) / np.sqrt(
+        precision_se = np.std(pre_results["precision"],ddof=1) / np.sqrt(
             len(pre_results["precision"])
         )
         
         recall = np.mean(pre_results["recall"])
-        recall_se = np.std(pre_results["recall"]) / np.sqrt(len(pre_results["recall"]))
+        recall_se = np.std(pre_results["recall"],ddof=1) / np.sqrt(len(pre_results["recall"]))
 
         f1 = np.mean(pre_results["f1"])
-        f1_se = np.std(pre_results["f1"]) / np.sqrt(len(pre_results["f1"]))
+        f1_se = np.std(pre_results["f1"],ddof=1) / np.sqrt(len(pre_results["f1"]))
 
         self.results = {
             "Attr Dis precision": precision,
@@ -101,8 +101,15 @@ class MIAClassifier(MetricClass):
                 metric is part of SynthEval.
         |                                          :                    |"""
         string = """\
-| Attr Dis macro F1             :   %.4f           |""" % (
-            self.results["Attr Dis macro F1"]
+| Attrribute disclosure risk (macro F1)    :   %.4f  %.4f   |
+|   -> Precision                           :   %.4f  %.4f   |
+|   -> Recall                              :   %.4f  %.4f   |""" % (
+            self.results["Attr Dis macro F1"],
+            self.results["Attr Dis macro F1 se"],
+            self.results["Attr Dis precision"],
+            self.results["Attr Dis precision se"],
+            self.results["Attr Dis recall"],
+            self.results["Attr Dis recall se"]
         )
         return string
 
@@ -116,3 +123,4 @@ class MIAClassifier(MetricClass):
         Return dictionary of lists 'val' and 'err'"""
         # val_non_lin = np.exp(-5 * self.results["eps_risk"])
         # return {"val": [val_non_lin], "err": [0]}
+        pass

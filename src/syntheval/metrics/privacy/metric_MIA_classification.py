@@ -93,13 +93,13 @@ class MIAClassifier(MetricClass):
             )
 
         precision = np.mean(pre_results["precision"])
-        precision_se = np.std(pre_results["precision"]) / np.sqrt(num_eval_iter)
+        precision_se = np.std(pre_results["precision"],ddof=1) / np.sqrt(num_eval_iter)
 
         recall = np.mean(pre_results["recall"])
-        recall_se = np.std(pre_results["recall"]) / np.sqrt(num_eval_iter)
+        recall_se = np.std(pre_results["recall"],ddof=1) / np.sqrt(num_eval_iter)
 
         f1 = np.mean(pre_results["f1"])
-        f1_se = np.std(pre_results["f1"]) / np.sqrt(num_eval_iter)
+        f1_se = np.std(pre_results["f1"],ddof=1) / np.sqrt(num_eval_iter)
 
         self.results = {
             "MIA precision": precision,
@@ -117,12 +117,15 @@ class MIAClassifier(MetricClass):
                 metric is part of SynthEval.
         |                                          :                    |"""
         string = """\
-| Membership inference attack Classifier F1:   %.4f           |
-|   -> Precision                           :   %.4f           |
-|   -> Recall                              :   %.4f           |""" % (
+| Membership inference attack Classifier F1:   %.4f  %.4f   |
+|   -> Precision                           :   %.4f  %.4f   |
+|   -> Recall                              :   %.4f  %.4f   |""" % (
             self.results["MIA macro F1"],
+            self.results["MIA macro F1 se"],
             self.results["MIA precision"],
-            self.results["MIA recall"]
+            self.results["MIA precision se"],
+            self.results["MIA recall"],
+            self.results["MIA recall se"],
         )
         return string
 
@@ -136,3 +139,4 @@ class MIAClassifier(MetricClass):
         Return dictionary of lists 'val' and 'err'"""
         # val_non_lin = np.exp(-5 * self.results["eps_risk"])
         # return {"val": [val_non_lin], "err": [0]}
+        pass
