@@ -4,5 +4,7 @@
     "nnaa"      : {"n_resample": 30},
     "dcr"       : {},
     "hit_rate"  : {"thres_percent": 0.0333},
-    "eps_risk"  : {}
+    "eps_risk"  : {},
+    "mia_classifier"  : {"num_eval_iter": 5},
+    "attr_discl_cats" : {}
 }

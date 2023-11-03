@@ -12,5 +12,7 @@
     "cls_acc"   : {"F1_type": "micro", "k_folds": 5},
     "dcr"       : {},
     "hit_rate"  : {"thres_percent": 0.0333},
-    "eps_risk"  : {}
+    "eps_risk"  : {},
+    "mia_classifier"  : {"num_eval_iter": 5},
+    "attr_discl_cats" : {}
 }
