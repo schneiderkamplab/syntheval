@@ -116,7 +116,7 @@ class MetricClassName(MetricClass):
             pass
         else:
             string = """\
-| prediction AUROC difference (%.7s)    :   %.4f           |""" % (self.results['model'], self.results['auroc_diff'])
+| prediction AUROC difference (%7s)    :   %.4f           |""" % (self.results['model'], self.results['auroc_diff'])
             return string
 
     def normalize_output(self) -> dict:
@@ -132,6 +132,6 @@ class MetricClassName(MetricClass):
         pass or return None if the metric should not be used in such scores.
 
         Return dictionary of lists 'val' and 'err' """
-        val_non_lin = np.exp(-10*self.results['auroc_diff'])
+        val_non_lin = np.exp(-10*abs(self.results['auroc_diff']))
 
         return {'val': [val_non_lin], 'err': [0]}
