@@ -10,6 +10,7 @@
     "nndr"      : {},
     "nnaa"      : {"n_resample": 30},
     "cls_acc"   : {"F1_type": "micro", "k_folds": 5},
+    "auroc_diff": {"model": "log_reg", "num_subsamples": 1},
     "dcr"       : {},
     "hit_rate"  : {"thres_percent": 0.0333},
     "eps_risk"  : {},

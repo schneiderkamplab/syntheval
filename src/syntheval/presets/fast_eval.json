@@ -4,6 +4,7 @@
     "cio"       : {"confidence": 95},
     "ks_test"   : {"sig_lvl": 0.05, "do_permutation": true, "n_perms": 1000},
     "h_dist"    : {},
+    "auroc_diff": {"model": "log_reg", "num_subsamples": 1},
     "nnaa"      : {"n_resample": 30},
     "hit_rate"  : {"thres_percent": 0.0333}
 }
