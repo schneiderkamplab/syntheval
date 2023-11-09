@@ -101,14 +101,16 @@ def plot_matrix_heatmap(mat,title,file_name):
 
     pass
 
-def plot_roc_curves(real_roc_mean, real_roc_conf, fake_roc, title, file_name):
+def plot_roc_curves(real_roc_mean, real_roc_conf, fake_roc, fake_roc_conf, title, file_name):
     fpr1, tpr1, roc_auc1 = real_roc_mean[0], real_roc_mean[1], real_roc_mean[2]
-    mean_fpr, mean_tpr, std_tpr = real_roc_conf[0], real_roc_conf[1], real_roc_conf[2]
+    mean_fpr_real, mean_tpr_real, std_tpr_real = real_roc_conf[0], real_roc_conf[1], real_roc_conf[2]
     fpr2, tpr2, roc_auc2 = fake_roc[0], fake_roc[1], fake_roc[2]
+    mean_fpr_fake, mean_tpr_fake, std_tpr_fake = fake_roc_conf[0], fake_roc_conf[1], fake_roc_conf[2]
     plt.figure(figsize=(6, 6))
-    plt.fill_between(mean_fpr, mean_tpr - 1.96*std_tpr, mean_tpr + 1.96*std_tpr, color='lightblue', alpha=0.5)
-    plt.plot(fpr1, tpr1, color='blue', lw=2, label=f'real data (AUROC = {roc_auc1:.4f})')
-    plt.plot(fpr2, tpr2, color='red', lw=2, label=f'synt data (AUROC = {roc_auc2:.4f})')
+    plt.fill_between(mean_fpr_real, mean_tpr_real - 1.96*std_tpr_real, mean_tpr_real + 1.96*std_tpr_real, color='lightblue', alpha=0.5)
+    plt.fill_between(mean_fpr_fake, mean_tpr_fake - 1.96*std_tpr_fake, mean_tpr_fake + 1.96*std_tpr_fake, color='lightpink', alpha=0.5)
+    plt.plot(fpr1, tpr1, color='blue', lw=0.5, label=f'real data (AUROC = {roc_auc1:.4f})')
+    plt.plot(fpr2, tpr2, color='red', lw=0.5, label=f'synt data (AUROC = {roc_auc2:.4f})')
     plt.plot([0, 1], [0, 1], color='gray', linestyle='--', alpha=0.5)
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.0])

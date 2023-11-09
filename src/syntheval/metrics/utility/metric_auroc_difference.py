@@ -61,48 +61,67 @@ class MetricClassName(MetricClass):
                 model1 = RandomForestClassifier(random_state=42)
                 model2 = RandomForestClassifier(random_state=42)
             elif model == 'log_reg':
-                model1 = LogisticRegression(random_state=42)
-                model2 = LogisticRegression(random_state=42)
+                model1 = LogisticRegression(random_state=42, max_iter=100)
+                model2 = LogisticRegression(random_state=42, max_iter=100)
             else:
                 print(f"Error: Unrecognised model name '{model}'!")
                 pass
             
-            model2.fit(fake_x, fake_y)
-            y2_probs = model2.predict_proba(hout_x)[:, 1]
+            # model2.fit(fake_x, fake_y)
+            # y2_probs = model2.predict_proba(hout_x)[:, 1]
 
-            fpr2, tpr2, _ = roc_curve(hout_y, y2_probs)
-            roc_auc2 = auc(fpr2, tpr2)
+            # fpr2, tpr2, _ = roc_curve(hout_y, y2_probs)
+            # roc_auc2 = auc(fpr2, tpr2)
 
-            roc_curves = []
+            roc_curves_real = []
+            roc_curves_fake = []
             for i in range(num_subsamples):
                 if num_subsamples != 1:
                     real_x_sub, real_y_sub = resample(real_x, real_y, n_samples=int(len(real_x)/2), random_state=i)
+                    fake_x_sub, fake_y_sub = resample(fake_x, fake_y, n_samples=int(len(fake_x)/2))
                 else:
                     real_x_sub, real_y_sub = real_x, real_y
+                    fake_x_sub, fake_y_sub = fake_x, fake_y
                 
                 model1.fit(real_x_sub, real_y_sub)
+                model2.fit(fake_x_sub, fake_y_sub)
                 y1_probs = model1.predict_proba(hout_x)[:, 1]
+                y2_probs = model2.predict_proba(hout_x)[:, 1]
                 
                 # Calculate ROC curve for the subsampled model
                 fpr1, tpr1, _ = roc_curve(hout_y, y1_probs)
-                roc_curves.append((fpr1, tpr1))
+                fpr2, tpr2, _ = roc_curve(hout_y, y2_probs)
+
+                roc_curves_real.append((fpr1, tpr1))
+                roc_curves_fake.append((fpr2, tpr2))
             
-            #mean_fpr = np.linspace(0, 1, 100)
-            mean_fpr = fpr2
-            tprs = []
+            mean_fpr = np.linspace(0, 1, len(fpr1))
+            #mean_fpr = fpr2
+            tprs_real, tprs_fake = [], []
 
-            for fpr, tpr in roc_curves:
-                tprs.append(np.interp(mean_fpr, fpr, tpr))
+            for fpr, tpr in roc_curves_real:
+                tprs_real.append(np.interp(mean_fpr, fpr, tpr))
 
-            mean_tpr = np.mean(tprs, axis=0)
-            std_tpr = np.std(tprs, axis=0)
+            mean_tpr_real = np.mean(tprs_real, axis=0)
+            std_tpr_real = np.std(tprs_real, axis=0)
+
+            for fpr, tpr in roc_curves_fake:
+                tprs_fake.append(np.interp(mean_fpr, fpr, tpr))
+
+            mean_tpr_fake = np.mean(tprs_fake, axis=0)
+            std_tpr_fake = np.std(tprs_fake, axis=0)
 
             # Calculate AUROC for the mean ROC curve
-            roc_auc_mean = auc(mean_fpr, mean_tpr)
+            roc_auc_mean_real = auc(mean_fpr, mean_tpr_real)
+            roc_auc_mean_fake = auc(mean_fpr, mean_tpr_fake)
 
-            if self.verbose: plot_roc_curves([mean_fpr, mean_tpr, roc_auc_mean], [mean_fpr,mean_tpr, std_tpr], [fpr2, tpr2, roc_auc2], model, 'roc_curves')
+            if self.verbose: plot_roc_curves([mean_fpr, mean_tpr_real, roc_auc_mean_real], 
+                                             [mean_fpr, mean_tpr_real, std_tpr_real], 
+                                             [mean_fpr, mean_tpr_fake, roc_auc_mean_fake],
+                                             [mean_fpr, mean_tpr_fake, std_tpr_fake],
+                                             model, 'roc_curves')
 
-            self.results = {'model': model, 'auroc_diff': roc_auc_mean - roc_auc2}
+            self.results = {'model': model, 'auroc_diff': abs(roc_auc_mean_real - roc_auc_mean_fake)}
             return self.results
 
     def format_output(self) -> str:
