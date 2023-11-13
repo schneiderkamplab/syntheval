@@ -50,7 +50,7 @@ class MetricClassName(MetricClass):
             assert len(pd.unique(self.real_data[self.analysis_target])) == 2
             assert self.hout_data is not None
         except AssertionError:
-            print("Error: AUROC metric did not run, analysis target variable did not have appropriate number levels (2) or test data was not supplied!'")
+            print("Error: AUROC metric did not run, analysis target variable did not have appropriate number levels (2) or test data was not supplied!")
             pass
         else:
             real_x, real_y = self.real_data.drop([self.analysis_target], axis=1), self.real_data[self.analysis_target]
@@ -151,6 +151,9 @@ class MetricClassName(MetricClass):
         pass or return None if the metric should not be used in such scores.
 
         Return dictionary of lists 'val' and 'err' """
-        val_non_lin = np.exp(-10*abs(self.results['auroc_diff']))
+        if self.results != {}:
+            val_non_lin = np.exp(-10*abs(self.results['auroc_diff']))
 
-        return {'val': [val_non_lin], 'err': [0]}
+            return {'val': [val_non_lin], 'err': [0]}
+        else:
+            pass

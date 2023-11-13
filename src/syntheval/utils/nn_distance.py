@@ -48,6 +48,9 @@ def _knn_distance(a, b, cat_cols, num, metric='gower', weights=None):
 
     if metric=='gower':
         bool_cat_cols = [col1 in cat_cols for col1 in a.columns]
+        num_cols = [col2 for col2 in a.columns if col2 not in cat_cols]
+        a[num_cols] = a[num_cols].astype("float")
+        b[num_cols] = b[num_cols].astype("float")
         return gower_knn(a,b,bool_cat_cols)
     if metric=='euclid':
         return eucledian_knn(a,b)
