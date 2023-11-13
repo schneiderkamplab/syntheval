@@ -7,7 +7,7 @@ import pandas as pd
 
 from ..core.metric import MetricClass
 
-from sklearn.model_selection import KFold
+from sklearn.model_selection import StratifiedKFold
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
 
@@ -53,9 +53,9 @@ class PropensityMeanSquaredError(MetricClass):
         Xs, ys = Df.drop(['real'], axis=1), Df['real']
 
         ### Run 5-fold cross-validation
-        kf = KFold(n_splits=k_folds)
+        kf = StratifiedKFold(n_splits=k_folds, shuffle=True, random_state=42)
         res, acc = [], []
-        for train_index, test_index in kf.split(Df):
+        for train_index, test_index in kf.split(Xs, ys):
             x_train = Xs.iloc[train_index]
             x_test = Xs.iloc[test_index]
             y_train = ys.iloc[train_index]
