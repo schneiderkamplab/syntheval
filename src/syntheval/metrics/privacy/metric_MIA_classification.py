@@ -128,9 +128,9 @@ class MIAClassifier(MetricClass):
             pass
         else:
             string = """\
-    | Membership inference attack Classifier F1:   %.4f  %.4f   |
-    |   -> Precision                           :   %.4f  %.4f   |
-    |   -> Recall                              :   %.4f  %.4f   |""" % (
+| Membership inference attack Classifier F1:   %.4f  %.4f   |
+|   -> Precision                           :   %.4f  %.4f   |
+|   -> Recall                              :   %.4f  %.4f   |""" % (
                 self.results["MIA macro F1"],
                 self.results["MIA macro F1 se"],
                 self.results["MIA precision"],
