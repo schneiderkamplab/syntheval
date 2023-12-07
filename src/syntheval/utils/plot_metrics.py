@@ -60,24 +60,62 @@ def plot_dimensionwise_means(means, sem, labels):
     pass
 
 def plot_principal_components(reals, fakes):
-    """Plot first two PCA components of real and synthetic data side by side"""
+    """Plot PCA components of real and synthetic data i a pairplot"""
     class_num = len(np.unique(reals['target']))
+    components = [col for col in reals.columns if col != 'target']
+    comp_num = len(components)
 
-    # Plotting
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 5), sharey=True)
-    sns.scatterplot(x=reals['PC1'], y=reals['PC2'], hue=reals['target'], ax=ax1, palette=sns.color_palette("colorblind",class_num))
-    sns.scatterplot(x=fakes['PC1'], y=fakes['PC2'], hue=fakes['target'], ax=ax2, palette=sns.color_palette("colorblind",class_num))
+    if comp_num < 2:
+        print('Error: Principal component analysis - too few components to plot!')
+    elif comp_num == 2:
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(11, 5), sharey=True, sharex=True)
+        sns.scatterplot(x=reals[components[0]], y=reals[components[1]], hue=reals['target'], ax=ax1, palette=sns.color_palette("colorblind",class_num))
+        sns.scatterplot(x=fakes[components[0]], y=fakes[components[1]], hue=fakes['target'], ax=ax2, palette=sns.color_palette("colorblind",class_num))
+        ax1.set_title('real data'),ax1.legend().remove()
+        ax2.set_title('synthetic data'),ax2.legend().remove()
+        handles, labels = ax1.get_legend_handles_labels()
+        fig.legend(handles, labels, title = 'class', loc='center right')
+        fig.tight_layout()
+        fig.subplots_adjust(right=0.85)
+        plt.savefig('SE_pca_' +str(int(time.time()))+'.png')
+    else:
+        fig, axs = plt.subplots(comp_num, comp_num, figsize=(comp_num*3, comp_num*3), sharey=True, sharex=True)
+        plt.suptitle("Synthetic (U) and real data (L) projected onto real data PCA components",fontsize=14)
+        for i in range(comp_num):
+            for j in range(comp_num):
+                # Only plot off-diagonal elements
+                if i != j:
+                    # Upper triangle: use data from df1
+                    if i < j:
+                        sns.scatterplot(x=fakes[components[j]], y=fakes[components[i]], hue=fakes['target'], ax=axs[i, j], palette=sns.color_palette("colorblind",class_num))
+                    # Lower triangle: use data from df2
+                    else:
+                        sns.scatterplot(x=reals[components[j]], y=reals[components[i]], hue=reals['target'], ax=axs[i, j], palette=sns.color_palette("colorblind",class_num))
+                    axs[i, j].legend().remove()
+                elif i == 0:
+                    # Hide the diagonal plots
+                    axs[i, j].set_ylabel(components[i])
+                elif i == comp_num and j== comp_num:
+                    axs[i, j].set_xlabel(components[j])
+                    #axs[i, j].axis('off')
 
-    ax1.set_title('real data'),ax1.legend().remove()
-    ax2.set_title('synthetic data'),ax2.legend().remove()
+        # Create a single legend for both subplots
+        handles, labels = axs[1,2].get_legend_handles_labels()
+        fig.legend(handles, labels, title = 'class', loc='center')
+        fig.tight_layout()
+        plt.savefig('SE_pca_proj_' +str(int(time.time()))+'.png')
+        plt.close()
+    pass
 
-    # Create a single legend for both subplots
-    handles, labels = ax1.get_legend_handles_labels()
-    fig.legend(handles, labels, title = 'class', loc='center right')
+def plot_own_principal_component_pairplot(data):
+    components = [col for col in data.columns if col not in ['index', 'target', 'real']]
+    size = len(components)
+    #fig = plt.figure(figsize=(size*3, size*3))
+    fig = sns.pairplot(data, hue='real', kind='scatter',vars=components, plot_kws={'alpha': 0.5})
+    plt.suptitle("Synthetic and real data projected onto own PCA components")
     fig.tight_layout()
-    fig.subplots_adjust(right=0.85)
-    plt.savefig('SE_pca_' +str(int(time.time()))+'.png')
-    #plt.show()
+    plt.savefig('SE_pca_own_' +str(int(time.time()))+'.png')
+    plt.close()
     pass
 
 def _shortened_labels(ax_get_ticks):

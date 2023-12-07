@@ -3,13 +3,15 @@
 # Date: 23-08-2023
 
 import pandas as pd
+import numpy as np
 
 from ..core.metric import MetricClass
 
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 
-from ...utils.plot_metrics import plot_principal_components
+from ...utils.plot_metrics import plot_principal_components, plot_own_principal_component_pairplot
+from ...utils.preprocessing import stack
 
 class PrincipalComponentAnalysis(MetricClass):
     """The Metric Class is an abstract class that interfaces with 
@@ -35,22 +37,38 @@ class PrincipalComponentAnalysis(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'utility'
 
-    def evaluate(self) -> float | dict:
+    def evaluate(self, num_components = 2) -> float | dict:
         """ Function for evaluating the metric"""
         if (self.analysis_target is not None and self.analysis_target in self.cat_cols):
             r_scaled = StandardScaler().fit_transform(self.real_data[self.num_cols])
             f_scaled = StandardScaler().fit_transform(self.synt_data[self.num_cols])
 
-            pca = PCA(n_components=2)
+            pca = PCA(n_components=num_components)
             r_pca = pca.fit_transform(r_scaled)
             f_pca = pca.transform(f_scaled)
 
-            r_pca = pd.DataFrame(r_pca,columns=['PC1', 'PC2'])
-            f_pca = pd.DataFrame(f_pca,columns=['PC1', 'PC2'])
+            labels = [ f"PC {i+1} ({var:.1f}%)" for i, var in enumerate(pca.explained_variance_ratio_ * 100)]
+
+            synt_pca = PCA(n_components=num_components)
+            s_pca = synt_pca.fit_transform(f_scaled)
+
+            var_difference = sum(abs(pca.explained_variance_ratio_- synt_pca.explained_variance_ratio_))
+
+            len_r = np.sqrt(pca.components_[0].dot(pca.components_[0]))
+            len_f = np.sqrt(synt_pca.components_[0].dot(synt_pca.components_[0]))
+
+            angle_diff = np.arccos(pca.components_[0].dot(synt_pca.components_[0])/(len_r*len_f))
+
+            self.results = {'exp_var_diff': var_difference, 'comp_angle_diff': angle_diff}
+
+            r_pca = pd.DataFrame(r_pca,columns=labels)
+            f_pca = pd.DataFrame(f_pca,columns=labels)
+            s_pca = pd.DataFrame(s_pca,columns=labels)
             r_pca['target'] = self.real_data[self.analysis_target]
             f_pca['target'] = self.synt_data[self.analysis_target]
             if self.verbose: plot_principal_components(r_pca,f_pca)
-            pass
+            if self.verbose: plot_own_principal_component_pairplot(stack(r_pca,s_pca))
+            return self.results
         elif self.analysis_target is None: 
             print('Error: Principal component analysis did not run, analysis class variable not set!')
             pass
@@ -62,7 +80,12 @@ class PrincipalComponentAnalysis(MetricClass):
         """ Return string for formatting the output, when the
         metric is part of SynthEval. 
 |                                          :                    |"""
-        pass
+        string = """\
+| PCA difference in eigenvalues (exp. var.):   %.4f           |
+| PCA angle between eigenvectors (radians) :   %.4f           |""" % (self.results['exp_var_diff'], 
+                                                                      self.results['comp_angle_diff'])
+        return string
+
 
     def normalize_output(self) -> dict:
         """ To add this metric to utility or privacy scores map the main 

@@ -13,12 +13,7 @@ from sklearn.preprocessing import StandardScaler
 
 from sklearn.metrics import f1_score
 
-def stack(real,fake):
-    """Function for stacking the real and fake dataframes and adding a column for keeping 
-    track of which is which. This is essentially to ease the use of seaborn plots hue."""
-    real = pd.concat((real.reset_index(),pd.DataFrame(np.ones(len(real)),columns=['real'])),axis=1)
-    fake = pd.concat((fake.reset_index(),pd.DataFrame(np.zeros(len(fake)),columns=['real'])),axis=1)
-    return pd.concat((real,fake),ignore_index=True)
+from ...utils.preprocessing import stack
 
 class PropensityMeanSquaredError(MetricClass):
     """The Metric Class is an abstract class that interfaces with 
@@ -65,7 +60,7 @@ class PropensityMeanSquaredError(MetricClass):
             pred = mod.predict_proba(x_test)
             
             res.append(np.mean((pred[:,0]-0.5)**2))
-            acc.append(f1_score(y_test,mod.predict(x_test),average='micro'))
+            acc.append(f1_score(y_test,mod.predict(x_test),average='macro'))
 
         self.results = {'avg pMSE': np.mean(res), 
                         'pMSE err': np.std(res,ddof=1)/np.sqrt(len(res)),
