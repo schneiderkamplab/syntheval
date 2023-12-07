@@ -77,7 +77,7 @@ def plot_principal_components(reals, fakes):
         fig.legend(handles, labels, title = 'class', loc='center right')
         fig.tight_layout()
         fig.subplots_adjust(right=0.85)
-        plt.savefig('SE_pca_' +str(int(time.time()))+'.png')
+        plt.savefig('SE_pca_proj_' +str(int(time.time()))+'.png')
     else:
         fig, axs = plt.subplots(comp_num, comp_num, figsize=(comp_num*3, comp_num*3), sharey=True, sharex=True)
         plt.suptitle("Synthetic (U) and real data (L) projected onto real data PCA components",fontsize=14)
@@ -110,9 +110,23 @@ def plot_principal_components(reals, fakes):
 def plot_own_principal_component_pairplot(data):
     components = [col for col in data.columns if col not in ['index', 'target', 'real']]
     size = len(components)
-    #fig = plt.figure(figsize=(size*3, size*3))
-    fig = sns.pairplot(data, hue='real', kind='scatter',vars=components, plot_kws={'alpha': 0.5})
-    plt.suptitle("Synthetic and real data projected onto own PCA components")
+
+    df_real = data[data['real'] == 1]
+    df_fake = data[data['real'] == 0]
+
+    fig, axs = plt.subplots(size, size, figsize=(size*3, size*3))
+    if size < 3: plt.suptitle("Synthetic (U) and real (L) data projected onto own PCA components",fontsize=12)
+    else: plt.suptitle("Synthetic (U) and real (L) data projected onto own PCA components",fontsize=14)
+    for i in range(size):
+        for j in range(size):
+            if i != j:
+                if i < j: # Upper triangle: use data from df_fake
+                    sns.scatterplot(x=df_fake[components[j]], y=df_fake[components[i]], ax=axs[i, j], c=['#7FB8D8'],edgecolor='k')
+                else:     # Lower triangle: use data from df_real
+                    sns.scatterplot(x=df_real[components[j]], y=df_real[components[i]], ax=axs[i, j], c=['#EEC681'],edgecolor='k')
+            else:
+                sns.kdeplot(x=data[components[i]], hue=data['real'], fill=True, multiple="stack", ax=axs[i, i], palette=['#7FB8D8','#EEC681'])
+
     fig.tight_layout()
     plt.savefig('SE_pca_own_' +str(int(time.time()))+'.png')
     plt.close()
