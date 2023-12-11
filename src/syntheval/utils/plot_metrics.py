@@ -125,7 +125,7 @@ def plot_own_principal_component_pairplot(data):
                 else:     # Lower triangle: use data from df_real
                     sns.scatterplot(x=df_real[components[j]], y=df_real[components[i]], ax=axs[i, j], c=['#EEC681'],edgecolor='k')
             else:
-                sns.kdeplot(x=data[components[i]], hue=data['real'], fill=True, multiple="stack", ax=axs[i, i], palette=['#7FB8D8','#EEC681'])
+                sns.kdeplot(x=data[components[i]], hue=data['real'], fill=True, multiple="layer", ax=axs[i, i], palette=['#7FB8D8','#EEC681'])
 
     fig.tight_layout()
     plt.savefig('SE_pca_own_' +str(int(time.time()))+'.png')
