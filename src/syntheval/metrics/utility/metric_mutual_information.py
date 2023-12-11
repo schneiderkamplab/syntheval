@@ -32,15 +32,15 @@ class MutualInformation(MetricClass):
         """privacy or utility"""
         return 'utility'
 
-    def evaluate(self) -> float | dict:
+    def evaluate(self, axs_lim=(0,1), axs_scale='Blues') -> float | dict:
         """ Function for evaluating the metric"""
         r_mi = _pairwise_attributes_mutual_information(self.real_data)
         f_mi = _pairwise_attributes_mutual_information(self.synt_data)
 
         mi_mat = r_mi - f_mi
-        if self.verbose: plot_matrix_heatmap(mi_mat,'Mutual information matrix difference', 'mi')
+        if self.verbose: plot_matrix_heatmap(mi_mat,'Mutual information matrix difference', 'mi', axs_lim, axs_scale)
         
-        self.results = {'mutual_inf_diff': np.linalg.norm(mi_mat, ord='fro')}
+        self.results = {'mutual_inf_diff': np.linalg.norm(mi_mat, ord='fro'),'mi_mat_dims': len(mi_mat)}
         return self.results
 
     def format_output(self) -> str:
@@ -51,13 +51,20 @@ class MutualInformation(MetricClass):
 | Pairwise mutual information difference   :   %.4f           |""" % (self.results['mutual_inf_diff'])
         return string
 
-    def normalize_output(self) -> dict:
-        """ To add this metric to utility or privacy scores map the main 
-        result(s) to the zero one interval where zero is worst performance 
-        and one is best.
-        
-        pass or return None if the metric should not be used in such scores.
+    def normalize_output(self) -> list:
+        """ This function is for making a dictionary of the most quintessential
+        nummerical results of running this metric (to be turned into a dataframe).
 
-        Return dictionary of lists 'val' and 'err'
+        The required format is:
+        metric  dim  val  err  n_val  n_err idx_val idx_err
+            name1  u  0.0  0.0    0.0    0.0    None    None
+            name2  p  0.0  0.0    0.0    0.0    0.0     0.0
         """
-        return ({'val': [1-np.tanh(self.results['mutual_inf_diff'])], 'err': [0]})
+        if self.results != {}:
+            n_elements = int(self.results['mi_mat_dims']*(self.results['mi_mat_dims']-1)/2)
+            return [{'metric': 'mutual_inf_diff', 'dim': 'u', 
+                     'val': self.results['mutual_inf_diff'], 
+                     'n_val': 1-self.results['mutual_inf_diff']/n_elements, 
+                     'idx_val': 1-np.tanh(self.results['mutual_inf_diff'])
+                     }]
+        else: pass

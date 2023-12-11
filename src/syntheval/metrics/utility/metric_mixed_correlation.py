@@ -81,7 +81,7 @@ class MixedCorrelation(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'utility'
 
-    def evaluate(self, mixed_corr=True, return_mats=False) -> dict:
+    def evaluate(self, mixed_corr=True, return_mats=False, axs_lim=(-1,1),axs_scale="RdBu") -> dict:
         """Function for calculating the (mixed) correlation matrix difference.
         This calculation uses spearmans rho for numerical-numerical, Cramer's V for categories,
         and correlation ratio (eta) for numerical-categorials.
@@ -92,14 +92,14 @@ class MixedCorrelation(MetricClass):
             r_corr = mixed_correlation(self.real_data,self.num_cols,self.cat_cols)
             f_corr = mixed_correlation(self.synt_data,self.num_cols,self.cat_cols)
             corr_mat = r_corr-f_corr
-            if self.verbose: plot_matrix_heatmap(corr_mat,'Mixed correlation matrix difference', 'corr')
+            if self.verbose: plot_matrix_heatmap(corr_mat,'Mixed correlation matrix difference', 'corr', axs_lim, axs_scale)
         else:
             r_corr = self.real_data[self.num_cols].corr()
             f_corr = self.synt_data[self.num_cols].corr()
             corr_mat = r_corr-f_corr
-            if self.verbose: plot_matrix_heatmap(corr_mat,'Correlation matrix difference (nums only)', 'corr')
+            if self.verbose: plot_matrix_heatmap(corr_mat,'Correlation matrix difference (nums only)', 'corr', axs_lim, axs_scale)
         
-        self.results = {'corr_mat_diff': np.linalg.norm(corr_mat,ord='fro')}
+        self.results = {'corr_mat_diff': np.linalg.norm(corr_mat,ord='fro'), 'corr_mat_dims': len(corr_mat)}
         if return_mats: self.results['real_cor_mat'] = r_corr
         if return_mats: self.results['synt_cor_mat'] = f_corr
         if return_mats: self.results['diff_cor_mat'] = corr_mat
@@ -126,3 +126,21 @@ class MixedCorrelation(MetricClass):
 
         Return dictionary of lists 'val' and 'err' """
         return {'val': [1-np.tanh(self.results['corr_mat_diff'])], 'err': [0]}
+
+    def normalize_output(self) -> list:
+        """ This function is for making a dictionary of the most quintessential
+        nummerical results of running this metric (to be turned into a dataframe).
+
+        The required format is:
+        metric  dim  val  err  n_val  n_err idx_val idx_err
+            name1  u  0.0  0.0    0.0    0.0    None    None
+            name2  p  0.0  0.0    0.0    0.0    0.0     0.0   
+        """
+        if self.results != {}:
+            n_elements = int(self.results['corr_mat_dims']*(self.results['corr_mat_dims']-1)/2)
+            return [{'metric': 'corr_mat_diff', 'dim': 'u', 
+                     'val': self.results['corr_mat_diff'], 
+                     'n_val': 1-self.results['corr_mat_diff']/n_elements, 
+                     'idx_val': 1-np.tanh(self.results['corr_mat_diff'])
+                     }]
+        else: pass

@@ -64,18 +64,26 @@ class HellingerDistance(MetricClass):
 | Average empirical hellinger distance     :   %.4f  %.4f   |""" % (self.results['avg'], self.results['err'])
         return string
 
-    def normalize_output(self) -> dict:
-        """ To add this metric to utility or privacy scores map the main 
-        result(s) to the zero one interval where zero is worst performance 
-        and one is best.
-        
-        pass or return None if the metric should not be used in such scores.
+    def normalize_output(self) -> list:
+        """ This function is for making a dictionary of the most quintessential
+        nummerical results of running this metric (to be turned into a dataframe).
 
-        Return dictionary of lists 'val' and 'err'
+        The required format is:
+        metric  dim  val  err  n_val  n_err idx_val idx_err
+            name1  u  0.0  0.0    0.0    0.0    None    None
+            name2  p  0.0  0.0    0.0    0.0    0.0     0.0 
         """
-        power = np.exp(10*(self.results['avg']-0.25))
-        val_non_lin     = 1/(1+power)
-        val_non_lin_err = 10*power/((1+power)**2)*self.results['err']
+        if self.results != {}:
+            power = np.exp(10*(self.results['avg']-0.25))
+            val_non_lin     = 1/(1+power)
+            val_non_lin_err = 10*power/((1+power)**2)*self.results['err']
 
-        return {'val': [val_non_lin], 'err': [val_non_lin_err]}
-
+            return [{'metric': 'avg_h_dist', 'dim': 'u', 
+                     'val': self.results['avg'], 
+                     'err': self.results['err'], 
+                     'n_val': 1-self.results['avg'], 
+                     'n_err': self.results['err'], 
+                     'idx_val': val_non_lin, 
+                     'idx_err': val_non_lin_err
+                     }]
+        else: pass

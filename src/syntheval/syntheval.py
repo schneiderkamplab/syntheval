@@ -6,6 +6,7 @@ import json
 import os
 
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 from pandas import DataFrame
 
@@ -92,7 +93,8 @@ class SynthEval():
 
         methods = evaluation_config.keys()
 
-        results = {}
+        raw_results = {}
+        key_results = None
         scores = {'utility':{'val':[],'err':[]}, 'privacy':{'val':[],'err':[]}}
         pbar = tqdm(methods, disable= not self.verbose)
         for method in pbar:
@@ -103,7 +105,7 @@ class SynthEval():
                 continue
             
             M = loaded_metrics[method](real_data, synt_data, hout_data, self.categorical_columns, self.numerical_columns, self.nn_dist, analysis_target_var, do_preprocessing=False, verbose=self.verbose)
-            results[method] = M.evaluate(**evaluation_config[method])
+            raw_results[method] = M.evaluate(**evaluation_config[method])
 
             string = M.format_output()
             if string is not None:
@@ -113,22 +115,54 @@ class SynthEval():
                     privacy_output_txt += string + '\n'
 
             normalized_result = M.normalize_output()
+            if normalized_result is not None: 
+                if key_results is None:
+                    key_results = pd.DataFrame(M.normalize_output(), columns=['metric', 'dim', 'val','err','n_val','n_err','idx_val','idx_err'])
+                else:
+                    tmp_df = pd.DataFrame(M.normalize_output(), columns=['metric', 'dim', 'val','err','n_val','n_err','idx_val','idx_err'])
+                    key_results = pd.concat((key_results,tmp_df), axis = 0).reset_index(drop=True)
+            
+            # if self.hold_out is not None:
+            #     pl = M.privacy_loss()
+            #     if pl is not None:
+            #         results[method].update(pl[0])
+            #         scores['privacy']["val"].extend(pl[1]["val"])
+            #         scores['privacy']["err"].extend(pl[1]["err"])
+            #         privacy_output_txt += pl[2] + '\n'
 
-            if self.hold_out is not None:
-                pl = M.privacy_loss()
-                if pl is not None:
-                    results[method].update(pl[0])
-                    scores['privacy']["val"].extend(pl[1]["val"])
-                    scores['privacy']["err"].extend(pl[1]["err"])
-                    privacy_output_txt += pl[2] + '\n'
-
-            if normalized_result is not None:
-                scores[loaded_metrics[method].type()]["val"].extend(normalized_result["val"])
-                scores[loaded_metrics[method].type()]["err"].extend(normalized_result["err"])
+        print(key_results)
+        
+        scores = {'utility':{'val': key_results[key_results['dim'] == 'u']['idx_val'].dropna().tolist(),
+                             'err': key_results[key_results['dim'] == 'u']['idx_err'].dropna().tolist()},
+                  'privacy':{'val': key_results[key_results['dim'] == 'p']['idx_val'].dropna().tolist(),
+                             'err': key_results[key_results['dim'] == 'p']['idx_err'].dropna().tolist()}
+                             }
 
         if self.verbose: print_results_to_console(utility_output_txt,privacy_output_txt,scores)
 
         if (kwargs != {} and not self.verbose):
             with open('SE_config.json', "w") as json_file:
                 json.dump(evaluation_config, json_file)
-        return results
+
+        self._raw_results = raw_results
+        return key_results
+
+    def benchmark(self, path_to_syn_file_folder, analysis_target_var=None, presets_file=None, **kwargs):
+
+        # Part to avoid printing in the following and resetting to user preference after
+        verbose_flag = False
+        if self.verbose == True:
+            verbose_flag = True
+            self.verbose = False
+
+        # Part to load all datasets in the folder
+
+
+        # Loop over datasets
+
+
+        # Part to postprocess the results, format and rank them in a csv file.
+        
+
+        self.verbose = verbose_flag
+        pass

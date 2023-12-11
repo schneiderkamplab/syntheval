@@ -31,7 +31,7 @@ class PrincipalComponentAnalysis(MetricClass):
 
     def name() -> str:
         """ Name/keyword to reference the metric"""
-        return 'plot_pca'
+        return 'pca'
 
     def type() -> str:
         """ Set to 'privacy' or 'utility' """
@@ -60,7 +60,12 @@ class PrincipalComponentAnalysis(MetricClass):
             angle_diff = np.arccos(pca.components_[0].dot(synt_pca.components_[0])/(len_r*len_f))
 
             self.results = {'exp_var_diff': var_difference, 'comp_angle_diff': angle_diff}
-
+            if len(self.num_cols) > 5 :
+                r_sort = np.argsort(abs(pca.components_[0]))[::-1]
+                s_sort = np.argsort(abs(synt_pca.components_[0]))[::-1]
+                self.results['pca_max_cont_real'] = [self.num_cols[i] for i in r_sort[:5]]
+                self.results['pca_max_cont_synt'] = [self.num_cols[i] for i in s_sort[:5]]
+            
             r_pca = pd.DataFrame(r_pca,columns=labels)
             f_pca = pd.DataFrame(f_pca,columns=labels)
             s_pca = pd.DataFrame(s_pca,columns=labels)
@@ -86,16 +91,25 @@ class PrincipalComponentAnalysis(MetricClass):
                                                                       self.results['comp_angle_diff'])
         return string
 
+    def normalize_output(self) -> list:
+        """ This function is for making a dictionary of the most quintessential
+        nummerical results of running this metric (to be turned into a dataframe).
 
-    def normalize_output(self) -> dict:
-        """ To add this metric to utility or privacy scores map the main 
-        result(s) to the zero one interval where zero is worst performance 
-        and one is best.
-        
-        pass or return None if the metric should not be used in such scores.
-
-        Return dictionary of lists 'val' and 'err' """
-        pass
+        The required format is:
+        metric  dim  val  err  n_val  n_err idx_val idx_err
+            name1  u  0.0  0.0    0.0    0.0    None    None
+            name2  p  0.0  0.0    0.0    0.0    0.0     0.0
+        """
+        if self.results != {}:
+            return [{'metric': 'pca_eigval_diff', 'dim': 'u', 
+                     'val': self.results['exp_var_diff'], 
+                     'n_val': 1-self.results['exp_var_diff'] 
+                     },
+                     {'metric': 'pca_eigvec_ang', 'dim': 'u', 
+                     'val': self.results['comp_angle_diff'], 
+                     'n_val': 1-self.results['comp_angle_diff']/np.pi 
+                     }]
+        else: pass
 
 
 

@@ -180,23 +180,38 @@ np.mean(hres[:,0]), np.mean(hres[:,1]), self.results['avg diff hout'], self.resu
 # +---------------------------------------------------------------+"""
         return string
 
-    def normalize_output(self) -> dict:
-        """ To add this metric to utility or privacy scores map the main 
-        result(s) to the zero one interval where zero is worst performance 
-        and one is best.
+    def normalize_output(self) -> list:
+        """ This function is for making a dictionary of the most quintessential
+        nummerical results of running this metric (to be turned into a dataframe).
         
-        pass or return None if the metric should not be used in such scores.
-
-        Return dictionary of lists 'val' and 'err' """
-        if self.results != {}:
+        The required format is:
+        metric  val  err  n_val  n_err idx_val idx_err
+            name1  0.0  0.0    0.0    0.0    None    None
+            name2  0.0  0.0    0.0    0.0    0.0     0.0
+        """
+        if self.results !={}:
             val_non_lin     = np.exp(-8*self.results['avg diff'])
             val_non_lin_err = 8*val_non_lin*self.results['avg diff err']
-            output = {'val': [val_non_lin], 'err': [val_non_lin_err]}
 
+            output = [{'metric': 'cls_F1_diff', 'dim': 'u',
+                       'val': self.results['avg diff'], 
+                       'err': self.results['avg diff err'], 
+                       'n_val': 1-self.results['avg diff'], 
+                       'n_err': self.results['avg diff err'], 
+                       'idx_val': val_non_lin, 
+                       'idx_err': val_non_lin_err
+                       }]
             if (self.hout_data is not None):
                 val_non_lin_2       = np.exp(-8*self.results['avg diff hout'])
                 val_non_lin_err_2   = 8*val_non_lin_2*self.results['avg diff err hout']
-                output["val"].extend([val_non_lin_2])
-                output["err"].extend([val_non_lin_err_2])
+
+                output.extend([{'metric': 'cls_F1_diff_hout', 'dim': 'u',
+                       'val': self.results['avg diff hout'], 
+                       'err': self.results['avg diff err hout'], 
+                       'n_val': 1-self.results['avg diff hout'], 
+                       'n_err': self.results['avg diff err hout'], 
+                       'idx_val': val_non_lin_2, 
+                       'idx_err': val_non_lin_err_2
+                       }])
             return output
         else: pass

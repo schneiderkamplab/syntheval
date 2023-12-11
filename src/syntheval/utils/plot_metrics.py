@@ -137,12 +137,13 @@ def _shortened_labels(ax_get_ticks):
     labels = [label.get_text()[:max_label_length] + '...' if len(label.get_text()) > max_label_length else label.get_text() for label in ax_get_ticks]
     return labels
 
-def plot_matrix_heatmap(mat,title,file_name):
+def plot_matrix_heatmap(mat,title,file_name,axs_lim,axs_scale):
     """Plotting difference matrix heatmap"""
     s = max(8,int(np.shape(mat)[0]/3))
     fig, ax = plt.subplots(figsize=(s,s))
-    if s <= 8: sns.heatmap(mat, annot=True, fmt='.2f', cmap='RdBu', ax=ax, cbar=True, mask=np.triu(np.ones(mat.shape), k=1))
+    if s <= 8: sns.heatmap(mat, annot=True, fmt='.2f', cmap=axs_scale, ax=ax, cbar=True, mask=np.triu(np.ones(mat.shape), k=1))
     else: sns.heatmap(mat, cmap='RdBu', ax=ax, cbar=True, mask=np.triu(np.ones(mat.shape), k=1))
+    if axs_scale is not None: ax.collections[0].set_clim(axs_lim) 
 
     plt.title(title)
     labels = _shortened_labels(ax.get_xticklabels())

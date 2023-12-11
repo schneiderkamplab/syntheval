@@ -80,17 +80,25 @@ class ConfidenceIntervalOverlap(MetricClass):
             return string
         else: pass
 
-    def normalize_output(self) -> dict:
-        """ To add this metric to utility or privacy scores map the main 
-        result(s) to the zero one interval where zero is worst performance 
-        and one is best.
-        
-        pass or return None if the metric should not be used in such scores.
+    def normalize_output(self) -> list:
+        """ This function is for making a dictionary of the most quintessential
+        nummerical results of running this metric (to be turned into a dataframe).
 
-        Return dictionary of lists 'val' and 'err' """
+        The required format is:
+        metric  dim  val  err  n_val  n_err idx_val idx_err
+            name1  u  0.0  0.0    0.0    0.0    None    None
+            name2  p  0.0  0.0    0.0    0.0    0.0     0.0
+        """
         if self.results != {}:
             power = np.exp(-8*(self.results['avg overlap']-0.5))
             val_non_lin     = 1/(1+power)
             val_non_lin_err = 8*power/((1+power)**2)*self.results['overlap err']
-            return {'val': [val_non_lin], 'err': [val_non_lin_err]}
+            return [{'metric': 'avg_cio', 'dim': 'u', 
+                     'val': self.results['avg overlap'], 
+                     'err': self.results['overlap err'], 
+                     'n_val': self.results['avg overlap'], 
+                     'n_err': self.results['overlap err'], 
+                     'idx_val': val_non_lin, 
+                     'idx_err': val_non_lin_err
+                     }]
         else: pass
