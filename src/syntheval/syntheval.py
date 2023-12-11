@@ -6,6 +6,7 @@ import json
 import os
 
 import numpy as np
+from tqdm import tqdm
 from pandas import DataFrame
 
 from .metrics import load_metrics
@@ -93,7 +94,9 @@ class SynthEval():
 
         results = {}
         scores = {'utility':{'val':[],'err':[]}, 'privacy':{'val':[],'err':[]}}
-        for method in methods:
+        pbar = tqdm(methods, disable= not self.verbose)
+        for method in pbar:
+            pbar.set_description(f'Syntheval: {method}')
             if method not in loaded_metrics.keys():
                 print(f"Unrecognised keyword: {method}")
                 #raise Exception(f"Unrecognised keyword: {method}")

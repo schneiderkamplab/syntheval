@@ -73,7 +73,7 @@ class ClassificationAccuracy(MetricClass):
             kf = KFold(n_splits=k_folds)
             res = []
             smol = real_y if len(real_y)<len(fake_y) else fake_y
-            for train_index, test_index in tqdm(kf.split(smol), desc='cls_acc', total=k_folds):
+            for train_index, test_index in tqdm(kf.split(smol), desc='cls_acc', total=k_folds, disable = not self.verbose):
                 real_x_train = real_x.iloc[train_index]
                 real_x_test = real_x.iloc[test_index]
                 real_y_train = real_y.iloc[train_index]
