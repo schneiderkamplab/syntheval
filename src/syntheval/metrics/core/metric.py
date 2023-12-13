@@ -80,24 +80,44 @@ class MetricClass(ABC):
 
     @abstractmethod
     def normalize_output(self) -> dict:
-        """ To add this metric to utility or privacy scores map the main 
-        result(s) to the zero one interval where zero is worst performance 
-        and one is best.
+        """ This function is for making a dictionary of the most quintessential
+        nummerical results of running this metric (to be turned into a dataframe).
+        This format is required for the metric to be used in the benchmark module, 
+        and also if the metric is to contribute to the utility or privacy index. 
         
-        pass or return None if the metric should not be used in such scores.
+        The required format is:
 
-        Return dictionary of lists 'val' and 'err'
-        """
+        metric  dim  val  err  n_val  n_err idx_val idx_err
+            name1  u  0.0  0.0    0.0    0.0    None    None
+            name2  p  0.0  0.0    0.0    0.0    0.0     0.0
+
+        Error fields and idx can be empty.
+
+        dim, is for designating if metric covers utility ('u') or privacy ('p').
+
+        [result] First set of val and err is the regular result found in the 
+        results dictionary.
+
+        [Benchmark] Second set is normalised to the zero-one interval so zero 
+        represents the worst possible performance and one is the best possible 
+        performance. 
+
+        [Indecies] Used for aggregating results of different metrics to a combined
+        utility or privacy index. Depending on the metric, you may want to check 
+        what scores are actually realistically possible and adjust this scale using 
+        nonlinearities so that values below say 0.95 are actually possible and that 
+        the metric does not drown out signal from other metrics. See the existing 
+        metrics for examples.
+
+        Leave empty if the metric should not be used in the index calculations."""
         pass
     
     ### Hooks
-    def privacy_loss(self) -> tuple:
-        """ Extra function for handling privacy loss. I.e. the difference in
-        metric from training data to synthetic data compared to test data.
-        This measure is only relevant for a select few metrics.
-        
-        Privacy loss is always treated as a privacy metric.
-        
-        Returns normalised output and formatted string.
+    def extra_formatted_output(self) -> tuple:
+        """ Some metrics may output both privacy and utility results. For keeping 
+        these results seperate in the console print, string output can be placed here 
+        to be put in the end of the opposite console text output than the metric type 
+        specified above.
+
         """
         pass

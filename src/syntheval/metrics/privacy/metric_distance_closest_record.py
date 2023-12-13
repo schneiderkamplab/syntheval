@@ -52,12 +52,21 @@ class MedianDistanceToClosestRecord(MetricClass):
 | Median distance to closest record        :   %.4f           |""" % (self.results['mDCR'])
         return string
 
-    def normalize_output(self) -> dict:
-        """ To add this metric to utility or privacy scores map the main 
-        result(s) to the zero one interval where zero is worst performance 
-        and one is best.
+    def normalize_output(self) -> list:
+        """ This function is for making a dictionary of the most quintessential
+        nummerical results of running this metric (to be turned into a dataframe).
         
-        pass or return None if the metric should not be used in such scores.
+        The required format is:
+        metric  dim  val  err  n_val  n_err idx_val idx_err
+            name1  u  0.0  0.0    0.0    0.0    None    None
+            name2  p  0.0  0.0    0.0    0.0    0.0     0.0
 
-        Return dictionary of lists 'val' and 'err' """
-        return {'val': [np.tanh(self.results['mDCR'])], 'err': [0]}
+        Error fields and idx can be empty.
+        """
+        if self.results != {}:
+            return [{'metric': 'median_DCR', 'dim': 'p', 
+                     'val': self.results['mDCR'],
+                     'n_val': np.tanh(self.results['mDCR']),
+                     'idx_val': np.tanh(self.results['mDCR'])
+                     }]
+        else: pass

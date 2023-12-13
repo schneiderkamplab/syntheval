@@ -113,14 +113,18 @@ class MIAClassifier(MetricClass):
         )
         return string
 
-    def normalize_output(self) -> dict:
-        """To add this metric to utility or privacy scores map the main
-        result(s) to the zero one interval where zero is worst performance
-        and one is best.
+    def normalize_output(self) -> list:
+        """ This function is for making a dictionary of the most quintessential
+        nummerical results of running this metric (to be turned into a dataframe).
 
-        pass or return None if the metric should not be used in such scores.
+        The required format is:
+        metric  dim  val  err  n_val  n_err idx_val idx_err
+            name1  u  0.0  0.0    0.0    0.0    None    None
+            name2  p  0.0  0.0    0.0    0.0    0.0     0.0   
+        """
+        if self.results != {}:
 
-        Return dictionary of lists 'val' and 'err'"""
-        # val_non_lin = np.exp(-5 * self.results["eps_risk"])
-        # return {"val": [val_non_lin], "err": [0]}
-        pass
+            return [{'metric': 'att_discl_risk', 'dim': 'p', 
+                     'val': self.results["Attr Dis macro F1"], 'err': self.results["Attr Dis macro F1 se"], 
+                     'n_val': 1-self.results["Attr Dis macro F1"], 'n_err': self.results["Attr Dis macro F1 se"]}]
+        else: pass

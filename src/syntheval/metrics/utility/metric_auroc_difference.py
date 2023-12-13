@@ -66,12 +66,6 @@ class MetricClassName(MetricClass):
             else:
                 print(f"Error: Unrecognised model name '{model}'!")
                 pass
-            
-            # model2.fit(fake_x, fake_y)
-            # y2_probs = model2.predict_proba(hout_x)[:, 1]
-
-            # fpr2, tpr2, _ = roc_curve(hout_y, y2_probs)
-            # roc_auc2 = auc(fpr2, tpr2)
 
             roc_curves_real = []
             roc_curves_fake = []
@@ -96,7 +90,7 @@ class MetricClassName(MetricClass):
                 roc_curves_fake.append((fpr2, tpr2))
             
             mean_fpr = np.linspace(0, 1, len(fpr1))
-            #mean_fpr = fpr2
+
             tprs_real, tprs_fake = [], []
 
             for fpr, tpr in roc_curves_real:
@@ -138,22 +132,20 @@ class MetricClassName(MetricClass):
 | prediction AUROC difference (%7s)    :   %.4f           |""" % (self.results['model'], self.results['auroc_diff'])
             return string
 
-    def normalize_output(self) -> dict:
-        """ To add this metric to utility or privacy scores map the main 
-        result(s) to the zero one interval where zero is worst performance 
-        and one is best. 
-        
-        Depending on the metric, you may want to check what scores are actually
-        realistically possible and adjust this scale using nonlinearities so that 
-        values below 0.95 are actually possible and that the metric does not 
-        universally drag the average up. See the existing metrics for examples.
-        
-        pass or return None if the metric should not be used in such scores.
+    def normalize_output(self) -> list:
+        """ This function is for making a dictionary of the most quintessential
+        nummerical results of running this metric (to be turned into a dataframe).
 
-        Return dictionary of lists 'val' and 'err' """
+        The required format is:
+        metric  dim  val  err  n_val  n_err idx_val idx_err
+            name1  u  0.0  0.0    0.0    0.0    None    None
+            name2  p  0.0  0.0    0.0    0.0    0.0     0.0
+        """
         if self.results != {}:
             val_non_lin = np.exp(-10*abs(self.results['auroc_diff']))
-
-            return {'val': [val_non_lin], 'err': [0]}
-        else:
-            pass
+            return [{'metric': 'auroc', 'dim': 'u', 
+                     'val': self.results['auroc_diff'], 
+                     'n_val': 1-self.results['auroc_diff'], 
+                     'idx_val': val_non_lin, 
+                     }]
+        else: pass

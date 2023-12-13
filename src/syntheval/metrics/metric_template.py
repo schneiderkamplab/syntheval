@@ -83,15 +83,12 @@ class MetricClassName(MetricClass):
 
 
     ### Hooks (Extra functions, not required)
-    def privacy_loss(self) -> tuple:
-        """ Extra function for handling privacy loss. I.e. the difference in
-        metric from training data to synthetic data compared to test data.
-        This measure is only relevant for a select few metrics.
-        
-        Privacy loss is always treated as a privacy metric.
-        
-        Returns output, normalised output and formatted string in that order.
-        """
+    def extra_formatted_output(self) -> str:
+        """ Some metrics may output both privacy and utility results. For keeping 
+        these results seperate in the console print, string output can be placed here 
+        to be put in the end of the opposite console text output than the metric type 
+        specified above.
+|                                          :                    |""" 
         pass
 
 

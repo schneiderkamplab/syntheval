@@ -32,17 +32,23 @@ class NearestNeighbourDistanceRatio(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'privacy'
 
-    def evaluate(self, real=None, fake=None) -> dict:
+    def evaluate(self) -> dict:
         """ Compute the Nearest Neighbour Distance Ratio (NNDR) between two datasets.
         """
-        if (real is None and fake is None):
-            real = self.real_data
-            fake = self.synt_data
-        
-        dist = _knn_distance(real, fake, self.cat_cols,2,self.nn_dist)
+        dist = _knn_distance(self.real_data, self.synt_data, self.cat_cols, 2, self.nn_dist)
         dr = list(map(lambda x: x[0] / x[1], np.transpose(dist)))
 
         self.results = {'avg': np.mean(dr), 'err': np.std(dr,ddof=1)/np.sqrt(len(dr))}
+
+        if self.hout_data is not None:
+            dist_h = _knn_distance(self.hout_data, self.synt_data, self.cat_cols, 2, self.nn_dist)
+            dr_h = list(map(lambda x: x[0] / x[1], np.transpose(dist_h)))
+
+            diff     = np.mean(dr_h) - self.results['avg']
+            err_diff = np.sqrt((np.std(dr_h,ddof=1)/np.sqrt(len(dr_h)))**2+self.results['err']**2)
+
+            self.results['priv_loss'] = diff
+            self.results['priv_loss_err'] = err_diff
         return self.results
 
     def format_output(self) -> str:
@@ -51,45 +57,41 @@ class NearestNeighbourDistanceRatio(MetricClass):
 |                                          :                    |"""
         string = """\
 | Nearest neighbour distance ratio         :   %.4f  %.4f   |""" % (self.results['avg'], self.results['err'])
+        if (self.results != {} and self.hout_data is not None):
+             string += """\n\
+| Privacy loss (diff. in NNDR)             :   %.4f  %.4f   |""" % (self.results['priv_loss'], self.results['priv_loss_err'])
         return string
 
-    def normalize_output(self) -> dict:
-        """ To add this metric to utility or privacy scores map the main 
-        result(s) to the zero one interval where zero is worst performance 
-        and one is best.
-        
-        pass or return None if the metric should not be used in such scores.
+    def normalize_output(self) -> list:
+        """ This function is for making a dictionary of the most quintessential
+        nummerical results of running this metric (to be turned into a dataframe).
 
-        Return dictionary of lists 'val' and 'err' """
-
-        val_non_lin     = self.results['avg']**3
-        val_non_lin_err = 3*self.results['avg']**2*self.results['err']
-
-        return {'val': [val_non_lin], 'err': [val_non_lin_err]}
-
-    def privacy_loss(self) -> tuple:
-        """ Extra function for handling privacy loss. I.e. the difference in
-        metric from training data to synthetic data compared to test data.
-        This measure is only relevant for a select few metrics.
-        
-        Privacy loss is always treated as a privacy metric.
-        
-        Returns normalised output and formatted string.
+        The required format is:
+        metric  dim  val  err  n_val  n_err idx_val idx_err
+            name1  u  0.0  0.0    0.0    0.0    None    None
+            name2  p  0.0  0.0    0.0    0.0    0.0     0.0  
         """
-        train_res = self.results
-        test_res = self.evaluate(real=self.hout_data,fake=self.synt_data)
-
-        diff     = test_res['avg'] - train_res['avg']
-        err_diff = np.sqrt(test_res['err']**2+train_res['err']**2)
-
-        val_non_lin     = np.exp(-15*max(0,diff))
-        val_non_lin_err = 15*val_non_lin*err_diff
-
-        string = """\
-| Privacy loss (diff. in NNDR)             :   %.4f  %.4f   |""" % (diff, err_diff)
-        return {'priv_loss': diff, 'priv_loss_err': err_diff}, {'val': [val_non_lin], 'err': [val_non_lin_err]}, string
-
-
-
-
-
+        if self.results != {}:
+            val_non_lin     = self.results['avg']**3
+            val_non_lin_err = 3*self.results['avg']**2*self.results['err']
+            output = [{'metric': 'avg_nndr', 'dim': 'p', 
+                     'val': self.results['avg'], 
+                     'err': self.results['err'], 
+                     'n_val': self.results['avg'], 
+                     'n_err': self.results['err'], 
+                     'idx_val': val_non_lin, 
+                     'idx_err': val_non_lin_err
+                     }]
+            if self.hout_data is not None:
+                pl_non_lin     = np.exp(-15*max(0,self.results['priv_loss']))
+                pl_non_lin_err = 15*val_non_lin*self.results['priv_loss_err']
+                output.extend([{'metric': 'priv_loss_nndr', 'dim': 'p', 
+                     'val': self.results['priv_loss'], 
+                     'err': self.results['priv_loss_err'], 
+                     'n_val': 1-abs(self.results['priv_loss']), 
+                     'n_err': self.results['err'], 
+                     'idx_val': pl_non_lin, 
+                     'idx_err': pl_non_lin_err
+                     }])
+            return output
+        else: pass
