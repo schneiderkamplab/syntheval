@@ -85,11 +85,13 @@ class PrincipalComponentAnalysis(MetricClass):
         """ Return string for formatting the output, when the
         metric is part of SynthEval. 
 |                                          :                    |"""
-        string = """\
+        if self.results != {}:
+            string = """\
 | PCA difference in eigenvalues (exp. var.):   %.4f           |
 | PCA angle between eigenvectors (radians) :   %.4f           |""" % (self.results['exp_var_diff'], 
                                                                       self.results['comp_angle_diff'])
-        return string
+            return string
+        else: pass
 
     def normalize_output(self) -> list:
         """ This function is for making a dictionary of the most quintessential

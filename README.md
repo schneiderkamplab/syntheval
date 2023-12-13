@@ -23,6 +23,12 @@ evaluator.evaluate(df_fake, class_lab_col, presets_file = "full_eval", **kwargs)
 ```
 Where the user supply <code>df_real, df_test, df_fake</code> as pandas dataframes, the <code>class_cat_col</code> is a complete list of column names or can be omitted for categoricals to be automatically inferred. Some metrics require a target class, so <code>class_lab_col</code> is a string for designating one column with discrete values as target for usability predictions and coloration. In the evaluate function, a presets file can be chosen ("full_eval", "fast_eval", or "privacy") or alternatively a filepath can be supplied to a json file with select metrics keywords. Finally, instead of (or in addition to), keyword arguments can be added in the end with additional metrics and their options. 
 
+New in version 1.4 is the benchmark module, that allows a directory of synthetic datasets to be specified for evaluation. All datasets in the folder are evaluated against the training (and test) data on the selected metrics. Three types of rank-derived scoring are available to choose between ("normal", "linear", or "quantile"), assisting in identifing datasets that perform well overall, and on utility and privacy dimensions.
+```python
+evaluator.benchmark('local/path_to/target_dir/', class_lab_col, presets_file = "full_eval", rank_strategy='linear', **kwargs)
+```
+Normal ranking works for identifying the datasets that does best/worst out of a normally distributed mass where it may be difficult to say something precise about the performance of a more typical result subject to noise. Linear ranking is appropriate for datasets where the results are more spaced out, and quantile ranking is only suitable for benchmarks of several datasets.
+
 ### Command line interface
 SynthEval can also be run from the commandline with the following syntax:
 ```

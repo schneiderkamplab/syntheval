@@ -1,6 +1,6 @@
 {
     "dwm"       : {},
-    "plot_pca"  : {},
+    "pca"       : {},
     "cio"       : {"confidence": 95},
     "ks_test"   : {"sig_lvl": 0.05, "do_permutation": true, "n_perms": 1000},
     "h_dist"    : {},

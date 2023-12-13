@@ -1,6 +1,6 @@
 {
     "dwm"       : {},
-    "plot_pca"  : {},
+    "pca"       : {},
     "cio"       : {"confidence": 95},
     "corr_diff" : {"mixed_corr": true},
     "mi_diff"   : {},

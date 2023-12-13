@@ -3,6 +3,8 @@
 # Date: 16-08-2023
 
 import json
+import glob
+import time
 import os
 
 import numpy as np
@@ -13,6 +15,7 @@ from pandas import DataFrame
 from .metrics import load_metrics
 from .utils.console_output import print_results_to_console
 from .utils.preprocessing import consistent_label_encoding
+from .utils.postprocessing import extremes_ranking, linear_ranking, quantile_ranking
 from .utils.variable_detection import get_cat_variables
 
 loaded_metrics = load_metrics()
@@ -107,12 +110,15 @@ class SynthEval():
             M = loaded_metrics[method](real_data, synt_data, hout_data, self.categorical_columns, self.numerical_columns, self.nn_dist, analysis_target_var, do_preprocessing=False, verbose=self.verbose)
             raw_results[method] = M.evaluate(**evaluation_config[method])
 
-            string = M.format_output()
+            string       = M.format_output()
+            extra_string = M.extra_formatted_output()
             if string is not None:
                 if loaded_metrics[method].type() == 'utility':
                     utility_output_txt += string + '\n'
+                    if extra_string is not None: privacy_output_txt += extra_string + '\n'
                 else:
                     privacy_output_txt += string + '\n'
+                    if extra_string is not None: utility_output_txt += extra_string + '\n'
 
             normalized_result = M.normalize_output()
             if normalized_result is not None: 
@@ -121,17 +127,7 @@ class SynthEval():
                 else:
                     tmp_df = pd.DataFrame(M.normalize_output(), columns=['metric', 'dim', 'val','err','n_val','n_err','idx_val','idx_err'])
                     key_results = pd.concat((key_results,tmp_df), axis = 0).reset_index(drop=True)
-            
-            # if self.hold_out is not None:
-            #     pl = M.privacy_loss()
-            #     if pl is not None:
-            #         results[method].update(pl[0])
-            #         scores['privacy']["val"].extend(pl[1]["val"])
-            #         scores['privacy']["err"].extend(pl[1]["err"])
-            #         privacy_output_txt += pl[2] + '\n'
 
-        print(key_results)
-        
         scores = {'utility':{'val': key_results[key_results['dim'] == 'u']['idx_val'].dropna().tolist(),
                              'err': key_results[key_results['dim'] == 'u']['idx_err'].dropna().tolist()},
                   'privacy':{'val': key_results[key_results['dim'] == 'p']['idx_val'].dropna().tolist(),
@@ -140,14 +136,27 @@ class SynthEval():
 
         if self.verbose: print_results_to_console(utility_output_txt,privacy_output_txt,scores)
 
-        if (kwargs != {} and not self.verbose):
+        if (kwargs != {} and self.verbose):
             with open('SE_config.json', "w") as json_file:
                 json.dump(evaluation_config, json_file)
 
         self._raw_results = raw_results
         return key_results
 
-    def benchmark(self, path_to_syn_file_folder, analysis_target_var=None, presets_file=None, **kwargs):
+    def benchmark(self, path_to_syn_file_folder, analysis_target_var=None, presets_file=None, rank_strategy='normal', **kwargs):
+        """Method for running SynthEval multiple times across all synthetic data files in a
+        specified directory. Making a results file, and calculating rank-derived utility 
+        and privacy scores.
+        
+        Takes:
+            path_to_syn_file_folder : string like '/example/ex_data_dir/' to folder with datasets
+            analysis_target_var     : string column name of categorical variable to check
+            rank_strategy           : {default='normal', 'linear', 'quantile'} see descriptions below
+
+        Returns:
+            val_df  : dataframe with the metrics and their rank derived scores
+            rank_df : dataframe with the ranks used to make the scores
+            """
 
         # Part to avoid printing in the following and resetting to user preference after
         verbose_flag = False
@@ -155,14 +164,47 @@ class SynthEval():
             verbose_flag = True
             self.verbose = False
 
-        # Part to load all datasets in the folder
+        # Part to loop over all datasets in the folder and evaluate them
+        csv_files = sorted(glob.glob(path_to_syn_file_folder + '*.csv'))
 
+        results = {}
+        for file in tqdm(csv_files,desc='SynthEval: benchmark'):
+            df_syn = pd.read_csv(file)
 
-        # Loop over datasets
-
+            results[file.split(os.path.sep)[-1].replace('.csv', '')] = self.evaluate(df_syn,analysis_target_var, presets_file, **kwargs)
 
         # Part to postprocess the results, format and rank them in a csv file.
-        
+        tmp_df = results[list(results.keys())[0]]
+
+        utility_mets = tmp_df[tmp_df['dim'] == 'u']['metric'].tolist()
+        privacy_mets = tmp_df[tmp_df['dim'] == 'p']['metric'].tolist()
+
+        vals_df = pd.DataFrame(columns=tmp_df['metric'])
+        rank_df = pd.DataFrame(columns=tmp_df['metric'])
+
+        for key, df in results.items():
+            df = df.set_index('metric').T
+
+            vals_df.loc[len(vals_df)] = df.loc['val']
+            rank_df.loc[len(vals_df)] = df.loc['n_val']
+
+        vals_df['dataset'] = list(results.keys())
+        rank_df['dataset'] = list(results.keys())
+
+        vals_df = vals_df.set_index('dataset')
+        rank_df = rank_df.set_index('dataset')
+
+        if rank_strategy == 'normal': rank_df = extremes_ranking(rank_df,utility_mets,privacy_mets)
+        if rank_strategy == 'linear': rank_df = linear_ranking(rank_df,utility_mets,privacy_mets)
+        if rank_strategy == 'quantile': rank_df = quantile_ranking(rank_df,utility_mets,privacy_mets)
+
+        vals_df['rank'] = rank_df['rank']
+        vals_df['u_rank'] = rank_df['u_rank']
+        vals_df['p_rank'] = rank_df['p_rank']
+
+        name_tag = str(int(time.time()))
+        vals_df.to_csv('SE_benchmark_results' +'_' +name_tag+ '.csv')
+        vals_df.to_csv('SE_benchmark_ranking' +'_' +name_tag+ '.csv')
 
         self.verbose = verbose_flag
-        pass
+        return vals_df, rank_df
