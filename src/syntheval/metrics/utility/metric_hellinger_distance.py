@@ -61,7 +61,7 @@ class HellingerDistance(MetricClass):
         metric is part of SynthEval.        
         """
         string = """\
-| Average empirical hellinger distance     :   %.4f  %.4f   |""" % (self.results['avg'], self.results['err'])
+| Average empirical Hellinger distance     :   %.4f  %.4f   |""" % (self.results['avg'], self.results['err'])
         return string
 
     def normalize_output(self) -> list:

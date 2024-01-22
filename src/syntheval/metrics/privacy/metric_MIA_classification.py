@@ -28,7 +28,7 @@ class MIAClassifier(MetricClass):
 
     def name() -> str:
         """Name/keyword to reference the metric"""
-        return "mia_classifier"
+        return "mia_risk"
 
     def type() -> str:
         """Set to 'privacy' or 'utility'"""

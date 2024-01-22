@@ -142,7 +142,7 @@ def plot_matrix_heatmap(mat,title,file_name,axs_lim,axs_scale):
     s = max(8,int(np.shape(mat)[0]/3))
     fig, ax = plt.subplots(figsize=(s,s))
     if s <= 8: sns.heatmap(mat, annot=True, fmt='.2f', cmap=axs_scale, ax=ax, cbar=True, mask=np.triu(np.ones(mat.shape), k=1))
-    else: sns.heatmap(mat, cmap='RdBu', ax=ax, cbar=True, mask=np.triu(np.ones(mat.shape), k=1))
+    else: sns.heatmap(mat, cmap=axs_scale, ax=ax, cbar=True, mask=np.triu(np.ones(mat.shape), k=1))
     if axs_scale is not None: ax.collections[0].set_clim(axs_lim) 
 
     plt.title(title)

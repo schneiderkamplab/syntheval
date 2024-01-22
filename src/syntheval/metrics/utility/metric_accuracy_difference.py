@@ -141,7 +141,7 @@ class ClassificationAccuracy(MetricClass):
 
 Classification accuracy test     
 avg. of %d-fold cross val.:
-clasifier model              acc_r   acc_f    |diff|  error
+classifier model             acc_r   acc_f    |diff|  error
 +---------------------------------------------------------------+
 | DecisionTreeClassifier  :   %.4f  %.4f   %.4f  %.4f   |
 | AdaBoostClassifier      :   %.4f  %.4f   %.4f  %.4f   | 

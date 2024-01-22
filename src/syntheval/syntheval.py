@@ -154,7 +154,7 @@ class SynthEval():
             rank_strategy           : {default='normal', 'linear', 'quantile'} see descriptions below
 
         Returns:
-            val_df  : dataframe with the metrics and their rank derived scores
+            vals_df : dataframe with the metrics and their rank derived scores
             rank_df : dataframe with the ranks used to make the scores
             """
 
