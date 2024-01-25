@@ -47,16 +47,15 @@ class MetricClassName(MetricClass):
     def normalize_output(self) -> list:
         """ This function is for making a dictionary of the most quintessential
         nummerical results of running this metric (to be turned into a dataframe).
-        This format is required for the metric to be used in the benchmark module, 
-        and also if the metric is to contribute to the utility or privacy index. 
+        This format is required for the metric to be used in the benchmark module. 
         
         The required format is:
 
-        metric  dim  val  err  n_val  n_err idx_val idx_err
-            name1  u  0.0  0.0    0.0    0.0    None    None
-            name2  p  0.0  0.0    0.0    0.0    0.0     0.0
+        metric  dim  val  err  n_val  n_err
+            name1  u  0.0  0.0    0.0    0.0
+            name2  p  0.0  0.0    0.0    0.0
 
-        Error fields and idx can be empty.
+        Error fields can be empty.
 
         dim, is for designating if metric covers utility ('u') or privacy ('p').
 
@@ -65,20 +64,11 @@ class MetricClassName(MetricClass):
 
         [Benchmark] Second set is normalised to the zero-one interval so zero 
         represents the worst possible performance and one is the best possible 
-        performance. 
-
-        [Indecies] Used for aggregating results of different metrics to a combined
-        utility or privacy index. Depending on the metric, you may want to check 
-        what scores are actually realistically possible and adjust this scale using 
-        nonlinearities so that values below say 0.95 are actually possible and that 
-        the metric does not drown out signal from other metrics. See the existing 
-        metrics for examples.
-
-        Leave empty if the metric should not be used in the index calculations.   
-        """
+        performance."""
+        
         if self.results != {}:
 
-            return [{'metric': 'placeholder', 'dim': 'u', 'val': 0.0, 'err': 0.0, 'n_val': 0.0, 'n_err': 0.0, 'idx_val': 0.0, 'idx_err': 0.0}]
+            return [{'metric': 'placeholder', 'dim': 'u', 'val': 0.0, 'err': 0.0, 'n_val': 0.0, 'n_err': 0.0}]#, 'idx_val': 0.0, 'idx_err': 0.0}]
         else: pass
 
 

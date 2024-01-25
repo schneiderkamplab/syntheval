@@ -67,31 +67,31 @@ class NearestNeighbourDistanceRatio(MetricClass):
         nummerical results of running this metric (to be turned into a dataframe).
 
         The required format is:
-        metric  dim  val  err  n_val  n_err idx_val idx_err
-            name1  u  0.0  0.0    0.0    0.0    None    None
-            name2  p  0.0  0.0    0.0    0.0    0.0     0.0  
+        metric  dim  val  err  n_val  n_err
+            name1  u  0.0  0.0    0.0    0.0
+            name2  p  0.0  0.0    0.0    0.0 
         """
         if self.results != {}:
-            val_non_lin     = self.results['avg']**3
-            val_non_lin_err = 3*self.results['avg']**2*self.results['err']
+            # val_non_lin     = self.results['avg']**3
+            # val_non_lin_err = 3*self.results['avg']**2*self.results['err']
             output = [{'metric': 'avg_nndr', 'dim': 'p', 
                      'val': self.results['avg'], 
                      'err': self.results['err'], 
                      'n_val': self.results['avg'], 
                      'n_err': self.results['err'], 
-                     'idx_val': val_non_lin, 
-                     'idx_err': val_non_lin_err
+                    #  'idx_val': val_non_lin, 
+                    #  'idx_err': val_non_lin_err
                      }]
             if self.hout_data is not None:
-                pl_non_lin     = np.exp(-15*max(0,self.results['priv_loss']))
-                pl_non_lin_err = 15*val_non_lin*self.results['priv_loss_err']
+                # pl_non_lin     = np.exp(-15*max(0,self.results['priv_loss']))
+                # pl_non_lin_err = 15*val_non_lin*self.results['priv_loss_err']
                 output.extend([{'metric': 'priv_loss_nndr', 'dim': 'p', 
                      'val': self.results['priv_loss'], 
                      'err': self.results['priv_loss_err'], 
                      'n_val': 1-abs(self.results['priv_loss']), 
                      'n_err': self.results['err'], 
-                     'idx_val': pl_non_lin, 
-                     'idx_err': pl_non_lin_err
+                    #  'idx_val': pl_non_lin, 
+                    #  'idx_err': pl_non_lin_err
                      }])
             return output
         else: pass

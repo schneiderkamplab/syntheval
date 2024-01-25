@@ -103,7 +103,6 @@ class KolmogorovSmirnovTest(MetricClass):
                 sig_cols.append(category)
 
         ### Calculate number of significant tests, and fraction of significant tests
-
         self.results = {'avg stat' : np.mean(dists), 
                         'stat err' : np.std(dists,ddof=1)/np.sqrt(len(dists)), 
                         'avg pval' : np.mean(pvals), 
@@ -138,27 +137,27 @@ class KolmogorovSmirnovTest(MetricClass):
         nummerical results of running this metric (to be turned into a dataframe).
 
         The required format is:
-        metric  dim  val  err  n_val  n_err idx_val idx_err
-            name1  u  0.0  0.0    0.0    0.0    None    None
-            name2  p  0.0  0.0    0.0    0.0    0.0     0.0
+        metric  dim  val  err  n_val  n_err
+            name1  u  0.0  0.0    0.0    0.0
+            name2  p  0.0  0.0    0.0    0.0
         """
         if self.results != {}:
             R = self.results
 
-            val_non_lin     = np.exp(-8*R['avg stat'])
-            val_non_lin_err = 8*val_non_lin*R['stat err']
+            # val_non_lin     = np.exp(-8*R['avg stat'])
+            # val_non_lin_err = 8*val_non_lin*R['stat err']
 
             return [{'metric': 'avg_ks_stat', 'dim': 'u', 
                      'val': R['avg stat'], 
                      'err': R['stat err'], 
                      'n_val': 1-R['avg stat'], 
                      'n_err': R['stat err'], 
-                     'idx_val': val_non_lin, 
-                     'idx_err': val_non_lin_err
+                    #  'idx_val': val_non_lin, 
+                    #  'idx_err': val_non_lin_err
                      },
                      {'metric': 'frac_ks_sigs', 'dim': 'u', 
                      'val': R['frac sigs'], 
                      'n_val': 1-R['frac sigs'], 
-                     'idx_val': 1-R['frac sigs'] 
+                    #  'idx_val': 1-R['frac sigs'] 
                      }]
         else: pass

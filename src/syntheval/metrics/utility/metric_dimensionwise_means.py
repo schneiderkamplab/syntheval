@@ -65,9 +65,9 @@ class MetricClassName(MetricClass):
         nummerical results of running this metric (to be turned into a dataframe).
 
         The required format is:
-        metric  dim  val  err  n_val  n_err idx_val idx_err
-            name1  u  0.0  0.0    0.0    0.0    None    None
-            name2  p  0.0  0.0    0.0    0.0    0.0     0.0
+        metric  dim  val  err  n_val  n_err
+            name1  u  0.0  0.0    0.0    0.0
+            name2  p  0.0  0.0    0.0    0.0
         """
         if self.results != {}:
             val_non_lin     = np.exp(-25*self.results['avg'])
@@ -77,8 +77,8 @@ class MetricClassName(MetricClass):
                      'err': self.results['err'], 
                      'n_val': 1-self.results['avg'], 
                      'n_err': self.results['err'], 
-                     'idx_val': val_non_lin, 
-                     'idx_err': val_non_lin_err
+                    #  'idx_val': val_non_lin, 
+                    #  'idx_err': val_non_lin_err
                      }]
         else: pass
 

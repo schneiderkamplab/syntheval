@@ -118,9 +118,9 @@ class MIAClassifier(MetricClass):
         nummerical results of running this metric (to be turned into a dataframe).
 
         The required format is:
-        metric  dim  val  err  n_val  n_err idx_val idx_err
-            name1  u  0.0  0.0    0.0    0.0    None    None
-            name2  p  0.0  0.0    0.0    0.0    0.0     0.0   
+        metric  dim  val  err  n_val  n_err
+            name1  u  0.0  0.0    0.0    0.0
+            name2  p  0.0  0.0    0.0    0.0  
         """
         if self.results != {}:
 

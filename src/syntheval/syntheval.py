@@ -98,7 +98,7 @@ class SynthEval():
 
         raw_results = {}
         key_results = None
-        scores = {'utility':{'val':[],'err':[]}, 'privacy':{'val':[],'err':[]}}
+        #scores = {'utility':{'val':[],'err':[]}, 'privacy':{'val':[],'err':[]}}
         pbar = tqdm(methods, disable= not self.verbose)
         for method in pbar:
             pbar.set_description(f'Syntheval: {method}')
@@ -123,18 +123,18 @@ class SynthEval():
             normalized_result = M.normalize_output()
             if normalized_result is not None: 
                 if key_results is None:
-                    key_results = pd.DataFrame(M.normalize_output(), columns=['metric', 'dim', 'val','err','n_val','n_err','idx_val','idx_err'])
+                    key_results = pd.DataFrame(M.normalize_output(), columns=['metric', 'dim', 'val','err','n_val','n_err'])#,'idx_val','idx_err'])
                 else:
-                    tmp_df = pd.DataFrame(M.normalize_output(), columns=['metric', 'dim', 'val','err','n_val','n_err','idx_val','idx_err'])
+                    tmp_df = pd.DataFrame(M.normalize_output(), columns=['metric', 'dim', 'val','err','n_val','n_err'])#,'idx_val','idx_err'])
                     key_results = pd.concat((key_results,tmp_df), axis = 0).reset_index(drop=True)
 
-        scores = {'utility':{'val': key_results[key_results['dim'] == 'u']['idx_val'].dropna().tolist(),
-                             'err': key_results[key_results['dim'] == 'u']['idx_err'].dropna().tolist()},
-                  'privacy':{'val': key_results[key_results['dim'] == 'p']['idx_val'].dropna().tolist(),
-                             'err': key_results[key_results['dim'] == 'p']['idx_err'].dropna().tolist()}
-                             }
+        # scores = {'utility':{'val': key_results[key_results['dim'] == 'u']['idx_val'].dropna().tolist(),
+        #                      'err': key_results[key_results['dim'] == 'u']['idx_err'].dropna().tolist()},
+        #           'privacy':{'val': key_results[key_results['dim'] == 'p']['idx_val'].dropna().tolist(),
+        #                      'err': key_results[key_results['dim'] == 'p']['idx_err'].dropna().tolist()}
+        #                      }
 
-        if self.verbose: print_results_to_console(utility_output_txt,privacy_output_txt,scores)
+        if self.verbose: print_results_to_console(utility_output_txt,privacy_output_txt)#,scores)
 
         if (kwargs != {} and self.verbose):
             with open('SE_config.json', "w") as json_file:

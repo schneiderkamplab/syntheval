@@ -8,6 +8,7 @@ version = "1.4"
 authors = [
   { name="Anton D. Lautrup"},
   { name="Tobias Hyrup"},
+  { name="Muhammad Rajabinasab"},
   { name="Peter Schneider-Kamp"}
 ]
 dependencies = [

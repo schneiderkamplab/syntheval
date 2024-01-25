@@ -82,40 +82,26 @@ class PropensityMeanSquaredError(MetricClass):
         self.results['acc err']
         )
         return string
-
-    def normalize_output(self) -> dict:
-        """ To add this metric to utility or privacy scores map the main 
-        result(s) to the zero one interval where zero is worst performance 
-        and one is best.
-        
-        pass or return None if the metric should not be used in such scores.
-
-        Return dictionary of lists 'val' and 'err' """
-
-        val_non_lin = np.exp(-10*self.results['avg pMSE'])
-        val_non_lin_err = 10*val_non_lin*self.results['pMSE err']
-
-        return {'val': [val_non_lin], 'err': [val_non_lin_err]}
     
     def normalize_output(self) -> list:
         """ This function is for making a dictionary of the most quintessential
         nummerical results of running this metric (to be turned into a dataframe).
 
         The required format is:
-        metric  dim  val  err  n_val  n_err idx_val idx_err
-            name1  u  0.0  0.0    0.0    0.0    None    None
-            name2  p  0.0  0.0    0.0    0.0    0.0     0.0 
+        metric  dim  val  err  n_val  n_err
+            name1  u  0.0  0.0    0.0    0.0
+            name2  p  0.0  0.0    0.0    0.0
         """
         if self.results != {}:
-            val_non_lin = np.exp(-10*self.results['avg pMSE'])
-            val_non_lin_err = 10*val_non_lin*self.results['pMSE err']
+            # val_non_lin = np.exp(-10*self.results['avg pMSE'])
+            # val_non_lin_err = 10*val_non_lin*self.results['pMSE err']
 
             return [{'metric': 'avg_pMSE', 'dim': 'u', 
                      'val': self.results['avg pMSE'], 
                      'err': self.results['pMSE err'], 
                      'n_val': 1-4*self.results['avg pMSE'], 
                      'n_err': 4*self.results['pMSE err'], 
-                     'idx_val': val_non_lin, 
-                     'idx_err': val_non_lin_err
+                    #  'idx_val': val_non_lin, 
+                    #  'idx_err': val_non_lin_err
                      }]
         else: pass

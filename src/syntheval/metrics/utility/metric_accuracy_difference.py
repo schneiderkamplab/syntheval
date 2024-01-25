@@ -190,28 +190,28 @@ np.mean(hres[:,0]), np.mean(hres[:,1]), self.results['avg diff hout'], self.resu
             name2  0.0  0.0    0.0    0.0    0.0     0.0
         """
         if self.results !={}:
-            val_non_lin     = np.exp(-8*self.results['avg diff'])
-            val_non_lin_err = 8*val_non_lin*self.results['avg diff err']
+            # val_non_lin     = np.exp(-8*self.results['avg diff'])
+            # val_non_lin_err = 8*val_non_lin*self.results['avg diff err']
 
             output = [{'metric': 'cls_F1_diff', 'dim': 'u',
                        'val': self.results['avg diff'], 
                        'err': self.results['avg diff err'], 
                        'n_val': 1-self.results['avg diff'], 
                        'n_err': self.results['avg diff err'], 
-                       'idx_val': val_non_lin, 
-                       'idx_err': val_non_lin_err
+                    #    'idx_val': val_non_lin, 
+                    #    'idx_err': val_non_lin_err
                        }]
             if (self.hout_data is not None):
-                val_non_lin_2       = np.exp(-8*self.results['avg diff hout'])
-                val_non_lin_err_2   = 8*val_non_lin_2*self.results['avg diff err hout']
+                # val_non_lin_2       = np.exp(-8*self.results['avg diff hout'])
+                # val_non_lin_err_2   = 8*val_non_lin_2*self.results['avg diff err hout']
 
                 output.extend([{'metric': 'cls_F1_diff_hout', 'dim': 'u',
                        'val': self.results['avg diff hout'], 
                        'err': self.results['avg diff err hout'], 
                        'n_val': 1-self.results['avg diff hout'], 
                        'n_err': self.results['avg diff err hout'], 
-                       'idx_val': val_non_lin_2, 
-                       'idx_err': val_non_lin_err_2
+                    #    'idx_val': val_non_lin_2, 
+                    #    'idx_err': val_non_lin_err_2
                        }])
             return output
         else: pass

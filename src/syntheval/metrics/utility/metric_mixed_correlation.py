@@ -117,30 +117,20 @@ class MixedCorrelation(MetricClass):
 | Correlation difference (nums only)       :   %.4f           |""" % (self.results['corr_mat_diff'])
         return string
 
-    def normalize_output(self) -> dict:
-        """ To add this metric to utility or privacy scores map the main 
-        result(s) to the zero one interval where zero is worst performance 
-        and one is best.
-        
-        pass or return None if the metric should not be used in such scores.
-
-        Return dictionary of lists 'val' and 'err' """
-        return {'val': [1-np.tanh(self.results['corr_mat_diff'])], 'err': [0]}
-
     def normalize_output(self) -> list:
         """ This function is for making a dictionary of the most quintessential
         nummerical results of running this metric (to be turned into a dataframe).
 
         The required format is:
-        metric  dim  val  err  n_val  n_err idx_val idx_err
-            name1  u  0.0  0.0    0.0    0.0    None    None
-            name2  p  0.0  0.0    0.0    0.0    0.0     0.0   
+        metric  dim  val  err  n_val  n_err
+            name1  u  0.0  0.0    0.0    0.0
+            name2  p  0.0  0.0    0.0    0.0  
         """
         if self.results != {}:
             n_elements = int(self.results['corr_mat_dims']*(self.results['corr_mat_dims']-1)/2)
             return [{'metric': 'corr_mat_diff', 'dim': 'u', 
                      'val': self.results['corr_mat_diff'], 
                      'n_val': 1-self.results['corr_mat_diff']/n_elements, 
-                     'idx_val': 1-np.tanh(self.results['corr_mat_diff'])
+                    #  'idx_val': 1-np.tanh(self.results['corr_mat_diff'])
                      }]
         else: pass
