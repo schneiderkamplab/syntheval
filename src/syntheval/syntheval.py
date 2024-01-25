@@ -143,15 +143,15 @@ class SynthEval():
         self._raw_results = raw_results
         return key_results
 
-    def benchmark(self, path_to_syn_file_folder, analysis_target_var=None, presets_file=None, rank_strategy='normal', **kwargs):
+    def benchmark(self, dict_or_path_to_syn_file_folder, analysis_target_var=None, presets_file=None, rank_strategy='normal', **kwargs):
         """Method for running SynthEval multiple times across all synthetic data files in a
         specified directory. Making a results file, and calculating rank-derived utility 
         and privacy scores.
         
         Takes:
-            path_to_syn_file_folder : string like '/example/ex_data_dir/' to folder with datasets
-            analysis_target_var     : string column name of categorical variable to check
-            rank_strategy           : {default='normal', 'linear', 'quantile'} see descriptions below
+            dict_or_path_to_syn_file_folder : dict of dataframes or string like '/example/ex_data_dir/' to folder with datasets
+            analysis_target_var             : string column name of categorical variable to check
+            rank_strategy                   : {default='normal', 'linear', 'quantile'} see descriptions below
 
         Returns:
             vals_df : dataframe with the metrics and their rank derived scores
@@ -164,14 +164,23 @@ class SynthEval():
             verbose_flag = True
             self.verbose = False
 
-        # Part to loop over all datasets in the folder and evaluate them
-        csv_files = sorted(glob.glob(path_to_syn_file_folder + '*.csv'))
+        # Part to make sure input is the correct format
+        if isinstance(dict_or_path_to_syn_file_folder, str):
+            csv_files = sorted(glob.glob(dict_or_path_to_syn_file_folder + '*.csv'))
+            
+            df_dict = {}
+            for file in csv_files: df_dict[file.split(os.path.sep)[-1].replace('.csv', '')] = pd.read_csv(file)
+        elif isinstance(dict_or_path_to_syn_file_folder, dict):
+            df_dict = dict_or_path_to_syn_file_folder
+        else:
+            raise Exception("Error: input was not instance of dictionary or filepath!")
 
+        # Evaluate the datasets in parallel
+        from joblib import Parallel, delayed
+        res_list = Parallel(n_jobs=-2)(delayed(self.evaluate)(dataframe, analysis_target_var, presets_file, **kwargs) for dataframe in df_dict.values())
+        
         results = {}
-        for file in tqdm(csv_files,desc='SynthEval: benchmark'):
-            df_syn = pd.read_csv(file)
-
-            results[file.split(os.path.sep)[-1].replace('.csv', '')] = self.evaluate(df_syn,analysis_target_var, presets_file, **kwargs)
+        for res, key in zip(res_list,list(df_dict.keys())): results[key] = res
 
         # Part to postprocess the results, format and rank them in a csv file.
         tmp_df = results[list(results.keys())[0]]
