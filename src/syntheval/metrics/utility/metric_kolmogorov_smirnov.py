@@ -6,49 +6,26 @@ import numpy as np
 
 from ..core.metric import MetricClass
 
+from collections import Counter
 from scipy.stats import permutation_test,ks_2samp
 
-def _discrete_ks_statistic(x, y):
-    """Function for calculating the KS statistic"""
-    KstestResult = ks_2samp(x,y)
-    return np.round(KstestResult.statistic,4)
+def _total_variation_distance(x,y):
+    """Function for calculating the TVD (KS statistic equivalent)"""
+    X, Y = Counter(x), Counter(y)
+    merged = X + Y
+
+    return np.round(0.5*sum([abs(X[key]/len(x)-Y[key]/len(y)) for key in merged.keys()]))
+
+# def _discrete_ks_statistic(x, y):
+#     """Function for calculating the KS statistic"""
+#     KstestResult = ks_2samp(x,y)
+#     return np.round(KstestResult.statistic,4)
 
 def _discrete_ks(x, y, n_perms=1000):
     """Function for doing permutation test of discrete values in the KS test"""
-    res = permutation_test((x, y), _discrete_ks_statistic, n_resamples=n_perms, vectorized=False, permutation_type='independent', alternative='greater')
+    res = permutation_test((x, y), _total_variation_distance, n_resamples=n_perms, vectorized=False, permutation_type='independent', alternative='greater')
 
     return res.statistic, res.pvalue
-
-def featurewise_ks_test(real, fake, cat_cols, sig_lvl=0.05, do_permutation = True, n_perms = 1000):
-    """Function for executing the Kolmogorov-Smirnov test.
-    
-    Returns:
-        Avg. KS dist: dict  - holds avg. and standard error of the mean (SE)
-        Avg. KS pval: dict  - holds avg. and SE
-        num of sigs : int   - the number of significant tests at sig_lvl
-        frac of sigs: float - the fraction of significant tests at sig_lvl   
-     """
-    dists = []
-    pvals = []
-
-    for category in real.columns:
-        R = real[category]
-        F = fake[category]
-
-        if (category in cat_cols and do_permutation==True):
-            statistic, pvalue = _discrete_ks(F,R,n_perms)
-            dists.append(statistic)
-            pvals.append(pvalue)
-        else:
-            KstestResult = ks_2samp(R,F)
-            dists.append(KstestResult.statistic)
-            pvals.append(KstestResult.pvalue)
-
-    ### Calculate number of significant tests, and fraction of sifnificant tests
-    num  = sum([p_val < sig_lvl for p_val in pvals])
-    frac = num/len(pvals)
-
-    return {'avg': np.mean(dists), 'err': np.std(dists,ddof=1)/np.sqrt(len(dists))}, {'avg': np.mean(pvals), 'err':np.std(pvals,ddof=1)/np.sqrt(len(pvals))}, num, frac 
 
 class KolmogorovSmirnovTest(MetricClass):
     """The Metric Class is an abstract class that interfaces with 
@@ -144,20 +121,14 @@ class KolmogorovSmirnovTest(MetricClass):
         if self.results != {}:
             R = self.results
 
-            # val_non_lin     = np.exp(-8*R['avg stat'])
-            # val_non_lin_err = 8*val_non_lin*R['stat err']
-
             return [{'metric': 'avg_ks_stat', 'dim': 'u', 
                      'val': R['avg stat'], 
                      'err': R['stat err'], 
                      'n_val': 1-R['avg stat'], 
                      'n_err': R['stat err'], 
-                    #  'idx_val': val_non_lin, 
-                    #  'idx_err': val_non_lin_err
                      },
                      {'metric': 'frac_ks_sigs', 'dim': 'u', 
                      'val': R['frac sigs'], 
                      'n_val': 1-R['frac sigs'], 
-                    #  'idx_val': 1-R['frac sigs'] 
                      }]
         else: pass
