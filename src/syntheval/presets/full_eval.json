@@ -4,7 +4,7 @@
     "cio"       : {"confidence": 95},
     "corr_diff" : {"mixed_corr": true},
     "mi_diff"   : {},
-    "ks_test"   : {"sig_lvl": 0.05, "do_permutation": true, "n_perms": 1000},
+    "ks_test"   : {"sig_lvl": 0.05, "n_perms": 1000},
     "h_dist"    : {},
     "p_mse"     : {"k_folds": 5, "max_iter": 100, "solver": "liblinear"},
     "nndr"      : {},

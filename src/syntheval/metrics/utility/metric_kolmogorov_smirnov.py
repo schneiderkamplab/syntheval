@@ -59,8 +59,7 @@ class KolmogorovSmirnovTest(MetricClass):
             num of sigs : int   - the number of significant tests at sig_lvl
             frac of sigs: float - the fraction of significant tests at sig_lvl   
         """
-        n_dists = []
-        c_dists = []
+        n_dists, c_dists = [], []
         pvals = []
         sig_cols = []
         
@@ -70,7 +69,7 @@ class KolmogorovSmirnovTest(MetricClass):
             R = self.real_data[category]
             F = self.synt_data[category]
 
-            if (category in self.cat_cols):
+            if category in self.cat_cols:
                 statistic, pvalue = _discrete_ks(F,R,n_perms)
                 c_dists.append(statistic)
                 pvals.append(pvalue)
@@ -83,14 +82,10 @@ class KolmogorovSmirnovTest(MetricClass):
                 sig_cols.append(category)
 
         ### Calculate number of significant tests, and fraction of significant tests
-        self.results = {'avg stat' : np.mean(n_dists+c_dists), 
-                        'stat err' : np.std(n_dists+c_dists,ddof=1)/np.sqrt(len(n_dists+c_dists)),
-                        'avg ks'   : np.mean(n_dists),
-                        'ks err'   : np.std(n_dists,ddof=1)/np.sqrt(len(n_dists)),
-                        'avg tvd'  : np.mean(c_dists),
-                        'tvd err'  : np.std(c_dists,ddof=1)/np.sqrt(len(c_dists)),
-                        'avg pval' : np.mean(pvals),
-                        'pval err' : np.std(pvals,ddof=1)/np.sqrt(len(pvals)),
+        self.results = {'avg stat' : np.mean(n_dists+c_dists), 'stat err' : np.std(n_dists+c_dists,ddof=1)/np.sqrt(len(n_dists+c_dists)),
+                        'avg ks'   : np.mean(n_dists), 'ks err'   : np.std(n_dists,ddof=1)/np.sqrt(len(n_dists)),
+                        'avg tvd'  : np.mean(c_dists), 'tvd err'  : np.std(c_dists,ddof=1)/np.sqrt(len(c_dists)),
+                        'avg pval' : np.mean(pvals), 'pval err' : np.std(pvals,ddof=1)/np.sqrt(len(pvals)),
                         'num sigs' : len(sig_cols),
                         'frac sigs': len(sig_cols)/len(pvals),
                         'sigs cols': sig_cols
@@ -107,7 +102,7 @@ class KolmogorovSmirnovTest(MetricClass):
 | Kolmogorov–Smirnov / Total Variation Distance test            |
 |   -> average combined statistic          :   %.4f  %.4f   |
 |       -> avg. Kolmogorov–Smirnov dist.   :   %.4f  %.4f   |
-        -> avg. Total Variation Distance   :   %.4f  %.4f   |
+|       -> avg. Total Variation Distance   :   %.4f  %.4f   |
 |   -> average combined p-value            :   %.4f  %.4f   |
 |       -> # significant tests at a=%.2f   :   %2d               |
 |       -> fraction of significant tests   :   %.4f           |""" % (R['avg stat'], R['stat err'],
