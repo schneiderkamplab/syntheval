@@ -189,31 +189,43 @@ class SynthEval():
         privacy_mets = tmp_df[tmp_df['dim'] == 'p']['metric'].tolist()
 
         vals_df = pd.DataFrame(columns=tmp_df['metric'])
+        errs_df = pd.DataFrame(columns=tmp_df['metric'])
         rank_df = pd.DataFrame(columns=tmp_df['metric'])
 
         for key, df in results.items():
             df = df.set_index('metric').T
 
             vals_df.loc[len(vals_df)] = df.loc['val']
+            errs_df.loc[len(vals_df)] = df.loc['err']
             rank_df.loc[len(vals_df)] = df.loc['n_val']
 
         vals_df['dataset'] = list(results.keys())
+        errs_df['dataset'] = list(results.keys())
         rank_df['dataset'] = list(results.keys())
 
         vals_df = vals_df.set_index('dataset')
+        errs_df = errs_df.set_index('dataset')
         rank_df = rank_df.set_index('dataset')
 
         if rank_strategy == 'normal': rank_df = extremes_ranking(rank_df,utility_mets,privacy_mets)
         if rank_strategy == 'linear': rank_df = linear_ranking(rank_df,utility_mets,privacy_mets)
         if rank_strategy == 'quantile': rank_df = quantile_ranking(rank_df,utility_mets,privacy_mets)
 
-        vals_df['rank'] = rank_df['rank']
-        vals_df['u_rank'] = rank_df['u_rank']
-        vals_df['p_rank'] = rank_df['p_rank']
+        comb_df = pd.DataFrame()
+        for column in vals_df.columns:
+            comb_df[(column, 'value')] = vals_df[column]
+            comb_df[(column, 'error')] = errs_df[column]
+        comb_df.columns = pd.MultiIndex.from_tuples(comb_df.columns)
+
+        comb_df['rank'] = rank_df['rank']
+        comb_df['u_rank'] = rank_df['u_rank']
+        comb_df['p_rank'] = rank_df['p_rank']
 
         name_tag = str(int(time.time()))
-        vals_df.to_csv('SE_benchmark_results' +'_' +name_tag+ '.csv')
+        temp_df = comb_df.copy()
+        temp_df.columns = ['_'.join(col) for col in comb_df.columns.values]
+        temp_df.to_csv('SE_benchmark_results' +'_' +name_tag+ '.csv')
         vals_df.to_csv('SE_benchmark_ranking' +'_' +name_tag+ '.csv')
 
         self.verbose = verbose_flag
-        return vals_df, rank_df
+        return comb_df, rank_df
