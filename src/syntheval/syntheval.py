@@ -143,7 +143,7 @@ class SynthEval():
         self._raw_results = raw_results
         return key_results
 
-    def benchmark(self, dict_or_path_to_syn_file_folder, analysis_target_var=None, presets_file=None, rank_strategy='normal', **kwargs):
+    def benchmark(self, dict_or_path_to_syn_file_folder, analysis_target_var=None, presets_file=None, rank_strategy='linear', **kwargs):
         """Method for running SynthEval multiple times across all synthetic data files in a
         specified directory. Making a results file, and calculating rank-derived utility 
         and privacy scores.

@@ -14,7 +14,7 @@ def _total_variation_distance(x,y):
     X, Y = Counter(x), Counter(y)
     merged = X + Y
 
-    return np.round(0.5*sum([abs(X[key]/len(x)-Y[key]/len(y)) for key in merged.keys()]))
+    return np.round(0.5*sum([abs(X[key]/len(x)-Y[key]/len(y)) for key in merged.keys()]),4)
 
 # def _discrete_ks_statistic(x, y):
 #     """Function for calculating the KS statistic"""
@@ -50,7 +50,7 @@ class KolmogorovSmirnovTest(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'utility'
 
-    def evaluate(self, sig_lvl=0.05, do_permutation = True, n_perms = 1000) -> float | dict:
+    def evaluate(self, sig_lvl=0.05, n_perms = 1000) -> float | dict:
         """Function for executing the Kolmogorov-Smirnov test.
     
         Returns:
@@ -59,36 +59,43 @@ class KolmogorovSmirnovTest(MetricClass):
             num of sigs : int   - the number of significant tests at sig_lvl
             frac of sigs: float - the fraction of significant tests at sig_lvl   
         """
-        dists = []
+        n_dists = []
+        c_dists = []
         pvals = []
         sig_cols = []
+        
+        self.sig_lvl = sig_lvl
 
         for category in self.real_data.columns:
             R = self.real_data[category]
             F = self.synt_data[category]
 
-            if (category in self.cat_cols and do_permutation==True):
+            if (category in self.cat_cols):
                 statistic, pvalue = _discrete_ks(F,R,n_perms)
-                dists.append(statistic)
+                c_dists.append(statistic)
                 pvals.append(pvalue)
             else:
                 KstestResult = ks_2samp(R,F)
                 statistic, pvalue = KstestResult.statistic, KstestResult.pvalue
-                dists.append(statistic)
+                n_dists.append(statistic)
                 pvals.append(pvalue)
             if pvalue < sig_lvl:
                 sig_cols.append(category)
 
         ### Calculate number of significant tests, and fraction of significant tests
-        self.results = {'avg stat' : np.mean(dists), 
-                        'stat err' : np.std(dists,ddof=1)/np.sqrt(len(dists)), 
-                        'avg pval' : np.mean(pvals), 
+        self.results = {'avg stat' : np.mean(n_dists+c_dists), 
+                        'stat err' : np.std(n_dists+c_dists,ddof=1)/np.sqrt(len(n_dists+c_dists)),
+                        'avg ks'   : np.mean(n_dists),
+                        'ks err'   : np.std(n_dists,ddof=1)/np.sqrt(len(n_dists)),
+                        'avg tvd'  : np.mean(c_dists),
+                        'tvd err'  : np.std(c_dists,ddof=1)/np.sqrt(len(c_dists)),
+                        'avg pval' : np.mean(pvals),
                         'pval err' : np.std(pvals,ddof=1)/np.sqrt(len(pvals)),
                         'num sigs' : len(sig_cols),
                         'frac sigs': len(sig_cols)/len(pvals),
                         'sigs cols': sig_cols
                         }
-        
+
         return self.results
 
     def format_output(self) -> str:
@@ -97,15 +104,17 @@ class KolmogorovSmirnovTest(MetricClass):
 |                                          :                    |"""
         R = self.results
         string = """\
-| Kolmogorov–Smirnov test                                       |
-|   -> avg. Kolmogorov–Smirnov distance    :   %.4f  %.4f   |
-|   -> avg. Kolmogorov–Smirnov p-value     :   %.4f  %.4f   |
-|   -> # significant tests at a=0.05       :   %2d               |
-|   -> fraction of significant tests       :   %.4f           |""" % (R['avg stat'], 
-                                                                      R['stat err'], 
-                                                                      R['avg pval'], 
-                                                                      R['pval err'], 
-                                                                      R['num sigs'],
+| Kolmogorov–Smirnov / Total Variation Distance test            |
+|   -> average combined statistic          :   %.4f  %.4f   |
+|       -> avg. Kolmogorov–Smirnov dist.   :   %.4f  %.4f   |
+        -> avg. Total Variation Distance   :   %.4f  %.4f   |
+|   -> average combined p-value            :   %.4f  %.4f   |
+|       -> # significant tests at a=%.2f   :   %2d               |
+|       -> fraction of significant tests   :   %.4f           |""" % (R['avg stat'], R['stat err'],
+                                                                      R['avg ks'], R['ks err'],
+                                                                      R['avg tvd'], R['tvd err'],
+                                                                      R['avg pval'], R['pval err'], 
+                                                                      self.sig_lvl, R['num sigs'],
                                                                       R['frac sigs'])
         return string
 
@@ -121,7 +130,7 @@ class KolmogorovSmirnovTest(MetricClass):
         if self.results != {}:
             R = self.results
 
-            return [{'metric': 'avg_ks_stat', 'dim': 'u', 
+            return [{'metric': 'ks_tvd_stat', 'dim': 'u', 
                      'val': R['avg stat'], 
                      'err': R['stat err'], 
                      'n_val': 1-R['avg stat'], 
