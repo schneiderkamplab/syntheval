@@ -3,11 +3,14 @@
 # Date: 01-02-2023
 
 import time
+import math
 
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
+
+from .preprocessing import stack
 
 # params = {'text.usetex' : True,
 #           'font.size' : 14,
@@ -129,6 +132,29 @@ def plot_own_principal_component_pairplot(data):
 
     fig.tight_layout()
     plt.savefig('SE_pca_own_' +str(int(time.time()))+'.png')
+    plt.close()
+    pass
+
+def plot_significantly_dissimilar_variables(real, fake, labels, cat_cols):
+    """Plot histograms of every attribute that is significantly unlike the one it is modelled on"""
+
+    df = stack(real, fake)
+
+    plt.rc('font', size=6)
+    fig, axes = plt.subplots(nrows=math.ceil(len(labels)/4), ncols=4, figsize=(10, 2*math.ceil(len(labels)/4)))
+    axes = axes.flatten()
+
+    for i, column in enumerate(labels):
+        
+        if column in cat_cols: sns.histplot(data=df, x=column, hue='real', stat='probability', common_norm=False, discrete=True, multiple="dodge", alpha=0.5, shrink=.8, ax=axes[i])
+        else: sns.histplot(data=df, x=column, hue='real', stat='probability', common_norm=False, multiple="layer", alpha=0.5, shrink=.8, ax=axes[i])
+        # axes[i].hist(df_real[column].dropna(), alpha=0.5, label='real_data')
+        # axes[i].hist(df_fake[column].dropna(), alpha=0.5, label='synt_data')
+        
+        axes[i].set_title(f'Variable {column}',fontsize=8)
+        
+    plt.tight_layout()
+    plt.savefig('SE_sig_hists_' +str(int(time.time()))+ '.png')
     plt.close()
     pass
 

@@ -9,6 +9,8 @@ from ..core.metric import MetricClass
 from collections import Counter
 from scipy.stats import permutation_test,ks_2samp
 
+from ...utils.plot_metrics import plot_significantly_dissimilar_variables
+
 def _total_variation_distance(x,y):
     """Function for calculating the TVD (KS statistic equivalent)"""
     X, Y = Counter(x), Counter(y)
@@ -91,6 +93,7 @@ class KolmogorovSmirnovTest(MetricClass):
                         'sigs cols': sig_cols
                         }
 
+        if (self.verbose and sig_cols != []): plot_significantly_dissimilar_variables(self.real_data, self.synt_data, sig_cols, self.cat_cols)
         return self.results
 
     def format_output(self) -> str:
