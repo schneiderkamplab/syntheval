@@ -28,13 +28,13 @@ class MIAClassifier(MetricClass):
 
     def name() -> str:
         """Name/keyword to reference the metric"""
-        return "attr_discl_cats"
+        return "att_discl"
 
     def type() -> str:
         """Set to 'privacy' or 'utility'"""
         return "privacy"
 
-    def minmaxscale(self, df: pd.DataFrame, include: list) -> pd.DataFrame:
+    def _minmaxscale(self, df: pd.DataFrame, include: list) -> pd.DataFrame:
         """Function for min-max scaling of a dataframe"""
         for column in df.columns:
             if column in include:
@@ -43,7 +43,7 @@ class MIAClassifier(MetricClass):
                 )
         return df
 
-    def predict_cat_target(self, real: pd.DataFrame, syn: pd.DataFrame, target: str):
+    def _predict_cat_target(self, real: pd.DataFrame, syn: pd.DataFrame, target: str):
         syn_predictors = syn.loc[:, syn.columns != target]
         real_predictors = real.loc[:, real.columns != target]
 
@@ -65,7 +65,7 @@ class MIAClassifier(MetricClass):
 
         return precision, recall, f1
 
-    def predict_num_target(
+    def _predict_num_target(
         self,
         real: pd.DataFrame,
         syn: pd.DataFrame,
@@ -103,19 +103,19 @@ class MIAClassifier(MetricClass):
         
         # Scale the numeric attributes
         combined_data = pd.concat([self.real_data, self.synt_data], ignore_index=True)
-        scaled = self.minmaxscale(combined_data.copy(deep=True), self.num_cols)
+        scaled = self._minmaxscale(combined_data.copy(deep=True), self.num_cols)
         real_scaled = scaled.iloc[: len(self.real_data)]
         syn_scaled = scaled.iloc[len(self.real_data) :]
 
         # Compute attribute disclosure for each attribute with maximum adversarial knowledge
         for column in self.real_data.columns:
             if column in self.cat_cols:
-                precision, recall, f1 = self.predict_cat_target(
+                precision, recall, f1 = self._predict_cat_target(
                     real=real_scaled, syn=syn_scaled, target=column
                 )
 
             else:
-                precision, recall, f1 = self.predict_num_target(
+                precision, recall, f1 = self._predict_num_target(
                     real=real_scaled,
                     syn=syn_scaled,
                     target=column,

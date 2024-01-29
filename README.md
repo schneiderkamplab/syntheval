@@ -23,9 +23,9 @@ evaluator.evaluate(df_fake, class_lab_col, presets_file = "full_eval", **kwargs)
 ```
 Where the user supply <code>df_real, df_test, df_fake</code> as pandas dataframes, the <code>class_cat_col</code> is a complete list of column names or can be omitted for categoricals to be automatically inferred. Some metrics require a target class, so <code>class_lab_col</code> is a string for designating one column with discrete values as target for usability predictions and coloration. In the evaluate function, a presets file can be chosen ("full_eval", "fast_eval", or "privacy") or alternatively a filepath can be supplied to a json file with select metrics keywords. Finally, instead of (or in addition to), keyword arguments can be added in the end with additional metrics and their options. 
 
-New in version 1.4 is the benchmark module, that allows a directory of synthetic datasets to be specified for evaluation. All datasets in the folder are evaluated against the training (and test) data on the selected metrics. Three types of rank-derived scoring are available to choose between ("normal", "linear", or "quantile"), assisting in identifing datasets that perform well overall, and on utility and privacy dimensions.
+New in version 1.4 is the benchmark module, that allows a directory of synthetic datasets to be specified for evaluation. All datasets in the folder are evaluated against the training (and test) data on the selected metrics. Three types of rank-derived scoring are available to choose between ("linear", "normal", or "quantile"), assisting in identifing datasets that perform well overall, and on utility and privacy dimensions.
 ```python
-evaluator.benchmark('local/path_to/target_dir/', class_lab_col, presets_file = "full_eval", rank_strategy='linear', **kwargs)
+evaluator.benchmark('local/path_to/target_dir/', class_lab_col, presets_file = "full_eval", rank_strategy='normal', **kwargs)
 ```
 Normal ranking works for identifying the datasets that does best/worst out of a normally distributed mass where it may be difficult to say something precise about the performance of a more typical result subject to noise. Linear ranking is appropriate for datasets where the results are more spaced out, and quantile ranking is only suitable for benchmarks of several datasets.
 
@@ -59,7 +59,7 @@ In the code we implemented:
 - Confidence Interval Overlap (nums. only, number and fraction of significant tests)
 - Correlation Matrix Difference (nums. only or mixed correlation)
 - Mutual Information Matrix Difference
-- Kolmogorov–Smirnov test (avg. distance, avg. p-value and number and fraction of significant tests)
+- Kolmogorov–Smirnov / Total Variation Distance test (avg. distance, avg. p-value and number and fraction of significant tests)
 - Hellinger Distance (avg. distance)
 - Propensity Mean Squared Error (pMSE and accuracy)
 - Nearest Neighbour Adversarial Accuracy (NNAA) 
@@ -82,9 +82,8 @@ Privacy is a crucial aspect of evaluating synthetic data, we include only three 
 - Median Distance to Closest Record (normalised by internal NN distance.)
 - Hitting Rate (for nummericals defined to be within the attribute range / 30)
 - Epsilon identifiability risk (calculated using weighted NN distance)
-
-### Utility and Privacy Indexes
-As a way to condense the results of all metrics down to a single number that can be used for ranking and comparing datasets with similar level of utility or privacy, a key feature of SynthEval is mapping most included metrics to the same scale, for an average to be carried out. This index is not to be taken too seriously since it is mearly an unweighted average of a non-predefined set of metrics, and can exclusively be used internally in an experiment. As an additional warning the number of values used in the averages are shown, so as to indicate that a good score on few metrics are less valuable than a less good score on many more metrics. 
+- Membership Inference Attack
+- Attribute Disclosure Risk
 
 ## Creating new metrics
 SynthEval is designed with modularity in mind. Creating new, custom metrics is as easy as copying the metrics template file, and filling in the five required functions. Because, SynthEval has very little hardcoding wrt. the metrics, making new metrics work locally should require no changes other than adding the metrics script in the metrics folder.

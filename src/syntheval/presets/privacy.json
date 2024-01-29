@@ -6,5 +6,5 @@
     "hit_rate"  : {"thres_percent": 0.0333},
     "eps_risk"  : {},
     "mia_risk"  : {"num_eval_iter": 5},
-    "attr_discl_cats" : {}
+    "att_discl" : {}
 }
