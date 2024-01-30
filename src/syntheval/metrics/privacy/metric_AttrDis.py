@@ -43,25 +43,37 @@ class MIAClassifier(MetricClass):
                 )
         return df
 
-    def _predict_cat_target(self, real: pd.DataFrame, syn: pd.DataFrame, target: str):
+    def _predict_cat_target(
+        self,
+        real: pd.DataFrame,
+        syn: pd.DataFrame,
+        target: str,
+        hout: pd.DataFrame = None,
+    ):
         syn_predictors = syn.loc[:, syn.columns != target]
         real_predictors = real.loc[:, real.columns != target]
 
         syn_target = syn[target]
         real_target = real[target]
 
-        combined_target = pd.concat([syn_target, real_target], ignore_index=True)
-        combined_target_encoded = LabelEncoder().fit_transform(combined_target)
-        syn_target = combined_target_encoded[: len(syn_target)]
-        real_target = combined_target_encoded[len(syn_target) :]
+        if hout is not None:
+            hout_predictors = hout.loc[:, hout.columns != target]
+            hout_target = hout[target]
+
+        total_targets = pd.concat([real_target, hout_target]) if hout is not None else real_target
+        total_predictors = pd.concat([real_predictors, hout_predictors]) if hout is not None else real_predictors
 
         clf = RandomForestClassifier(n_estimators=100).fit(syn_predictors, syn_target)
-        preds = clf.predict(real_predictors)
+
+        total_targets = pd.concat([real_target, hout_target]) if hout is not None else real_target
+        total_predictors = pd.concat([real_predictors, hout_predictors]) if hout is not None else real_predictors
+        
+        preds = clf.predict(total_predictors)
         precision = precision_score(
-            real_target, preds, average="macro", zero_division=0
+            total_targets, preds, average="macro", zero_division=0
         )
-        recall = recall_score(real_target, preds, average="macro", zero_division=0)
-        f1 = f1_score(real_target, preds, average="macro", zero_division=0)
+        recall = recall_score(total_targets, preds, average="macro", zero_division=0)
+        f1 = f1_score(total_targets, preds, average="macro", zero_division=0)
 
         return precision, recall, f1
 
@@ -70,6 +82,7 @@ class MIAClassifier(MetricClass):
         real: pd.DataFrame,
         syn: pd.DataFrame,
         target: str,
+        hout: pd.DataFrame = None,
         threshold: float = 1 / 30,
     ):
         syn_target = syn[target]
@@ -77,20 +90,28 @@ class MIAClassifier(MetricClass):
         syn_predictors = syn.loc[:, syn.columns != target]
         real_predictors = real.loc[:, real.columns != target]
 
+        if hout is not None:
+            hout_predictors = hout.loc[:, hout.columns != target]
+            hout_target = hout[target]
+
+        total_targets = pd.concat([real_target, hout_target]) if hout is not None else real_target
+        total_predictors = pd.concat([real_predictors, hout_predictors]) if hout is not None else real_predictors
+
         rf_regressor = RandomForestRegressor(n_estimators=100).fit(
             syn_predictors, syn_target
         )
-        preds = rf_regressor.predict(real_predictors)
+
+        preds = rf_regressor.predict(total_predictors)
 
         # check if differens from preds to target_real is less than the given threshold
-        preds = np.where(np.abs(preds - real_target) < threshold, 1, 0)
-        real_target = [1] * len(real_target)
+        preds = np.where(np.abs(preds - total_targets) < threshold, 1, 0)
+        total_targets = [1] * len(total_targets)
 
         precision = precision_score(
-            real_target, preds, average="macro", zero_division=0
+            total_targets, preds, average="macro", zero_division=0
         )
-        recall = recall_score(real_target, preds, average="macro", zero_division=0)
-        f1 = f1_score(real_target, preds, average="macro", zero_division=0)
+        recall = recall_score(total_targets, preds, average="macro", zero_division=0)
+        f1 = f1_score(total_targets, preds, average="macro", zero_division=0)
 
         return precision, recall, f1
 
@@ -100,24 +121,38 @@ class MIAClassifier(MetricClass):
             "recall": [],
             "f1": [],
         }
-        
+
         # Scale the numeric attributes
-        combined_data = pd.concat([self.real_data, self.synt_data], ignore_index=True)
+        if self.hout_data is not None:
+            combined_data = pd.concat(
+                [self.real_data, self.synt_data, self.hout_data], ignore_index=True
+            )
+        else:
+            combined_data = pd.concat(
+                [self.real_data, self.synt_data], ignore_index=True
+            )
         scaled = self._minmaxscale(combined_data.copy(deep=True), self.num_cols)
+
         real_scaled = scaled.iloc[: len(self.real_data)]
         syn_scaled = scaled.iloc[len(self.real_data) :]
+        hout_scaled = (
+            scaled.iloc[len(self.real_data) + len(self.synt_data) :]
+            if self.hout_data is not None
+            else None
+        )
 
         # Compute attribute disclosure for each attribute with maximum adversarial knowledge
         for column in self.real_data.columns:
             if column in self.cat_cols:
                 precision, recall, f1 = self._predict_cat_target(
-                    real=real_scaled, syn=syn_scaled, target=column
+                    real=real_scaled, syn=syn_scaled, hout=hout_scaled, target=column
                 )
 
             else:
                 precision, recall, f1 = self._predict_num_target(
                     real=real_scaled,
                     syn=syn_scaled,
+                    hout=hout_scaled,
                     target=column,
                     threshold=numerical_dist_thresh,
                 )
