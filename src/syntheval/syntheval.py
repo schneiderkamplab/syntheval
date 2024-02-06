@@ -26,33 +26,44 @@ def _has_not_slash_backslash_or_dot(input_string):
 
 class SynthEval():
     def __init__(self, 
-                 real: DataFrame, 
-                 hold_out: DataFrame = None,
+                 real_dataframe: DataFrame, 
+                 holdout_dataframe: DataFrame = None,
                  cat_cols: list = None,
                  nn_distance: str = 'gower', 
                  unique_threshold: int = 10,
                  verbose: bool = True,
         ) -> None:
+        """Primary object for accessing the SynthEval evaluation framework. Create with the real data used for training 
+        and use either evaluate of benchmark methods for evaluating synthetic datasets.
+        
+        Parameters:
+            real_dataframe      : real dataset, in dataframe format. 
+            holdout_dataframe   : (optional) real data that was not used for training the generative model
+            cat_cols            : (optional) complete list of categorical columns column names. 
+            nn_distance         : {default= 'gower', 'euclid'} distance metric for NN distances.
+            unique_threshold    : threshold of unique levels in non-object columns to be considered categoricals.    
+            verbose             : flag fo printing to console and making figures
+        """
 
-        self.real = real
+        self.real = real_dataframe
         self.verbose = verbose
 
-        if hold_out is not None:
-            self.hold_out = hold_out
-
+        if holdout_dataframe is not None:
             # Make sure columns and their order are the same.
-            if len(real.columns) == len(hold_out.columns):
-                hold_out = hold_out[real.columns.tolist()]
-            assert real.columns.tolist() == hold_out.columns.tolist(), 'Columns in real and houldout dataframe are not the same'
+            if len(real_dataframe.columns) == len(holdout_dataframe.columns):
+                holdout_dataframe = holdout_dataframe[real_dataframe.columns.tolist()]
+            assert real_dataframe.columns.tolist() == holdout_dataframe.columns.tolist(), 'Columns in real and houldout dataframe are not the same'
+
+            self.hold_out = holdout_dataframe
         else:
             self.hold_out = None
 
         if cat_cols is None:
-            cat_cols = get_cat_variables(real, unique_threshold)
+            cat_cols = get_cat_variables(real_dataframe, unique_threshold)
             if self.verbose: print('SynthEval: inferred categorical columns...')
         
         self.categorical_columns = cat_cols
-        self.numerical_columns = [column for column in real.columns if column not in cat_cols]
+        self.numerical_columns = [column for column in real_dataframe.columns if column not in cat_cols]
 
         self.nn_dist = nn_distance
         
@@ -68,7 +79,26 @@ class SynthEval():
         if self.verbose: print('SynthEval: synthetic data read successfully')
         pass
 
+    def display_loaded_metrics(self):
+        """Utility function for getting an overview of the loaded modules and their keys."""
+        print(loaded_metrics)
+        pass
+
     def evaluate(self, synthetic_dataframe, analysis_target_var=None, presets_file=None, **kwargs):
+        """Method for generating the SynthEval evaluation report on a synthetic dataset. Includes the metrics specified in the 
+        presets file or through the keyword arguments. Returns a dataframe with the primary results, and prints to console if 
+        verbose. The raw output can be accessed as a charateristic of the SynthEval object after running this method 
+        (e.i. self._raw_results).
+        
+        Parameters:
+            synthetic_dataframe     : synthetic dataset, in dataframe format. 
+            analysis_target_var     : string column name of categorical variable to check.
+            presets_file            : {default=None, 'full_eval', 'fast_eval', 'privacy'} or json file path.
+            **kwargs                : keyword arguments for metrics e.g. ks_test={}, eps_risk={}, ...
+
+        Returns:
+            key_results : dataframe with the primary result(s) from each of the included metrics.
+        """
         self._update_syn_data(synthetic_dataframe)
         
         loaded_preset = {}
@@ -148,13 +178,13 @@ class SynthEval():
         specified directory. Making a results file, and calculating rank-derived utility 
         and privacy scores.
         
-        Takes:
+        Parameters:
             dict_or_path_to_syn_file_folder : dict of dataframes or string like '/example/ex_data_dir/' to folder with datasets
             analysis_target_var             : string column name of categorical variable to check
-            rank_strategy                   : {default='normal', 'linear', 'quantile'} see descriptions below
+            rank_strategy                   : {default='linear', 'normal', 'quantile'} see descriptions below
 
         Returns:
-            vals_df : dataframe with the metrics and their rank derived scores
+            comb_df : dataframe with the metrics and their rank derived scores
             rank_df : dataframe with the ranks used to make the scores
             """
 
