@@ -72,7 +72,7 @@ def cli(evaluate,real_data_file,synt_data_file,test_data_file,evaluation_config,
         else:
             raise RuntimeError("Please provide category labels in a comma separated txt file")
 
-    evaluator = SynthEval(df_real, hold_out=df_test, cat_cols=category_labels)
+    evaluator = SynthEval(df_real, holdout_dataframe=df_test, cat_cols=category_labels)
     evaluator.evaluate(df_fake, class_label, evaluation_config)
     
 #cli()
