@@ -87,4 +87,4 @@ Privacy is a crucial aspect of evaluating synthetic data, we include only three 
 - Attribute Disclosure Risk (with or without holdout data)
 
 ## Creating new metrics
-SynthEval is designed with modularity in mind. Creating new, custom metrics is as easy as copying the metrics template file, and filling in the five required functions. Because, SynthEval has very little hardcoding wrt. the metrics, making new metrics work locally should require no changes other than adding the metrics script in the metrics folder.
+SynthEval is designed with modularity in mind. Creating new, custom metrics is as easy as copying the [metrics template file](https://github.com/schneiderkamplab/syntheval/blob/main/src/syntheval/metrics/metric_template.py), and filling in the five required functions. Because, SynthEval has very little hardcoding wrt. the metrics, making new metrics work locally should require no changes other than adding the metrics script in the metrics folder.
