@@ -47,6 +47,7 @@ class MetricClassName(MetricClass):
         
         """
         try:
+            assert self.analysis_target is not None
             assert len(pd.unique(self.real_data[self.analysis_target])) == 2
             assert self.hout_data is not None
         except AssertionError:
@@ -123,6 +124,7 @@ class MetricClassName(MetricClass):
         metric is part of SynthEval. 
 |                                          :                    |"""
         try:
+            assert self.analysis_target is not None
             assert len(pd.unique(self.real_data[self.analysis_target])) == 2
             assert self.hout_data is not None
         except AssertionError:
