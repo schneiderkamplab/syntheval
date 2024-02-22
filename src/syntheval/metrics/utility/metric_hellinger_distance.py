@@ -23,7 +23,7 @@ def _hellinger(p,q):
     sqrt_pdf1 = np.sqrt(p)
     sqrt_pdf2 = np.sqrt(q)
     diff = sqrt_pdf1 - sqrt_pdf2
-    return 1/np.sqrt(2)*np.sqrt(np.linalg.norm(diff))
+    return 1/np.sqrt(2)*np.linalg.norm(diff)
 
 class HellingerDistance(MetricClass):
 
