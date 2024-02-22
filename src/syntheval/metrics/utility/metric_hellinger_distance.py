@@ -42,16 +42,16 @@ class HellingerDistance(MetricClass):
         for category in self.cat_cols:
             class_num = len(np.unique(self.real_data[category]))
 
-            pdfR = np.histogram(self.real_data[category], bins=class_num, density=True)[0]
-            pdfF = np.histogram(self.synt_data[category], bins=class_num, density=True)[0]
-            H_dist.append(_hellinger(pdfR,pdfF))
+            pdfR = np.histogram(self.real_data[category], bins=class_num)[0]
+            pdfF = np.histogram(self.synt_data[category], bins=class_num)[0]
+            H_dist.append(_hellinger(pdfR/sum(pdfR),pdfF/sum(pdfF)))
         
         for category in self.num_cols:
             n_bins = _scott_ref_rule(self.real_data[category],self.synt_data[category]) # Scott rule for finding bin width
 
-            pdfR = np.histogram(self.real_data[category], bins=n_bins, density=True)[0]
-            pdfF = np.histogram(self.synt_data[category], bins=n_bins, density=True)[0]
-            H_dist.append(_hellinger(pdfR,pdfF))
+            pdfR = np.histogram(self.real_data[category], bins=n_bins)[0]
+            pdfF = np.histogram(self.synt_data[category], bins=n_bins)[0]
+            H_dist.append(_hellinger(pdfR/sum(pdfR),pdfF/sum(pdfF)))
 
         self.results = {'avg': np.mean(H_dist), 'err': np.std(H_dist,ddof=1)/np.sqrt(len(H_dist))}
         return self.results
