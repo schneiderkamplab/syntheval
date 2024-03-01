@@ -57,7 +57,7 @@ class PrincipalComponentAnalysis(MetricClass):
             len_r = np.sqrt(pca.components_[0].dot(pca.components_[0]))
             len_f = np.sqrt(synt_pca.components_[0].dot(synt_pca.components_[0]))
 
-            angle_diff = np.arccos(pca.components_[0].dot(synt_pca.components_[0])/(len_r*len_f))
+            angle_diff = min([np.arccos(pca.components_[0] @ (s*synt_pca.components_[0])) for s in [1,-1]])/(len_r*len_f)
 
             self.results = {'exp_var_diff': var_difference, 'comp_angle_diff': angle_diff}
             if len(self.num_cols) > 5 :
