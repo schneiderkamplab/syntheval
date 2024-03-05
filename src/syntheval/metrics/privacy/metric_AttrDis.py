@@ -135,7 +135,7 @@ class MIAClassifier(MetricClass):
 
         return accuracy, precision, recall, f1
 
-    def evaluate(self, numerical_dist_thresh: float = 1 / 30) -> float | dict:
+    def evaluate(self, numerical_dist_thresh: float = 1 / 30, sensitive: list = None) -> float | dict:
         pre_results = {
             "accuracy": [],
             "precision": [],
@@ -165,7 +165,8 @@ class MIAClassifier(MetricClass):
         )
 
         # Compute attribute disclosure for each attribute with maximum adversarial knowledge
-        for column in self.real_data.columns:
+        sensitive_columns = sensitive if sensitive is not None else self.real_data.columns
+        for column in sensitive_columns:
             if column in self.cat_cols:
                 accuracy, precision, recall, f1 = self._predict_cat_target(
                     real=real_scaled, syn=syn_scaled, hout=hout_scaled, target=column
