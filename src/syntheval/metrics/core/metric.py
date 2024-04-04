@@ -33,7 +33,7 @@ class MetricClass(ABC):
                 num_cols = [column for column in real_data.columns if column not in cat_cols]
                 print('SynthEval: inferred categorical columns...')
                 
-            CLE = consistent_label_encoding(real_data, synt_data, cat_cols, hout_data)
+            CLE = consistent_label_encoding(real_data, synt_data, cat_cols, num_cols, hout_data)
             real_data = CLE.encode(real_data)
             synt_data = CLE.encode(synt_data)
             if hout_data is not None: hout_data = CLE.encode(hout_data)

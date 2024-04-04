@@ -10,6 +10,7 @@ import os
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from typing import Literal
 from pandas import DataFrame
 
 from .metrics import load_metrics
@@ -29,7 +30,7 @@ class SynthEval():
                  real_dataframe: DataFrame, 
                  holdout_dataframe: DataFrame = None,
                  cat_cols: list = None,
-                 nn_distance: str = 'gower', 
+                 nn_distance: Literal['gower', 'euclid', 'EXPERIMENTAL_gower'] = 'gower', 
                  unique_threshold: int = 10,
                  verbose: bool = True,
         ) -> None:
@@ -40,7 +41,7 @@ class SynthEval():
             real_dataframe      : real dataset, in dataframe format. 
             holdout_dataframe   : (optional) real data that was not used for training the generative model
             cat_cols            : (optional) complete list of categorical columns column names. 
-            nn_distance         : {default= 'gower', 'euclid'} distance metric for NN distances.
+            nn_distance         : {default= 'gower', 'euclid', 'EXPERIMENTAL_gower'} distance metric for NN distances.
             unique_threshold    : threshold of unique levels in non-object columns to be considered categoricals.    
             verbose             : flag fo printing to console and making figures
         """
@@ -115,7 +116,7 @@ class SynthEval():
         
         evaluation_config = {**loaded_preset, **kwargs}
 
-        CLE = consistent_label_encoding(self.real, self.synt, self.categorical_columns, self.hold_out)
+        CLE = consistent_label_encoding(self.real, self.synt, self.categorical_columns, self.numerical_columns, self.hold_out)
         real_data = CLE.encode(self.real)
         synt_data = CLE.encode(self.synt)
         if self.hold_out is not None: hout_data = CLE.encode(self.hold_out)
