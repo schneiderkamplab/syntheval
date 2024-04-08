@@ -39,7 +39,17 @@ class PrincipalComponentAnalysis(MetricClass):
 
     def evaluate(self, num_components = 2) -> float | dict:
         """ Function for evaluating the metric"""
-        if (self.analysis_target is not None and self.analysis_target in self.cat_cols):
+        try:
+            assert (self.analysis_target is not None and self.analysis_target in self.cat_cols and len(self.num_cols)>=2)
+        except AssertionError:
+            if self.analysis_target is None: 
+                print('Error: Principal component analysis did not run, analysis class variable not set!')
+            elif len(self.num_cols)<2:
+                print('Error: Principal component analysis did not run, too few nummerical attributes!')
+            else:
+                print('Error: Principal component analysis did not run, provided class not in list of categoricals!')
+            pass
+        else:
             r_scaled = StandardScaler().fit_transform(self.real_data[self.num_cols])
             f_scaled = StandardScaler().fit_transform(self.synt_data[self.num_cols])
 
@@ -74,12 +84,6 @@ class PrincipalComponentAnalysis(MetricClass):
             if self.verbose: plot_principal_components(r_pca,f_pca)
             if self.verbose: plot_own_principal_component_pairplot(stack(r_pca,s_pca))
             return self.results
-        elif self.analysis_target is None: 
-            print('Error: Principal component analysis did not run, analysis class variable not set!')
-            pass
-        else:
-            print('Error: Principal component analysis did not run, provided class not in list of categoricals!')
-            pass
 
     def format_output(self) -> str:
         """ Return string for formatting the output, when the
