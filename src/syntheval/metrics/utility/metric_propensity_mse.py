@@ -38,7 +38,7 @@ class PropensityMeanSquaredError(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'utility'
 
-    def evaluate(self,k_folds=5, max_iter=100, solver='liblinear') -> float | dict:
+    def evaluate(self, k_folds=5, max_iter=100, solver='liblinear') -> float | dict:
         """Train a a discriminator to distinguish between real and fake data."""
 
         discriminator = LogisticRegression(max_iter=max_iter, solver=solver, random_state=42)
@@ -58,8 +58,9 @@ class PropensityMeanSquaredError(MetricClass):
 
             mod = discriminator.fit(x_train,y_train)
             pred = mod.predict_proba(x_test)
-            
-            res.append(np.mean((pred[:,0]-0.5)**2))
+
+            num_synths = len(y_test)-np.count_nonzero(y_test)
+            res.append(np.mean((pred[:,0]-num_synths/len(y_test))**2))
             acc.append(f1_score(y_test,mod.predict(x_test),average='macro'))
 
         self.results = {'avg pMSE': np.mean(res), 
