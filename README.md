@@ -6,6 +6,19 @@ The SynthEval library is a framework for evaluating the fidelity of tabularised 
 ## Latest version
 The current version of the tool offers a wide selection of utility metrics, to evaluate how well your synthetic data aligns on privacy and utility. In the current several metrics are available, and can be used in preconfigured or custum evaluation reports. The benchmark module enables multiaxis comparison of several synthetic versions of the same dataset in parallel.  
 
+If you use our library in your work, you can reference us by citing our paper:
+```
+@misc{Lautrup2024,
+    author          = {Lautrup, Anton D and Hyrup, Tobias and Zimek, Arthur and Schneider-Kamp, Peter}, 
+    title           = {SynthEval: A Framework for Detailed Utility and Privacy Evaluation of Tabular Synthetic Data},
+    howpublished    = {Preprint at \url{https://arxiv.org/abs/2404.15821}},
+    note            = {Code available on GitHub v1.4.1},
+    doi             = {10.48550/arXiv.2404.15821},
+    year            = {2024},
+    copyright       = {CC BY Att. 4.0 Int.}
+}
+```
+
 ## Installation
 Installation with PyPI using
 ```
