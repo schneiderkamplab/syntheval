@@ -255,8 +255,8 @@ class SynthEval():
         name_tag = str(int(time.time()))
         temp_df = comb_df.copy()
         temp_df.columns = ['_'.join(col) for col in comb_df.columns.values]
-        temp_df.to_csv('SE_benchmark_results' +'_' +name_tag+ '.csv')
-        vals_df.to_csv('SE_benchmark_ranking' +'_' +name_tag+ '.csv')
+        vals_df.to_csv('SE_benchmark_results' +'_' +name_tag+ '.csv')
+        temp_df.to_csv('SE_benchmark_ranking' +'_' +name_tag+ '.csv')
 
         self.verbose = verbose_flag
         return comb_df, rank_df
