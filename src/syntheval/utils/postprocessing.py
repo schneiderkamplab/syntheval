@@ -7,6 +7,15 @@ import pandas as pd
 
 from sklearn.preprocessing import MinMaxScaler
 
+def summation_ranking(dataframe, utility_mets, privacy_mets):
+    """Take the basic sum of the utility and privacy metrics as the rank."""
+    res_df = dataframe.copy()
+
+    res_df['rank'] = res_df.sum(axis=1,numeric_only = True)
+    res_df['u_rank'] = res_df[utility_mets].sum(axis=1,numeric_only = True)
+    res_df['p_rank'] = res_df[privacy_mets].sum(axis=1,numeric_only = True)
+    return res_df
+
 def linear_ranking(dataframe, utility_mets, privacy_mets):
     """Apply minmax scaling to the normalised columns, take the row sum as rank.
     Appropriate when there is enough separation between scores that we can trust 

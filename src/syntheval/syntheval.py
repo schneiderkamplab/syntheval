@@ -16,7 +16,7 @@ from pandas import DataFrame
 from .metrics import load_metrics
 from .utils.console_output import print_results_to_console
 from .utils.preprocessing import consistent_label_encoding
-from .utils.postprocessing import extremes_ranking, linear_ranking, quantile_ranking
+from .utils.postprocessing import extremes_ranking, linear_ranking, quantile_ranking, summation_ranking
 from .utils.variable_detection import get_cat_variables
 
 loaded_metrics = load_metrics()
@@ -182,7 +182,7 @@ class SynthEval():
         Parameters:
             dict_or_path_to_syn_file_folder : dict of dataframes or string like '/example/ex_data_dir/' to folder with datasets
             analysis_target_var             : string column name of categorical variable to check
-            rank_strategy                   : {default='linear', 'normal', 'quantile'} see descriptions below
+            rank_strategy                   : {default='linear', 'normal', 'quantile', 'summation'} see descriptions below
 
         Returns:
             comb_df : dataframe with the metrics and their rank derived scores
@@ -241,6 +241,7 @@ class SynthEval():
         if rank_strategy == 'normal': rank_df = extremes_ranking(rank_df,utility_mets,privacy_mets)
         if rank_strategy == 'linear': rank_df = linear_ranking(rank_df,utility_mets,privacy_mets)
         if rank_strategy == 'quantile': rank_df = quantile_ranking(rank_df,utility_mets,privacy_mets)
+        if rank_strategy == 'summation': rank_df = summation_ranking(rank_df,utility_mets,privacy_mets)
 
         comb_df = pd.DataFrame()
         for column in vals_df.columns:
