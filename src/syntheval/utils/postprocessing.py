@@ -11,9 +11,9 @@ def summation_ranking(dataframe, utility_mets, privacy_mets):
     """Take the basic sum of the utility and privacy metrics as the rank."""
     res_df = dataframe.copy()
 
-    res_df['rank'] = res_df.sum(axis=1,numeric_only = True)
-    res_df['u_rank'] = res_df[utility_mets].sum(axis=1,numeric_only = True)
-    res_df['p_rank'] = res_df[privacy_mets].sum(axis=1,numeric_only = True)
+    res_df['rank'] = res_df.sum(axis=1)
+    res_df['u_rank'] = res_df[utility_mets].sum(axis=1)
+    res_df['p_rank'] = res_df[privacy_mets].sum(axis=1)
     return res_df
 
 def linear_ranking(dataframe, utility_mets, privacy_mets):
