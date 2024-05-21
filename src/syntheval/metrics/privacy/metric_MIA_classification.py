@@ -4,6 +4,7 @@
 
 import numpy as np
 import pandas as pd
+from logging import warning
 from ..core.metric import MetricClass
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import precision_score, recall_score, f1_score
@@ -39,9 +40,15 @@ class MIAClassifier(MetricClass):
         try:
             assert self.hout_data is not None
         except AssertionError:
-            print("Error: Membership inference attack metric did not run, holdout data was not supplied!")
+            print(
+                "Error: Membership inference attack metric did not run, holdout data was not supplied!"
+            )
             pass
         else:
+            if len(self.real_data) < len(self.hout_data) // 2:
+                    warning(
+                        "The holdout data is more than double the size of the real data. The holdout data will be downsampled to match the size of the real data. real size: %s, holdout size: %s", len(self.real_data), len(self.hout_data)
+                    )
             # One-hot encode. All data is combined to ensure consitent encoding
             combined_data = pd.concat(
                 [self.real_data, self.synt_data, self.hout_data], ignore_index=True
@@ -55,7 +62,9 @@ class MIAClassifier(MetricClass):
             syn = combined_data_encoded.iloc[
                 len(self.real_data) : len(self.real_data) + len(self.synt_data)
             ]
-            hout = combined_data_encoded.iloc[len(self.real_data) + len(self.synt_data) :]
+            hout = combined_data_encoded.iloc[
+                len(self.real_data) + len(self.synt_data) :
+            ]
 
             # Run classifier multiple times and average the results
             pre_results = {
@@ -69,16 +78,25 @@ class MIAClassifier(MetricClass):
                 # Create training data consisting of synthetic and holdout data
                 X_train = pd.concat([syn, hout_train], axis=0)
                 y_train = pd.Series([1] * len(syn) + [0] * len(hout_train))
-
+                
                 # Create test set by combining some random data from the real and holdout data with an equal number of records from each dataframe
+                if len(real) < len(hout_test):
+                    # warning(
+                    #     "The holdout data is larger than the real data. The holdout data will be downsampled to match the size of the real data."
+                    # )
+                    hout_sample = hout_test.sample(n=len(real))
+                    real_sample = real
+                else:
+                    real_sample = real.sample(n=len(hout_test))
+                    hout_sample = hout_test
                 X_test = pd.concat(
                     [
-                        real.sample(n=len(hout_test)),
-                        hout_test,
+                        real_sample,
+                        hout_sample,
                     ],
                     axis=0,
                 )
-                y_test = pd.Series([1] * len(hout_test) + [0] * len(hout_test))
+                y_test = pd.Series([1] * len(real_sample) + [0] * len(hout_sample))
 
                 # Train the classifier on all the data
                 rf_classifier = RandomForestClassifier(n_estimators=100).fit(
@@ -98,13 +116,15 @@ class MIAClassifier(MetricClass):
                 )
 
             precision = np.mean(pre_results["precision"])
-            precision_se = np.std(pre_results["precision"],ddof=1) / np.sqrt(num_eval_iter)
+            precision_se = np.std(pre_results["precision"], ddof=1) / np.sqrt(
+                num_eval_iter
+            )
 
             recall = np.mean(pre_results["recall"])
-            recall_se = np.std(pre_results["recall"],ddof=1) / np.sqrt(num_eval_iter)
+            recall_se = np.std(pre_results["recall"], ddof=1) / np.sqrt(num_eval_iter)
 
             f1 = np.mean(pre_results["f1"])
-            f1_se = np.std(pre_results["f1"],ddof=1) / np.sqrt(num_eval_iter)
+            f1_se = np.std(pre_results["f1"], ddof=1) / np.sqrt(num_eval_iter)
 
             self.results = {
                 "MIA precision": precision,
@@ -140,7 +160,7 @@ class MIAClassifier(MetricClass):
             return string
 
     def normalize_output(self) -> list:
-        """ This function is for making a dictionary of the most quintessential
+        """This function is for making a dictionary of the most quintessential
         nummerical results of running this metric (to be turned into a dataframe).
 
         The required format is:
@@ -150,8 +170,15 @@ class MIAClassifier(MetricClass):
         """
         if self.results != {}:
 
-            return [{'metric': 'mia_cls_risk', 'dim': 'p', 
-                     'val': self.results["MIA recall"], 'err': self.results["MIA recall se"], 
-                     'n_val': 1-self.results["MIA recall"], 'n_err': self.results["MIA recall se"]}
-                     ]
-        else: pass
+            return [
+                {
+                    "metric": "mia_cls_risk",
+                    "dim": "p",
+                    "val": self.results["MIA recall"],
+                    "err": self.results["MIA recall se"],
+                    "n_val": 1 - self.results["MIA recall"],
+                    "n_err": self.results["MIA recall se"],
+                }
+            ]
+        else:
+            pass
