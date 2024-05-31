@@ -173,7 +173,7 @@ def plot_matrix_heatmap(mat,title,file_name,axs_lim,axs_scale):
 
     plt.title(title)
     labels = _shortened_labels(ax.get_xticklabels())
-    ax.set_xticks(ax.get_xticks(), labels, rotation=45, ha='right')
+    ax.set_xticks(ax.get_xticks(), labels, rotation=35, ha='right')
     ax.set_yticks(ax.get_yticks(), labels)
     fig.tight_layout()
     plt.savefig('SE_' +file_name +'_' +str(int(time.time()))+ '.png')
