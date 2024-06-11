@@ -34,7 +34,7 @@ from syntheval import SynthEval
 evaluator = SynthEval(df_real, holdout_dataframe = df_test, cat_cols = class_cat_col)
 evaluator.evaluate(df_fake, class_lab_col, presets_file = "full_eval", **kwargs)
 ```
-Where the user supplies <code>df_real, df_test, df_fake</code> as pandas dataframes, the <code>class_cat_col</code> is a complete list of column names (which can be omitted for categoricals to be automatically inferred). Some metrics require a target class, so <code>class_lab_col</code> is a string for designating one column with discrete values as a target for usability predictions and coloration. In the evaluate function, a presets file can be chosen ("full_eval", "fast_eval", or "privacy") or alternatively, a filepath can be supplied to a json file with select metrics keywords. Finally, instead of (or in addition to), keyword arguments can be added in the end with additional metrics and their options. 
+Where the user supplies <code>df_real, df_test, df_fake</code> as pandas dataframes, the <code>class_cat_col</code> is a complete list of column names (which can be omitted for categoricals to be automatically inferred). Some metrics require a target class, so <code>class_lab_col</code> is a string for designating one column with discrete values as a target for usability predictions and colouration. In the evaluate function, a presets file can be chosen ("full_eval", "fast_eval", or "privacy") or alternatively, a filepath can be supplied to a json file with select metrics keywords. Finally, instead of (or in addition to), keyword arguments can be added in the end with additional metrics and their options. 
 
 New in version 1.4 is the benchmark module, that allows a directory of synthetic datasets to be specified for evaluation (or a dictionary of dataframes). All datasets in the folder are evaluated against the training (and test) data on the selected metrics. Three types of rank-derived scoring are available to choose between ("linear", "normal", or "quantile"), assisting in identifying datasets that perform well overall, and on utility and privacy dimensions.
 ```python
@@ -47,6 +47,7 @@ For more details on how to use the library, see the codebooks below;
 | --- | --- |
 | [Tutorial 1](guides/syntheval_guide.ipynb) | Get started, basic examples |
 | [Tutorial 2](guides/syntheval_benchmark.ipynb) | Dataset benchmark, evaluating and ranking synthetic datasets in bulk |
+| [Tutorial 3](https://github.com/schneiderkamplab/syntheval-model-benchmark-example/blob/main/syntheval_model_benchmark.ipynb) | Model benchmark example, evaluating and ranking models |
 
 ### Command line interface
 SynthEval can also be run from the commandline with the following syntax:
@@ -100,7 +101,7 @@ Privacy is a crucial aspect of evaluating synthetic data, we include only three 
 - Nearest Neighbour Distance Ratio (NNDR)
 - Privacy Losses (difference in NNAA and NNDR between test and training sets, good for checking overfitting too.)
 - Median Distance to Closest Record (normalised by internal NN distance.)
-- Hitting Rate (for nummericals defined to be within the attribute range / 30)
+- Hitting Rate (for numericals defined to be within the attribute range / 30)
 - Epsilon identifiability risk (calculated using weighted NN distance)
 - Membership Inference Attack
 - Attribute Disclosure Risk (with or without holdout data)
