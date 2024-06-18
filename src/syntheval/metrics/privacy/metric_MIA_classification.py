@@ -174,10 +174,10 @@ class MIAClassifier(MetricClass):
                 {
                     "metric": "mia_cls_risk",
                     "dim": "p",
-                    "val": self.results["MIA recall"],
-                    "err": self.results["MIA recall se"],
-                    "n_val": 1 - self.results["MIA recall"],
-                    "n_err": self.results["MIA recall se"],
+                    "val": self.results["MIA macro F1"],
+                    "err": self.results["MIA macro F1 se"],
+                    "n_val": 1 - self.results["MIA macro F1"],
+                    "n_err": self.results["MIA macro F1 se"],
                 }
             ]
         else:
