@@ -44,7 +44,8 @@ class PropensityMeanSquaredError(MetricClass):
         discriminator = LogisticRegression(max_iter=max_iter, solver=solver, random_state=42)
         Df = stack(self.real_data,self.synt_data).drop(['index'], axis=1)
 
-        Df[self.num_cols] = StandardScaler().fit_transform(Df[self.num_cols])
+        if len(self.num_cols) > 0:
+            Df[self.num_cols] = StandardScaler().fit_transform(Df[self.num_cols])
         Xs, ys = Df.drop(['real'], axis=1), Df['real']
 
         ### Run 5-fold cross-validation

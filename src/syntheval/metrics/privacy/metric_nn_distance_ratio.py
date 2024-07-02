@@ -59,7 +59,7 @@ class NearestNeighbourDistanceRatio(MetricClass):
 | Nearest neighbour distance ratio         :   %.4f  %.4f   |""" % (self.results['avg'], self.results['err'])
         if (self.results != {} and self.hout_data is not None):
              string += """\n\
-| Privacy loss (diff. in NNDR)             :   %.4f  %.4f   |""" % (self.results['priv_loss'], self.results['priv_loss_err'])
+| Privacy loss (diff. in NNDR)             :   %.4f  %.4f  |""" % (self.results['priv_loss'], self.results['priv_loss_err'])
         return string
 
     def normalize_output(self) -> list:
