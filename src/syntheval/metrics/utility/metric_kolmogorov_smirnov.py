@@ -101,7 +101,8 @@ class KolmogorovSmirnovTest(MetricClass):
         metric is part of SynthEval. 
 |                                          :                    |"""
         R = self.results
-        string = """\
+        if self.results != {}:
+            string = """\
 | Kolmogorov–Smirnov / Total Variation Distance test            |
 |   -> average combined statistic          :   %.4f  %.4f   |
 |       -> avg. Kolmogorov–Smirnov dist.   :   %.4f  %.4f   |
@@ -114,7 +115,9 @@ class KolmogorovSmirnovTest(MetricClass):
                                                                       R['avg pval'], R['pval err'], 
                                                                       self.sig_lvl, R['num sigs'],
                                                                       R['frac sigs'])
-        return string
+            return string
+        else:
+            pass
 
     def normalize_output(self) -> list:
         """ This function is for making a dictionary of the most quintessential

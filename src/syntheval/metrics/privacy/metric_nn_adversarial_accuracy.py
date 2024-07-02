@@ -18,8 +18,9 @@ def _adversarial_score(real, fake, cat_cols, metric):
 def evaluate_dataset_nnaa(real, fake, num_cols, cat_cols, metric, n_resample):
     """Helper function for running adversarial score multiple times if the 
     datasets have much different sizes."""
-    real[num_cols] = MinMaxScaler().fit_transform(real[num_cols])
-    fake[num_cols] = MinMaxScaler().fit_transform(fake[num_cols])
+    if len(num_cols) > 0:
+        real[num_cols] = MinMaxScaler().fit_transform(real[num_cols])
+        fake[num_cols] = MinMaxScaler().fit_transform(fake[num_cols])
     
     real_fake = len(real)/len(fake)
     fake_real = len(fake)/len(real)

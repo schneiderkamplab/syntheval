@@ -34,34 +34,42 @@ class ConfidenceIntervalOverlap(MetricClass):
     def evaluate(self,confidence=95) -> float | dict:
         """Function for calculating the average CIO, also returns the 
         number of nonoverlapping interval"""
-        self.confidence = confidence
-        confidence_table = {80: 1.28, 90: 1.645, 95: 1.96, 98: 2.33, 99: 2.58}
+        try:
+            if self.num_cols == []:
+                raise ValueError("No nummerical columns provided for confidence interval overlap.")
+            self.confidence = confidence
+            confidence_table = {80: 1.28, 90: 1.645, 95: 1.96, 98: 2.33, 99: 2.58}
 
-        if confidence in confidence_table.keys():
-            z_value = confidence_table[confidence]
-            mus = np.array([np.mean(self.real_data[self.num_cols],axis=0),np.mean(self.synt_data[self.num_cols],axis=0)]).T
-            sems = np.array([sem(self.real_data[self.num_cols]),sem(self.synt_data[self.num_cols])]).T
-            
-            CI = sems*z_value
-            us = mus+sems
-            ls = mus-sems
+            if confidence in confidence_table.keys():
+                z_value = confidence_table[confidence]
+                mus = np.array([np.mean(self.real_data[self.num_cols],axis=0),np.mean(self.synt_data[self.num_cols],axis=0)]).T
+                sems = np.array([sem(self.real_data[self.num_cols]),sem(self.synt_data[self.num_cols])]).T
+                
+                CI = sems*z_value
+                us = mus+sems
+                ls = mus-sems
 
-            Jk = []
-            for i in range(len(CI)):
-                top = (min(us[i][0],us[i][1])-max(ls[i][0],ls[i][1]))
-                Jk.append(max(0,0.5*(top/(us[i][0]-ls[i][0])+top/(us[i][1]-ls[i][1]))))
+                Jk = []
+                for i in range(len(CI)):
+                    top = (min(us[i][0],us[i][1])-max(ls[i][0],ls[i][1]))
+                    Jk.append(max(0,0.5*(top/(us[i][0]-ls[i][0])+top/(us[i][1]-ls[i][1]))))
 
-            num = sum([j == 0 for j in Jk])
-            frac = num/len(Jk)
-            self.results = {'avg overlap': np.mean(Jk), 
-                            'overlap err': np.std(Jk,ddof=1)/np.sqrt(len(Jk)), 
-                            'num non-overlaps': num, 
-                            'frac non-overlaps': frac
-                            }
-            return self.results
-        else:
-            print('Error: Confidence level not recognized, choose 80, 90, 95, 98 or 99.')
-            pass
+                num = sum([j == 0 for j in Jk])
+                frac = num/len(Jk)
+                self.results = {'avg overlap': np.mean(Jk), 
+                                'overlap err': np.std(Jk,ddof=1)/np.sqrt(len(Jk)), 
+                                'num non-overlaps': num, 
+                                'frac non-overlaps': frac
+                                }
+                return self.results
+            else:
+                print('Error: Confidence level not recognized, choose 80, 90, 95, 98 or 99.')
+                pass
+        except ValueError as err:
+            print(err)
+            return {}
+        except:
+            print("An error occured during the calculation of the confidence interval overlap.")
 
     def format_output(self) -> str:
         """ Return string for formatting the output, when the
