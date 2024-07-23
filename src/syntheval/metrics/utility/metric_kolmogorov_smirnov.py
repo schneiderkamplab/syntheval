@@ -83,10 +83,16 @@ class KolmogorovSmirnovTest(MetricClass):
             if pvalue < sig_lvl:
                 sig_cols.append(category)
 
+        if n_dists == []: avg_ks = np.nan; err_ks = np.nan
+        else: avg_ks = np.mean(n_dists); err_ks = np.std(n_dists,ddof=1)/np.sqrt(len(n_dists))
+
+        if c_dists == []: avg_tvd = np.nan; err_tvd = np.nan
+        else: avg_tvd = np.mean(c_dists); err_tvd = np.std(c_dists,ddof=1)/np.sqrt(len(c_dists))
+
         ### Calculate number of significant tests, and fraction of significant tests
         self.results = {'avg stat' : np.mean(n_dists+c_dists), 'stat err' : np.std(n_dists+c_dists,ddof=1)/np.sqrt(len(n_dists+c_dists)),
-                        'avg ks'   : np.mean(n_dists), 'ks err'   : np.std(n_dists,ddof=1)/np.sqrt(len(n_dists)),
-                        'avg tvd'  : np.mean(c_dists), 'tvd err'  : np.std(c_dists,ddof=1)/np.sqrt(len(c_dists)),
+                        'avg ks'   : avg_ks, 'ks err'   : err_ks,
+                        'avg tvd'  : avg_tvd, 'tvd err'  : err_tvd,
                         'avg pval' : np.mean(pvals), 'pval err' : np.std(pvals,ddof=1)/np.sqrt(len(pvals)),
                         'num sigs' : len(sig_cols),
                         'frac sigs': len(sig_cols)/len(pvals),
