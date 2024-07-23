@@ -40,7 +40,9 @@ class MedianDistanceToClosestRecord(MetricClass):
         int_nn = np.median(in_dists)
         mut_nn = np.median(distances)
 
-        dcr = mut_nn/int_nn
+        if (int_nn == 0 and mut_nn == 0): dcr = 1
+        elif (int_nn == 0 and mut_nn != 0): dcr = 0
+        else: dcr = mut_nn/int_nn
         self.results = {'mDCR': dcr}
         return self.results
 

@@ -95,15 +95,10 @@ class PropensityMeanSquaredError(MetricClass):
             name2  p  0.0  0.0    0.0    0.0
         """
         if self.results != {}:
-            # val_non_lin = np.exp(-10*self.results['avg pMSE'])
-            # val_non_lin_err = 10*val_non_lin*self.results['pMSE err']
-
             return [{'metric': 'avg_pMSE', 'dim': 'u', 
                      'val': self.results['avg pMSE'], 
                      'err': self.results['pMSE err'], 
                      'n_val': 1-4*self.results['avg pMSE'], 
                      'n_err': 4*self.results['pMSE err'], 
-                    #  'idx_val': val_non_lin, 
-                    #  'idx_err': val_non_lin_err
                      }]
         else: pass

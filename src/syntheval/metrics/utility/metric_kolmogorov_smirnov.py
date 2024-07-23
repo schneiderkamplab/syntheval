@@ -116,8 +116,7 @@ class KolmogorovSmirnovTest(MetricClass):
                                                                       self.sig_lvl, R['num sigs'],
                                                                       R['frac sigs'])
             return string
-        else:
-            pass
+        else: pass
 
     def normalize_output(self) -> list:
         """ This function is for making a dictionary of the most quintessential

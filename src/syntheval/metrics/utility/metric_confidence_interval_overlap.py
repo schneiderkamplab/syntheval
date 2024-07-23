@@ -35,8 +35,15 @@ class ConfidenceIntervalOverlap(MetricClass):
         """Function for calculating the average CIO, also returns the 
         number of nonoverlapping interval"""
         try:
-            if self.num_cols == []:
-                raise ValueError("No nummerical columns provided for confidence interval overlap.")
+            assert len(self.num_cols) > 0
+            assert confidence in confidence_table.keys()
+        except AssertionError:
+            if len(self.num_cols) == 0:
+                print(" Warning: No nummerical attributes provided for confidence interval overlap metric.")
+            else:
+                print(" Error: Confidence level not recognized, choose 80, 90, 95, 98 or 99.")
+            return {}
+        else:
             self.confidence = confidence
             confidence_table = {80: 1.28, 90: 1.645, 95: 1.96, 98: 2.33, 99: 2.58}
 
@@ -62,14 +69,6 @@ class ConfidenceIntervalOverlap(MetricClass):
                                 'frac non-overlaps': frac
                                 }
                 return self.results
-            else:
-                print('Error: Confidence level not recognized, choose 80, 90, 95, 98 or 99.')
-                pass
-        except ValueError as err:
-            print(err)
-            return {}
-        except:
-            print("An error occured during the calculation of the confidence interval overlap.")
 
     def format_output(self) -> str:
         """ Return string for formatting the output, when the
