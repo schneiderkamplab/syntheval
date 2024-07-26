@@ -34,6 +34,7 @@ class ConfidenceIntervalOverlap(MetricClass):
     def evaluate(self,confidence=95) -> float | dict:
         """Function for calculating the average CIO, also returns the 
         number of nonoverlapping interval"""
+        confidence_table = {80: 1.28, 90: 1.645, 95: 1.96, 98: 2.33, 99: 2.58}
         try:
             assert len(self.num_cols) > 0
             assert confidence in confidence_table.keys()
@@ -45,7 +46,6 @@ class ConfidenceIntervalOverlap(MetricClass):
             return {}
         else:
             self.confidence = confidence
-            confidence_table = {80: 1.28, 90: 1.645, 95: 1.96, 98: 2.33, 99: 2.58}
 
             if confidence in confidence_table.keys():
                 z_value = confidence_table[confidence]
