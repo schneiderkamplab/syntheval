@@ -52,10 +52,12 @@ def mixed_correlation(data,num_cols,cat_cols):
     corr_num_num = data[num_cols].corr()
     corr_cat_cat = _apply_mat(data,_cramers_V,cat_cols,cat_cols)
     corr_cat_num = _apply_mat(data,_correlation_ratio,cat_cols,num_cols)
-
-    top_row = pd.concat([corr_cat_cat,corr_cat_num],axis=1)
-    bot_row = pd.concat([corr_cat_num.transpose(),corr_num_num],axis=1)
-    corr = pd.concat([top_row,bot_row],axis=0)
+    if corr_cat_cat.empty: corr = corr_num_num
+    elif corr_num_num.empty: corr = corr_cat_cat
+    else:
+        top_row = pd.concat([corr_cat_cat,corr_cat_num],axis=1)
+        bot_row = pd.concat([corr_cat_num.transpose(),corr_num_num],axis=1)
+        corr = pd.concat([top_row,bot_row],axis=0)
     return corr + np.diag(1-np.diag(corr))
 
 class MixedCorrelation(MetricClass):
@@ -81,7 +83,7 @@ class MixedCorrelation(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'utility'
 
-    def evaluate(self, mixed_corr=True, return_mats=False, axs_lim=(-1,1),axs_scale="RdBu") -> dict:
+    def evaluate(self, mixed_corr=True, return_mats=False, axs_lim=(-1,1), axs_scale="RdBu") -> dict:
         """Function for calculating the (mixed) correlation matrix difference.
         This calculation uses spearmans rho for numerical-numerical, Cramer's V for categories,
         and correlation ratio (eta) for numerical-categorials.

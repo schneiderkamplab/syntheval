@@ -60,3 +60,11 @@ class consistent_label_encoding:
         if self.num_cols is not None:
             data[self.num_cols] = self.num_encoder.transform(data[self.num_cols])
         return data
+
+    def decode(self, data):
+        data = data.copy()
+        if self.cat_cols is not None:
+            data[self.cat_cols] = self.encoder.inverse_transform(data[self.cat_cols])
+        if self.num_cols is not None:
+            data[self.num_cols] = self.num_encoder.inverse_transform(data[self.num_cols])
+        return data

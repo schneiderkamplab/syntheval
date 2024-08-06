@@ -27,7 +27,7 @@ class MetricClass(ABC):
             verbose: bool = True
     ) -> None:
         
-        if do_preprocessing:
+        if isinstance(do_preprocessing, (int, bool)) and do_preprocessing == True:
             if cat_cols is None:
                 cat_cols = get_cat_variables(real_data, threshold=10)
                 num_cols = [column for column in real_data.columns if column not in cat_cols]
@@ -37,6 +37,9 @@ class MetricClass(ABC):
             real_data = CLE.encode(real_data)
             synt_data = CLE.encode(synt_data)
             if hout_data is not None: hout_data = CLE.encode(hout_data)
+            self.encoder = CLE
+        elif not isinstance(do_preprocessing, (int, bool)):
+            self.encoder = do_preprocessing
 
         self.real_data = real_data
         self.synt_data = synt_data

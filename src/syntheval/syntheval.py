@@ -138,7 +138,7 @@ class SynthEval():
                 #raise Exception(f"Unrecognised keyword: {method}")
                 continue
             
-            M = loaded_metrics[method](real_data, synt_data, hout_data, self.categorical_columns, self.numerical_columns, self.nn_dist, analysis_target_var, do_preprocessing=False, verbose=self.verbose)
+            M = loaded_metrics[method](real_data, synt_data, hout_data, self.categorical_columns, self.numerical_columns, self.nn_dist, analysis_target_var, do_preprocessing=CLE, verbose=self.verbose)
             raw_results[method] = M.evaluate(**evaluation_config[method])
 
             string       = M.format_output()
