@@ -12,7 +12,7 @@ If you use our library in your work, you can reference us by citing our paper:
     author          = {Lautrup, Anton D and Hyrup, Tobias and Zimek, Arthur and Schneider-Kamp, Peter}, 
     title           = {SynthEval: A Framework for Detailed Utility and Privacy Evaluation of Tabular Synthetic Data},
     howpublished    = {Preprint at \url{https://arxiv.org/abs/2404.15821}},
-    note            = {Code available on GitHub v1.4.1},
+    note            = {Code available on GitHub v1.5.0},
     doi             = {10.48550/arXiv.2404.15821},
     year            = {2024},
     copyright       = {CC BY Att. 4.0 Int.}
