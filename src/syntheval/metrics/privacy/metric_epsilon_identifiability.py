@@ -67,6 +67,16 @@ class EpsilonIdentifiability(MetricClass):
         identifiability_value = np.sum(R_Diff < 0) / float(no)
 
         self.results['eps_risk'] = identifiability_value
+
+        if self.hout_data is not None:
+            in_dists = _knn_distance(self.hout_data,self.hout_data,self.cat_cols,1,self.nn_dist,W_adjust)[0]
+            ext_distances = _knn_distance(self.hout_data,self.synt_data,self.cat_cols,1,self.nn_dist,W_adjust)[0]
+
+            R_Diff = ext_distances - in_dists
+            identifiability_value = np.sum(R_Diff < 0) / float(no)
+
+            self.results['priv_loss'] = self.results['eps_risk'] - identifiability_value
+
         return self.results
 
     def format_output(self) -> str:
@@ -75,6 +85,9 @@ class EpsilonIdentifiability(MetricClass):
 |                                          :                    |"""
         string = """\
 | Epsilon identifiability risk             :   %.4f           |""" % (self.results['eps_risk'])
+        if (self.results != {} and self.hout_data is not None):
+             string += """       
+| Privacy loss (diff. in eps. risk)        :   %.4f           |""" % (self.results['priv_loss'])
         return string
 
     def normalize_output(self) -> list:
@@ -87,10 +100,14 @@ class EpsilonIdentifiability(MetricClass):
             name2  p  0.0  0.0    0.0    0.0
         """
         if self.results != {}:
-            # val_non_lin = np.exp(-5*self.results['eps_risk'])
-            return [{'metric': 'eps_identif_risk', 'dim': 'p', 
+            output =  [{'metric': 'eps_identif_risk', 'dim': 'p', 
                      'val': self.results['eps_risk'], 
                      'n_val': 1-self.results['eps_risk'], 
-                    #  'idx_val': val_non_lin, 
                      }]
+            if self.hout_data is not None:
+                output.extend([{'metric': 'priv_loss_eps', 'dim': 'p', 
+                        'val': self.results['priv_loss'], 
+                        'n_val': 1-abs(self.results['priv_loss']), 
+                        }])
+            return output
         else: pass

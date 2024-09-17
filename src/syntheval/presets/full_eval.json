@@ -7,6 +7,7 @@
     "ks_test"   : {"sig_lvl": 0.05, "n_perms": 1000},
     "h_dist"    : {},
     "p_mse"     : {"k_folds": 5, "max_iter": 100, "solver": "liblinear"},
+    "q_mse"     : {"num_quants": 10, "cat_mse": false},
     "nndr"      : {},
     "nnaa"      : {"n_resample": 30},
     "auroc_diff": {"model": "log_reg", "num_subsamples": 1},
@@ -14,6 +15,5 @@
     "dcr"       : {},
     "hit_rate"  : {"thres_percent": 0.0333},
     "eps_risk"  : {},
-    "mia_risk"  : {"num_eval_iter": 5},
-    "att_discl" : {}
+    "mia_risk"  : {"num_eval_iter": 5}
 }
