@@ -8,14 +8,15 @@ The current version of the tool offers a wide selection of utility metrics, to e
 
 If you use our library in your work, you can reference us by citing our paper:
 ```
-@misc{Lautrup2024,
-    author          = {Lautrup, Anton D and Hyrup, Tobias and Zimek, Arthur and Schneider-Kamp, Peter}, 
-    title           = {SynthEval: A Framework for Detailed Utility and Privacy Evaluation of Tabular Synthetic Data},
-    howpublished    = {Preprint at \url{https://arxiv.org/abs/2404.15821}},
-    note            = {Code available on GitHub v1.5.0},
-    doi             = {10.48550/arXiv.2404.15821},
-    year            = {2024},
-    copyright       = {CC BY Att. 4.0 Int.}
+@article{Lautrup2024,
+  author = {Lautrup,  Anton D. and Hyrup,  Tobias and Zimek,  Arthur and Schneider-Kamp,  Peter},
+  title = {Syntheval: a framework for detailed utility and privacy evaluation of tabular synthetic data},
+  publisher = {Springer Science and Business Media LLC},
+  journal = {Data Mining and Knowledge Discovery},
+  doi = {10.1007/s10618-024-01081-4},
+  year = {2024},
+  volume = {39},
+  number = {1},
 }
 ```
 
