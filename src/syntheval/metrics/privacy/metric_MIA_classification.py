@@ -7,6 +7,7 @@ import pandas as pd
 from logging import warning
 from ..core.metric import MetricClass
 from sklearn.ensemble import RandomForestClassifier
+from lightgbm import LGBMClassifier
 from sklearn.metrics import precision_score, recall_score, f1_score
 from sklearn.model_selection import train_test_split
 
@@ -56,13 +57,13 @@ class MIAClassifier(MetricClass):
             )
 
             # Separate into the three datasets
-            real = combined_data_encoded.iloc[: len(self.real_data)]
+            real = combined_data_encoded.iloc[: len(self.real_data)].reset_index(drop=True)
             syn = combined_data_encoded.iloc[
                 len(self.real_data) : len(self.real_data) + len(self.synt_data)
-            ]
+            ].reset_index(drop=True)
             hout = combined_data_encoded.iloc[
                 len(self.real_data) + len(self.synt_data) :
-            ]
+            ].reset_index(drop=True)
 
             # Run classifier multiple times and average the results
             pre_results = {
@@ -71,11 +72,18 @@ class MIAClassifier(MetricClass):
                 "f1": [],
             }
             for _ in range(num_eval_iter):
-                hout_train, hout_test = train_test_split(hout, test_size=0.5)
+                hout_train, hout_test = train_test_split(hout, test_size=0.25)
+                syn_samples = syn.sample(n=len(hout_train))
 
                 # Create training data consisting of synthetic and holdout data
-                X_train = pd.concat([syn, hout_train], axis=0)
-                y_train = pd.Series([1] * len(syn) + [0] * len(hout_train))
+                X_train = pd.concat([syn_samples, hout_train], axis=0, ignore_index=True)
+                y_train = pd.Series([1] * len(syn_samples) + [0] * len(hout_train))
+
+                # Shuffle
+                shuffle_idx = np.arange(len(X_train))
+                np.random.shuffle(shuffle_idx)
+                X_train = X_train.iloc[shuffle_idx]
+                y_train = y_train.iloc[shuffle_idx]
                 
                 # Create test set by combining some random data from the real and holdout data with an equal number of records from each dataframe
                 if len(real) < len(hout_test):
@@ -93,16 +101,13 @@ class MIAClassifier(MetricClass):
                         hout_sample,
                     ],
                     axis=0,
+                    ignore_index=True,
                 )
                 y_test = pd.Series([1] * len(real_sample) + [0] * len(hout_sample))
 
-                # Train the classifier on all the data
-                rf_classifier = RandomForestClassifier(n_estimators=100).fit(
-                    X_train, y_train
-                )
-
+                cls = LGBMClassifier(verbosity=-1).fit(X_train, y_train)
                 # Get predictions
-                holdout_predictions = rf_classifier.predict(X_test)
+                holdout_predictions = cls.predict(X_test)
 
                 # Calculate precision, recall, and F1-score
                 pre_results["precision"].append(
