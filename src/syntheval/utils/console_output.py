@@ -47,8 +47,7 @@ Fairness metric description                   value   error
             )
         print(fairness_output_txt.rstrip())
         print("""\
-+---------------------------------------------------------------+
-
++---------------------------------------------------------------+""")
 
 def format_metric_string(name: str, value: float, error: float) -> str:
     """Return string for formatting the output, when the
