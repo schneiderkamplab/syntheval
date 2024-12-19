@@ -5,8 +5,7 @@
 import numpy as np
 import pandas as pd
 from logging import warning
-from ..core.metric import MetricClass
-from sklearn.ensemble import RandomForestClassifier
+from syntheval.metrics.core.metric import MetricClass
 from lightgbm import LGBMClassifier
 from sklearn.metrics import precision_score, recall_score, f1_score
 from sklearn.model_selection import train_test_split
@@ -30,14 +29,31 @@ class MIAClassifier(MetricClass):
 
     def name() -> str:
         """Name/keyword to reference the metric"""
-        return "mia_risk"
+        return "mia"
 
     def type() -> str:
         """Set to 'privacy' or 'utility'"""
         return "privacy"
 
     def evaluate(self, num_eval_iter=5) -> float | dict:
-        """Function for computing the precision, recall, and F1-score of a membership inference attack using a Random Forest classifier"""
+        """Function for computing the precision, recall, and F1-score of a membership 
+        inference attack using a Random Forest classifier
+        
+        Args:
+            num_eval_iter (int): Number of iterations to run the classifier
+
+        Returns:
+            dict: Precision, recall, and F1-score of the membership inference
+        
+        Example:
+            >>> import pandas as pd
+            >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> hout = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> M = MIAClassifier(real, fake, hout, cat_cols=[], num_cols=[], do_preprocessing=False)
+            >>> M.evaluate(num_eval_iter=1) # doctest: +ELLIPSIS
+            {'MIA precision': 0.0, 'MIA precision se': nan, 'MIA recall': 0.0, 'MIA recall se': nan, 'MIA macro F1': 0.33..., 'MIA macro F1 se': nan}
+        """
         try:
             assert self.hout_data is not None
         except AssertionError:
@@ -173,11 +189,19 @@ class MIAClassifier(MetricClass):
         """
         if self.results != {}:
             return [{
-                    "metric": "mia_cls_risk",
+                    "metric": "mia_recall",
                     "dim": "p",
-                    "val": self.results["MIA macro F1"],
-                    "err": self.results["MIA macro F1 se"],
-                    "n_val": 1 - self.results["MIA macro F1"],
-                    "n_err": self.results["MIA macro F1 se"],
+                    "val": self.results["MIA recall"],
+                    "err": self.results["MIA recall se"],
+                    "n_val": 1 - self.results["MIA recall"],
+                    "n_err": self.results["MIA recall se"],
+                },
+                {
+                    "metric": "mia_precision",
+                    "dim": "p",
+                    "val": self.results["MIA precision"],
+                    "err": self.results["MIA precision se"],
+                    "n_val": abs(0.5 - self.results["MIA precision"]),
+                    "n_err": self.results["MIA precision se"],
                 }]
         else: pass

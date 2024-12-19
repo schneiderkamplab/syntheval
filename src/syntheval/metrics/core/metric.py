@@ -3,6 +3,7 @@
 # Date: 18-08-2023
 
 from pandas import DataFrame
+from typing import List, Dict
 from abc import ABC, abstractmethod
 
 from ...utils.variable_detection import get_cat_variables
@@ -12,6 +13,17 @@ class MetricClass(ABC):
     """
     The Metric Class defines an abstract method that contains a skeleton of
     some evaluation metric algorithm
+
+    Args:
+        real_data (DataFrame) : Real dataset
+        synt_data (DataFrame) : Synthetic dataset
+        hout_data (DataFrame) : Holdout dataset (can be empty)
+        cat_cols (List[str]) : List of strings
+        num_cols (List[str]) : List of strings
+        nn_dist (str) : keyword literal for NN module (not used by all metrics)
+        analysis_target (str) : target variable name (not used by all metrics)
+        do_preprocessing (bool|object) : whether to preprocess the data or module to use for preprocessing
+        verbose (bool) : whether to print and plot results
     """ 
 
     def __init__(
@@ -19,11 +31,11 @@ class MetricClass(ABC):
             real_data: DataFrame,
             synt_data: DataFrame,
             hout_data: DataFrame = None,
-            cat_cols: list = None,
-            num_cols: list = None,
+            cat_cols: List[str] = None,
+            num_cols: List[str] = None,
             nn_dist: str = None,
             analysis_target : str = None,
-            do_preprocessing: bool = True,
+            do_preprocessing: bool | object = True,
             verbose: bool = True
     ) -> None:
         
@@ -106,7 +118,7 @@ class MetricClass(ABC):
         pass
     
     ### Hooks
-    def extra_formatted_output(self) -> tuple:
+    def extra_formatted_output(self) -> Dict[str, str]:
         """ Some metrics may output both privacy and utility results. For keeping 
         these results seperate in the console print, string output can be placed here 
         to be put in the end of the opposite console text output than the metric type 

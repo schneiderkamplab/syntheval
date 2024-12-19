@@ -4,13 +4,13 @@
 
 import numpy as np
 import pandas as pd
-from ..core.metric import MetricClass
+
+from syntheval.metrics.core.metric import MetricClass
+
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.metrics import precision_score, recall_score, f1_score
-from sklearn.preprocessing import LabelEncoder
 
-
-class MIAClassifier(MetricClass):
+class AttributeDisclosure(MetricClass):
     """The Metric Class is an abstract class that interfaces with
     SynthEval. When initialised the class has the following attributes:
 
@@ -136,6 +136,23 @@ class MIAClassifier(MetricClass):
         return accuracy, precision, recall, f1
 
     def evaluate(self, numerical_dist_thresh: float = 1 / 30, sensitive: list = None) -> float | dict:
+        """Evaluate the attribute disclosure risk of the synthetic data
+
+        Args:
+            numerical_dist_thresh (float): Threshold for numerical attributes
+            sensitive (list): List of sensitive attributes to evaluate
+        
+        Returns:
+            dict: Dictionary with attribute disclosure risk and standard error
+        
+        Example:
+            >>> import pandas as pd
+            >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> A = AttributeDisclosure(real, fake, cat_cols=[], num_cols=[], do_preprocessing=False)
+            >>> A.evaluate(sensitive=['b']) # doctest: +ELLIPSIS
+            {'Attr Dis accuracy': 0.0, ...}
+        """
         pre_results = {
             "accuracy": [],
             "precision": [],

@@ -5,14 +5,25 @@
 import numpy as np
 import pandas as pd
 
-from ..core.metric import MetricClass
+from syntheval.metrics.core.metric import MetricClass
 
 from scipy.stats import chi2_contingency
-from ...utils.plot_metrics import plot_matrix_heatmap
+from syntheval.utils.plot_metrics import plot_matrix_heatmap
 
 def _cramers_V(var1,var2) :
     """function for calculating Cramers V between two categorial variables
     credit: https://www.kaggle.com/code/chrisbss1/cramer-s-v-correlation-matrix
+
+    Args:
+        var1 (array-like): Real data
+        var2 (array-like): Synthetic data
+    
+    Returns:
+        float : Cramers V
+    
+    Example:
+        >>> _cramers_V([1,2,3,4,5],[1,2,3,4,5])
+        1.0...
     """
     crosstab =np.array(pd.crosstab(var1, var2, rownames=None, colnames=None)) # Cross table building
     stat = chi2_contingency(crosstab)[0] # Keeping of the test statistic of the Chi2 test
@@ -21,12 +32,40 @@ def _cramers_V(var1,var2) :
     return (stat/(obs*mini+1e-16))
 
 def _apply_mat(data,func,labs1,labs2):
-    """Help function for constructing a matrix based on func accross labels 1 and 2"""
+    """Help function for constructing a matrix based on func accross labels 1 and 2
+    
+    Args:
+        data (DataFrame): Data
+        func (function): Function to apply
+        labs1 (list): Labels 1
+        labs2 (list): Labels 2
+
+    Returns:
+        DataFrame : Matrix
+    
+    Example:
+        >>> _apply_mat(pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]}), _cramers_V ,['a','b'], ['a','b']) # doctest: +NORMALIZE_WHITESPACE
+            a    b
+        a  1.0  1.0
+        b  1.0  1.0
+    """
     res = (func(data[lab1],data[lab2]) for lab1 in labs1 for lab2 in labs2)
     return pd.DataFrame(np.fromiter(res, dtype=float).reshape(len(labs1),len(labs2)), columns = labs2, index = labs1)
 
 def _correlation_ratio(categories, measurements):
-    """Function for calculating the correlation ration eta^2 of categorial and nummerical data"""
+    """Function for calculating the correlation ration eta^2 of categorial and nummerical data
+    
+    Args:
+        categories (array): Categories
+        measurements (array): Measurements
+    
+    Returns:
+        float : Eta^2
+    
+    Example:
+        >>> _correlation_ratio(np.array([0,1,0,1]),np.array([1,2,3,4]))
+        0.2
+    """
     fcat, _ = pd.factorize(categories)
     cat_num = np.max(fcat)+1
     y_avg_array = np.zeros(cat_num)
@@ -48,6 +87,20 @@ def mixed_correlation(data,num_cols,cat_cols):
     """Function for calculating a correlation matrix of mixed datatypes.
     Spearman's rho is used for rank-based correlation, Cramer's V is used for categorical variables, 
     and correlation ratio is used for categorical and continuous variables.
+
+    Args:
+        data (DataFrame): Data
+        num_cols (list): Numerical columns
+        cat_cols (list): Categorical columns
+
+    Returns:
+        DataFrame : Correlation matrix
+
+    Example:
+        >>> mixed_correlation(pd.DataFrame({'num': [1, 2, 3], 'cat': [4, 5, 6]}),['num'],['cat']) # doctest: +NORMALIZE_WHITESPACE
+            cat  num
+        cat  1.0  1.0
+        num  1.0  1.0
     """
     corr_num_num = data[num_cols].corr()
     corr_cat_cat = _apply_mat(data,_cramers_V,cat_cols,cat_cols)
@@ -87,8 +140,24 @@ class MixedCorrelation(MetricClass):
         """Function for calculating the (mixed) correlation matrix difference.
         This calculation uses spearmans rho for numerical-numerical, Cramer's V for categories,
         and correlation ratio (eta) for numerical-categorials.
+                
+        Args:
+            mixed_corr (bool): Use mixed correlation
+            return_mats (bool): Return the individual correlation matrices
+            axs_lim (tuple): Axis limits (for plotting)
+            axs_scale (str): Axis scale (for plotting)
+
+        Returns:
+            dict: Frobenius norm of the correlation matrix difference
         
-        Mixed mode can be disabled, to only use the numerical variables."""
+        Example:
+            >>> import pandas as pd
+            >>> real = pd.DataFrame({'num': [1, 2, 3], 'cat': [0, 1, 0]})
+            >>> fake = pd.DataFrame({'num': [1, 2, 3], 'cat': [0, 1, 0]})
+            >>> MC = MixedCorrelation(real, fake, cat_cols=['cat'], num_cols=['num'], do_preprocessing=False, verbose=False)
+            >>> MC.evaluate(mixed_corr=True)
+            {'corr_mat_diff': 0.0, 'corr_mat_dims': 2}
+        """
         self.mixed_corr = mixed_corr
         if mixed_corr:
             r_corr = mixed_correlation(self.real_data,self.num_cols,self.cat_cols)
@@ -133,6 +202,5 @@ class MixedCorrelation(MetricClass):
             return [{'metric': 'corr_mat_diff', 'dim': 'u', 
                      'val': self.results['corr_mat_diff'], 
                      'n_val': 1-self.results['corr_mat_diff']/n_elements, 
-                    #  'idx_val': 1-np.tanh(self.results['corr_mat_diff'])
                      }]
         else: pass

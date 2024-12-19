@@ -2,7 +2,7 @@
 # Author: Anton D. Lautrup
 # Date: 21-08-2023
 
-from ..core.metric import MetricClass
+from syntheval.metrics.core.metric import MetricClass
 import numpy as np
 
 class MetricClassName(MetricClass):
@@ -35,12 +35,19 @@ class MetricClassName(MetricClass):
         """Function for executing the quantile mse metric.
 
         Args:
-            num_quants: int - number of quantiles to evaluate
-            cat_mse: bool - whether to calculate the mse for categorical variables
-                                (has nothing to do with quantiles, hence the option)
+            num_quants (int): Number of quantiles to divide the data into
+            cat_mse (bool): Enable categorical mse
     
         Returns:
-            Avg. qMSE: dict  - holds avg. and standard error of the mean (SE)
+            dict : holds avg. and standard error of the mean (SE)
+        
+        Example:
+            >>> import pandas as pd
+            >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> QMSE = MetricClassName(real, fake, cat_cols=[], num_cols=[], do_preprocessing=False)
+            >>> QMSE.evaluate(num_quants=5, cat_mse=True) # doctest: +ELLIPSIS
+            {'avg qMSE': ...
         """
         try:
             assert (len(self.num_cols)>=1 or cat_mse)

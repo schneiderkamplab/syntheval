@@ -10,10 +10,10 @@
     "q_mse"     : {"num_quants": 10, "cat_mse": false},
     "nndr"      : {},
     "nnaa"      : {"n_resample": 30},
-    "auroc_diff": {"model": "log_reg", "num_subsamples": 1},
+    "auroc_diff": {"model": "log_reg", "num_boots": 1},
     "cls_acc"   : {"F1_type": "micro", "k_folds": 5},
     "dcr"       : {},
     "hit_rate"  : {"thres_percent": 0.0333},
     "eps_risk"  : {},
-    "mia_risk"  : {"num_eval_iter": 5}
+    "mia"  : {"num_eval_iter": 5}
 }

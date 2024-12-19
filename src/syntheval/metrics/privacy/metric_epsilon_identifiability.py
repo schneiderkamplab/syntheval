@@ -4,13 +4,26 @@
 
 import numpy as np
 
-from ..core.metric import MetricClass
+from syntheval.metrics.core.metric import MetricClass
 
 from scipy.stats import entropy
 
-from ...utils.nn_distance import _knn_distance
+from syntheval.utils.nn_distance import _knn_distance
 
 def _column_entropy(labels):
+        """ Compute the entropy of a column of data
+        Args:
+            labels (np.array): A column of data
+
+        Returns:
+            float: The entropy of the column
+        
+        Example:
+            >>> import numpy as np
+            >>> ent = _column_entropy(np.array([1, 1, 2, 2, 3, 3]))
+            >>> isinstance(ent, float)
+            True
+        """
         value, counts = np.unique(np.round(labels), return_counts=True)
         return entropy(counts)
 
@@ -43,7 +56,18 @@ class EpsilonIdentifiability(MetricClass):
 
         Adapted from:
         Yoon, J., Drumright, L. N., & van der Schaar, M. (2020). Anonymization Through Data Synthesis Using Generative Adversarial Networks (ADS-GAN). 
-        IEEE Journal of Biomedical and Health Informatics, 24(8), 2378–2388. [doi:10.1109/JBHI.2020.2980262] 
+        IEEE Journal of Biomedical and Health Informatics, 24(8), 2378–2388. [doi:10.1109/JBHI.2020.2980262]
+
+        Returns:
+            dict: The results of the metric
+
+        Example:
+            >>> import pandas as pd
+            >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> EI = EpsilonIdentifiability(real, fake, num_cols=['a','b'], nn_dist='euclid', do_preprocessing=False)
+            >>> EI.evaluate()
+            {'eps_risk': 0.0}
         """
 
         if self.nn_dist == 'euclid':
@@ -55,10 +79,6 @@ class EpsilonIdentifiability(MetricClass):
         no, x_dim = np.shape(real)
         W = [_column_entropy(real[:, i]) for i in range(x_dim)]
         W_adjust = 1/(np.array(W)+1e-16)
-
-        # for i in range(x_dim):
-        #     real_hat[:, i] = real[:, i] * 1. / W[i]
-        #     fake_hat[:, i] = fake[:, i] * 1. / W[i]
 
         in_dists = _knn_distance(self.real_data,self.real_data,self.cat_cols,1,self.nn_dist,W_adjust)[0]
         ext_distances = _knn_distance(self.real_data,self.synt_data,self.cat_cols,1,self.nn_dist,W_adjust)[0]

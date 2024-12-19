@@ -13,7 +13,7 @@ def load_metrics():
     metric_files = glob.glob(join(dirname(__file__),"**/metric_*.py"),recursive=True)
 
     for metric_file in metric_files:
-        module_name = os.path.splitext(metric_file)[0].replace(dirname(__file__),'syntheval.metrics').replace(os.path.sep,'.')#.replace("src.","")
+        module_name = os.path.splitext(metric_file)[0].replace(dirname(__file__),'syntheval.metrics').replace(os.path.sep,'.')
 
         module = importlib.import_module(module_name)
 

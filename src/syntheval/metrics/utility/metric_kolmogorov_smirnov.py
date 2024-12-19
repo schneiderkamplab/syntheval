@@ -4,27 +4,48 @@
 
 import numpy as np
 
-from ..core.metric import MetricClass
+from syntheval.metrics.core.metric import MetricClass
 
 from collections import Counter
-from scipy.stats import permutation_test,ks_2samp
+from scipy.stats import permutation_test, ks_2samp
 
-from ...utils.plot_metrics import plot_significantly_dissimilar_variables
+from syntheval.utils.plot_metrics import plot_significantly_dissimilar_variables
 
 def _total_variation_distance(x,y):
-    """Function for calculating the TVD (KS statistic equivalent)"""
+    """Function for calculating the TVD (KS statistic equivalent)
+    
+    Args:
+        x (array-like): Real data
+        y (array-like): Synthetic data
+    
+    Returns:
+        float : Total variation distance
+    
+    Example:
+        >>> _total_variation_distance([1,2,3,4,5],[1,2,3,4,5])
+        0.0
+    """
     X, Y = Counter(x), Counter(y)
     merged = X + Y
 
     return np.round(0.5*sum([abs(X[key]/len(x)-Y[key]/len(y)) for key in merged.keys()]),4)
 
-# def _discrete_ks_statistic(x, y):
-#     """Function for calculating the KS statistic"""
-#     KstestResult = ks_2samp(x,y)
-#     return np.round(KstestResult.statistic,4)
-
 def _discrete_ks(x, y, n_perms=1000):
-    """Function for doing permutation test of discrete values in the KS test"""
+    """Function for doing permutation test of discrete values in the KS test
+    
+    Args:
+        x (array-like): Real data
+        y (array-like): Synthetic data
+        n_perms (int): Number of permutations
+    
+    Returns:
+        float : KS statistic
+        float : p-value
+    
+    Example:
+        >>> _discrete_ks([1,2,3,4,5],[1,2,3,4,5])
+        (0.0, 1.0)
+    """
     res = permutation_test((x, y), _total_variation_distance, n_resamples=n_perms, vectorized=False, permutation_type='independent', alternative='greater')
 
     return res.statistic, res.pvalue
@@ -54,12 +75,21 @@ class KolmogorovSmirnovTest(MetricClass):
 
     def evaluate(self, sig_lvl=0.05, n_perms = 1000) -> float | dict:
         """Function for executing the Kolmogorov-Smirnov test.
-    
+
+        Args:
+            sig_lvl (float): Significance level
+            n_perms (int): Number of permutations
+        
         Returns:
-            Avg. KS dist: dict  - holds avg. and standard error of the mean (SE)
-            Avg. KS pval: dict  - holds avg. and SE
-            num of sigs : int   - the number of significant tests at sig_lvl
-            frac of sigs: float - the fraction of significant tests at sig_lvl   
+            dict: Average KS statistic and standard error of the mean
+
+        Example:
+            >>> import pandas as pd
+            >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> KST = KolmogorovSmirnovTest(real, fake, cat_cols=['a'], num_cols=['b'], do_preprocessing=False)
+            >>> KST.evaluate(sig_lvl=0.05, n_perms=10) # doctest: +ELLIPSIS
+            {'avg stat': 0.0, ...}
         """
         n_dists, c_dists = [], []
         pvals = []
