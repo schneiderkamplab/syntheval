@@ -48,3 +48,18 @@ Privacy metric description                    value   error
 #     print("""\
 # +---------------------------------------------------------------+"""
 #         )
+
+def format_metric_string(name: str, value: float, error: float) -> str:
+    """Return string for formatting the output, when the
+    metric is part of SynthEval.
+    """
+    if len(name) >= 40:
+        name = name[:39]
+
+    metric_value = f"{value:.4f}"
+    metric_error = f"{error:.4f}"
+
+    name = name + ":"
+    string = f""
+    string += f"| {name:<40}   {metric_value:<7}  {metric_error:<7}   |\n"
+    return string
