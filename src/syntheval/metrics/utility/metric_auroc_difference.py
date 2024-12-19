@@ -5,8 +5,8 @@
 import numpy as np
 import pandas as pd
 
-from ..core.metric import MetricClass
-from ...utils.plot_metrics import plot_roc_curves
+from syntheval.metrics.core.metric import MetricClass
+from syntheval.utils.plot_metrics import plot_roc_curves
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -39,12 +39,25 @@ class MetricClassName(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'utility'
 
-    def evaluate(self, model = 'log_reg', num_subsamples = 1) -> float | dict:
+    def evaluate(self, model = 'log_reg', num_boots = 1) -> float | dict:
         """ Metric that calculates the AUROC difference between a Random Forest model trained on 
         real data and one trained on fake data. Also plots the ROC curves if verbose
         
-        model: 'log_reg' or 'rf_cls'
+        Args:
+            model (str): 'log_reg' or 'rf_cls'
+            num_boots (int): Number of bootstraps runs of the model
         
+        Returns:
+            dict: AUROC difference between the two models
+
+        Example:
+            >>> import pandas as pd
+            >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6], 'label': [0, 1, 0]})
+            >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6], 'label': [0, 1, 0]})
+            >>> hout = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6], 'label': [0, 1, 0]})
+            >>> AUROC = MetricClassName(real, fake, hout, analysis_target='label', verbose=False, do_preprocessing=False)
+            >>> AUROC.evaluate(model='log_reg', num_boots=1)
+            {'model': 'log_reg', 'auroc_diff': 0.0}       
         """
         try:
             assert self.analysis_target is not None
@@ -70,8 +83,8 @@ class MetricClassName(MetricClass):
 
             roc_curves_real = []
             roc_curves_fake = []
-            for i in range(num_subsamples):
-                if num_subsamples != 1:
+            for i in range(num_boots):
+                if num_boots != 1:
                     real_x_sub, real_y_sub = resample(real_x, real_y, n_samples=int(len(real_x)/2), random_state=i)
                     fake_x_sub, fake_y_sub = resample(fake_x, fake_y, n_samples=int(len(fake_x)/2))
                 else:
@@ -144,10 +157,8 @@ class MetricClassName(MetricClass):
             name2  p  0.0  0.0    0.0    0.0
         """
         if self.results != {}:
-            # val_non_lin = np.exp(-10*abs(self.results['auroc_diff']))
             return [{'metric': 'auroc', 'dim': 'u', 
                      'val': self.results['auroc_diff'], 
                      'n_val': 1-self.results['auroc_diff'], 
-                    #  'idx_val': val_non_lin, 
                      }]
         else: pass

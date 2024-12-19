@@ -4,9 +4,9 @@
 
 import numpy as np
 
-from ..core.metric import MetricClass
+from syntheval.metrics.core.metric import MetricClass
 
-from ...utils.nn_distance import _knn_distance
+from syntheval.utils.nn_distance import _knn_distance
 
 class MedianDistanceToClosestRecord(MetricClass):
     """The Metric Class is an abstract class that interfaces with 
@@ -32,7 +32,19 @@ class MedianDistanceToClosestRecord(MetricClass):
         return 'privacy'
 
     def evaluate(self) -> float | dict:
-        """Distance to closest record, using the same NN stuff as NNAA"""
+        """Distance to closest record, using the same NN stuff as NNAA
+        
+        Returns:
+            dict: The results of the metric
+        
+        Example:
+            >>> import pandas as pd
+            >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> DCR = MedianDistanceToClosestRecord(real, fake, nn_dist='euclid', do_preprocessing=False)
+            >>> DCR.evaluate()
+            {'mDCR': 1.0}
+        """
         
         distances = _knn_distance(self.synt_data,self.real_data,self.cat_cols,1,self.nn_dist)
         in_dists = _knn_distance(self.real_data,self.real_data,self.cat_cols,1,self.nn_dist)
@@ -69,6 +81,5 @@ class MedianDistanceToClosestRecord(MetricClass):
             return [{'metric': 'median_DCR', 'dim': 'p', 
                      'val': self.results['mDCR'],
                      'n_val': np.tanh(self.results['mDCR']),
-                    #  'idx_val': np.tanh(self.results['mDCR'])
                      }]
         else: pass

@@ -5,7 +5,7 @@
 import numpy as np
 import pandas as pd
 
-from ..core.metric import MetricClass
+from syntheval.metrics.core.metric import MetricClass
 
 from sklearn.model_selection import StratifiedKFold
 from sklearn.linear_model import LogisticRegression
@@ -13,7 +13,7 @@ from sklearn.preprocessing import StandardScaler
 
 from sklearn.metrics import f1_score
 
-from ...utils.preprocessing import stack
+from syntheval.utils.preprocessing import stack
 
 class PropensityMeanSquaredError(MetricClass):
     """The Metric Class is an abstract class that interfaces with 
@@ -39,7 +39,24 @@ class PropensityMeanSquaredError(MetricClass):
         return 'utility'
 
     def evaluate(self, k_folds=5, max_iter=100, solver='liblinear') -> float | dict:
-        """Train a a discriminator to distinguish between real and fake data."""
+        """Train a a discriminator to distinguish between real and fake data.
+        
+        Args:
+            k_folds (int): Number of cross-validation folds
+            max_iter (int): Maximum number of iterations for logistic regression
+            solver (str): Solver for the logistic regression (see sklearn documentation)
+        
+        Returns:
+            dict: Propensity mean squared error (pMSE) and classifier accuracy
+        
+        Example:
+            >>> import pandas as pd
+            >>> real = pd.DataFrame({'a': [1, 2, 3, 2], 'b': [4, 5, 6, 4]})
+            >>> fake = pd.DataFrame({'a': [1, 2, 3, 2], 'b': [4, 5, 6, 4]})
+            >>> PMSE = PropensityMeanSquaredError(real, fake, num_cols=['a', 'b'], do_preprocessing=False)
+            >>> PMSE.evaluate(k_folds=2) # doctest: +ELLIPSIS
+            {'avg pMSE': 0.0, ...}
+        """
 
         discriminator = LogisticRegression(max_iter=max_iter, solver=solver, random_state=42)
         Df = stack(self.real_data,self.synt_data).drop(['index'], axis=1)

@@ -4,7 +4,7 @@
 
 import numpy as np
 
-def print_results_to_console(utility_output_txt,privacy_output_txt):#,scores):
+def print_results_to_console(utility_output_txt,privacy_output_txt,fairness_output_txt):
     print("""\
 
 SynthEval results
@@ -30,14 +30,6 @@ Privacy metric description                    value   error
         print("""\
 +---------------------------------------------------------------+
     """)
-#     print("""\
-# +---------------------------------------------------------------+"""
-#         )
-#     if not scores['utility']['val'] == []:
-#         scores_lst = np.sqrt(sum(np.square(scores['utility']['err'])))/len(scores['utility']['val'])
-#         print("""\
-# | Utility index (avg. of %2d scores)        :   %.4f  %.4f   |""" % (len(scores['utility']['val']),np.mean(scores['utility']['val']), scores_lst)
-#         )
         
 #     if not scores['privacy']['val'] == []:
 #         scores_lst = np.sqrt(sum(np.square(scores['privacy']['err'])))/len(scores['privacy']['val'])
@@ -48,6 +40,15 @@ Privacy metric description                    value   error
 #     print("""\
 # +---------------------------------------------------------------+"""
 #         )
+    if fairness_output_txt != '':
+        print("""\
+Fairness metric description                   value   error                                 
++---------------------------------------------------------------+"""
+            )
+        print(fairness_output_txt.rstrip())
+        print("""\
++---------------------------------------------------------------+
+
 
 def format_metric_string(name: str, value: float, error: float) -> str:
     """Return string for formatting the output, when the

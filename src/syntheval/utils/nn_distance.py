@@ -9,6 +9,8 @@ import numpy as np
 from typing import Literal
 from sklearn.neighbors import NearestNeighbors
 
+#TODO: Save the NNs, so that they can be reused
+
 def _create_matrix_with_ones(indices, num_rows):
     matrix = np.zeros((len(indices),num_rows), dtype=int)
     for i, index in enumerate(indices):

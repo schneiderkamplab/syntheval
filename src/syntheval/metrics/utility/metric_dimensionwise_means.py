@@ -3,13 +3,12 @@
 # Date: 23-08-2023
 
 import numpy as np
-import pandas as pd
 
-from ..core.metric import MetricClass
+from syntheval.metrics.core.metric import MetricClass
 
 from scipy.stats import sem
 
-from ...utils.plot_metrics import plot_dimensionwise_means
+from syntheval.utils.plot_metrics import plot_dimensionwise_means
 
 class MetricClassName(MetricClass):
     """The Metric Class is an abstract class that interfaces with 
@@ -34,8 +33,20 @@ class MetricClassName(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'utility'
 
-    def evaluate(self) -> float | dict:
-        """Function for calculating DWM, plotting an appropriate diagram"""
+    def evaluate(self) -> dict:
+        """Function for calculating DWM, plotting an appropriate diagram
+        
+        Returns:
+            dict: Average dimensionwise means difference and standard error of the mean
+        
+        Example:
+            >>> import pandas as pd
+            >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> DWM = MetricClassName(real, fake, num_cols=['a','b'], do_preprocessing=False, verbose=False)
+            >>> DWM.evaluate() # doctest: +ELLIPSIS
+            {'avg': 0.0, ...}
+        """
         try:
             assert len(self.num_cols) > 0
         except AssertionError:

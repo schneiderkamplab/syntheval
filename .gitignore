@@ -155,4 +155,7 @@ test.py
 test.py
 *.svg
 *.png
-SE_config.json
+SE_*.json
+SE_*.csv
+SE_*.png
+.vscode/settings.json

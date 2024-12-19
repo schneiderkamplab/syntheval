@@ -4,9 +4,9 @@
 
 import numpy as np
 
-from ..core.metric import MetricClass
+from syntheval.metrics.core.metric import MetricClass
 
-from ...utils.nn_distance import _knn_distance
+from syntheval.utils.nn_distance import _knn_distance
 
 class NearestNeighbourDistanceRatio(MetricClass):
     """The Metric Class is an abstract class that interfaces with 
@@ -34,6 +34,17 @@ class NearestNeighbourDistanceRatio(MetricClass):
 
     def evaluate(self) -> dict:
         """ Compute the Nearest Neighbour Distance Ratio (NNDR) between two datasets.
+
+        Returns:
+            dict: Average NNDR and standard error of the mean
+        
+        Example:
+            >>> import pandas as pd
+            >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> NNDR = NearestNeighbourDistanceRatio(real, fake, cat_cols=[], nn_dist='euclid', do_preprocessing=False)
+            >>> NNDR.evaluate() # doctest: +ELLIPSIS
+            {'avg': 0.66..., 'err': ...}
         """
         dist = _knn_distance(self.real_data, self.synt_data, self.cat_cols, 2, self.nn_dist)
         dr = list(map(lambda x: x[0] / (x[1]+1e-16), np.transpose(dist)))

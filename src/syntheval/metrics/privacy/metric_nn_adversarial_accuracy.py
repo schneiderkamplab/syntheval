@@ -4,26 +4,62 @@
 
 import numpy as np
 
-from ..core.metric import MetricClass
+from syntheval.metrics.core.metric import MetricClass
 
-from ...utils.nn_distance import _knn_distance
+from syntheval.utils.nn_distance import _knn_distance
 
 def _adversarial_score(real, fake, cat_cols, metric):
-    """Function for calculating adversarial score"""
+    """Function for calculating adversarial score
+    
+    Args:
+        real (DataFrame) : Real dataset
+        fake (DataFrame) : Synthetic dataset
+        cat_cols (List[str]) : list of strings
+        metric (str) : keyword literal for NN module
+
+    Returns:
+        float : Adversarial score
+    
+    Example:
+        >>> import pandas as pd
+        >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+        >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+        >>> _adversarial_score(real, fake, [], 'euclid')
+        0.0
+    """
     left = np.mean(_knn_distance(real, fake, cat_cols, 1, metric)[0] > _knn_distance(real, real, cat_cols, 1, metric)[0])
     right = np.mean(_knn_distance(fake, real, cat_cols, 1, metric)[0] > _knn_distance(fake, fake, cat_cols, 1, metric)[0])
     return 0.5 * (left + right)
 
 def evaluate_dataset_nnaa(real, fake, num_cols, cat_cols, metric, n_resample):
     """Helper function for running adversarial score multiple times if the 
-    datasets have much different sizes."""
+    datasets have much different sizes.
+    
+    Args:
+        real (DataFrame) : Real dataset
+        fake (DataFrame) : Synthetic dataset
+        num_cols (List[str]) : list of strings
+        cat_cols (List[str]) : list of strings
+        metric (str) : keyword literal for NN module
+        n_resample (int) : number of resample rounds to run if datasets are of different sizes
+    
+    Returns:
+        float, float: Average adversarial score and standard error
+    
+    Example:
+        >>> import pandas as pd
+        >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+        >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+        >>> evaluate_dataset_nnaa(real, fake, [], [], 'euclid', 1)
+        (0.0, 0.0)
+    """
 
     real_fake = len(real)/len(fake)
     fake_real = len(fake)/len(real)
 
     if any([real_fake >= 2, fake_real >= 2]):
         aa_lst = []
-        for batch in range(n_resample):
+        for _ in range(n_resample):
             temp_r = real if real_fake < 2 else real.sample(n=len(fake))
             temp_f = fake if fake_real < 2 else fake.sample(n=len(real))
             aa_lst.append(_adversarial_score(temp_r, temp_f, cat_cols, metric))
@@ -60,7 +96,22 @@ class NearestNeighbourAdversarialAccuracy(MetricClass):
         return 'utility'
 
     def evaluate(self, n_resample=30) -> dict:
-        """Implementation heavily inspired by original paper"""
+        """Implementation heavily inspired by original paper
+        
+        Args:
+            n_resample (int) : number of resample rounds to run if datasets are of different sizes
+        
+        Returns:
+            dict: Average adversarial score and standard error
+        
+        Example:
+            >>> import pandas as pd
+            >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> N = NearestNeighbourAdversarialAccuracy(real, fake, cat_cols=[], num_cols=[], nn_dist='euclid', do_preprocessing=False)
+            >>> N.evaluate(n_resample = 1)
+            {'avg': 0.0, 'err': 0.0}
+        """
 
         avg, err = evaluate_dataset_nnaa(self.real_data,self.synt_data,self.num_cols,self.cat_cols,self.nn_dist,n_resample)
 
@@ -110,10 +161,10 @@ class NearestNeighbourAdversarialAccuracy(MetricClass):
             return output
         else: pass
 
-    def extra_formatted_output(self) -> str:
+    def extra_formatted_output(self) -> dict:
         """Bit for printing the privacy loss together with the other privacy metrics"""
         if (self.results != {} and self.hout_data is not None):
             string = """\
 | Privacy loss (diff. in NNAA)             :   %.4f  %.4f   |""" % (self.results['priv_loss'], self.results['priv_loss_err'])
-            return string
+            return {'privacy': string}
         else: pass

@@ -4,11 +4,23 @@
 
 import numpy as np
 
-from ..core.metric import MetricClass
+from syntheval.metrics.core.metric import MetricClass
 
 def _scott_ref_rule(set1,set2):
     """Function for doing the Scott reference rule to calcualte number of bins needed to 
-    represent the nummerical values."""
+    represent the nummerical values.
+    
+    Args:
+        set1 (array-like): Real data
+        set2 (array-like): Synthetic data
+    
+    Returns:
+        array : bin edges
+    
+    Example:
+        >>> _scott_ref_rule([1,2,3,4,5],[1,2,3,4,5])
+        array([1., 2., 3., 4., 5.])
+    """
     samples = np.concatenate((set1, set2))
     std = np.std(samples)
     n = len(samples)
@@ -19,7 +31,19 @@ def _scott_ref_rule(set1,set2):
     return np.linspace(min_edge, max_edge, Nplus1)
 
 def _hellinger(p,q):
-    """Hellinger distance between distributions"""
+    """Hellinger distance between distributions
+    
+    Args:
+        p (array-like): Real data
+        q (array-like): Synthetic data
+    
+    Returns:
+        float : Hellinger distance
+    
+    Example:
+        >>> _hellinger([1,2,3,4,5],[1,2,3,4,5])
+        0.0
+    """
     sqrt_pdf1 = np.sqrt(p)
     sqrt_pdf2 = np.sqrt(q)
     diff = sqrt_pdf1 - sqrt_pdf2
@@ -36,7 +60,19 @@ class HellingerDistance(MetricClass):
         return 'utility'
 
     def evaluate(self) -> float | dict:
-        """ Function for evaluating the metric"""
+        """ Function for evaluating the metric
+        
+        Returns:
+            dict: Average Hellinger distance and standard error of the mean
+        
+        Example:
+            >>> import pandas as pd
+            >>> real = pd.DataFrame({'a': [0, 1, 0], 'b': [4, 5, 6]})
+            >>> fake = pd.DataFrame({'a': [0, 1, 0], 'b': [4, 5, 6]})
+            >>> HD = HellingerDistance(real, fake, cat_cols=['a'], num_cols=['b'], do_preprocessing=False)
+            >>> HD.evaluate()
+            {'avg': 0.0, 'err': 0.0}
+        """
         H_dist = []
     
         for category in self.cat_cols:
@@ -74,16 +110,10 @@ class HellingerDistance(MetricClass):
             name2  p  0.0  0.0    0.0    0.0
         """
         if self.results != {}:
-            # power = np.exp(10*(self.results['avg']-0.25))
-            # val_non_lin     = 1/(1+power)
-            # val_non_lin_err = 10*power/((1+power)**2)*self.results['err']
-
             return [{'metric': 'avg_h_dist', 'dim': 'u', 
                      'val': self.results['avg'], 
                      'err': self.results['err'], 
                      'n_val': 1-self.results['avg'], 
                      'n_err': self.results['err'], 
-                    #  'idx_val': val_non_lin, 
-                    #  'idx_err': val_non_lin_err
                      }]
         else: pass

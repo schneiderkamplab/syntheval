@@ -5,9 +5,9 @@
 import numpy as np
 import pandas as pd
 
-from ..core.metric import MetricClass
+from syntheval.metrics.core.metric import MetricClass
 
-from ...utils.plot_metrics import plot_matrix_heatmap
+from syntheval.utils.plot_metrics import plot_matrix_heatmap
 from sklearn.metrics import normalized_mutual_info_score
 
 def _pairwise_attributes_mutual_information(data):
@@ -16,8 +16,20 @@ def _pairwise_attributes_mutual_information(data):
     Elements borrowed from: 
     Ping H, Stoyanovich J, Howe B. DataSynthesizer: privacy-preserving synthetic datasets. 2017
     Presented at: Proceedingsof the 29th International Conference on Scientific and Statistical Database Management; 2017; Chicago.
-    [doi:10.1145/3085504.3091117]"""
-
+    [doi:10.1145/3085504.3091117]
+    
+    Args:
+        data (DataFrame): Data
+    
+    Returns:
+        DataFrame : Matrix
+    
+    Example:
+        >>> _pairwise_attributes_mutual_information(pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})) # doctest: +NORMALIZE_WHITESPACE
+            a    b
+        a  1.0  1.0
+        b  1.0  1.0
+    """
     labs = sorted(data.columns)
     res = (normalized_mutual_info_score(data[cat1].astype(str),data[cat2].astype(str),average_method='arithmetic') for cat1 in labs for cat2 in labs)
     return pd.DataFrame(np.fromiter(res, dtype=float).reshape(len(labs),len(labs)), columns = labs, index = labs)
@@ -33,7 +45,23 @@ class MutualInformation(MetricClass):
         return 'utility'
 
     def evaluate(self, axs_lim=(0,1), axs_scale='Blues') -> float | dict:
-        """ Function for evaluating the metric"""
+        """ Function for evaluating the metric
+        
+        Args:
+            axs_lim (tuple): Axis limits (for plotting)
+            axs_scale (str): Color scale (for plotting)
+        
+        Returns:
+            dict: Mutual information matrix difference
+        
+        Example:
+            >>> import pandas as pd
+            >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> M = MutualInformation(real, fake, do_preprocessing=False, verbose=False)
+            >>> M.evaluate()
+            {'mutual_inf_diff': 0.0, 'mi_mat_dims': 2}
+        """
         r_mi = _pairwise_attributes_mutual_information(self.real_data)
         f_mi = _pairwise_attributes_mutual_information(self.synt_data)
 
@@ -65,6 +93,5 @@ class MutualInformation(MetricClass):
             return [{'metric': 'mutual_inf_diff', 'dim': 'u', 
                      'val': self.results['mutual_inf_diff'], 
                      'n_val': 1-self.results['mutual_inf_diff']/n_elements, 
-                    #  'idx_val': 1-np.tanh(self.results['mutual_inf_diff'])
                      }]
         else: pass

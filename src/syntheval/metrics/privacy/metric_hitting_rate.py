@@ -2,8 +2,7 @@
 # Author: Anton D. Lautrup
 # Date: 23-08-2023
 
-import numpy as np
-from ..core.metric import MetricClass
+from syntheval.metrics.core.metric import MetricClass
 
 class HittingRate(MetricClass):
     """The Metric Class is an abstract class that interfaces with 
@@ -29,9 +28,26 @@ class HittingRate(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'privacy'
 
-    def evaluate(self,thres_percent=1/30) -> float | dict:
+    def evaluate(self, thres_percent=1/30) -> float | dict:
         """For hitting rate we regard records as similar if the 
-        nummerical attributes are within a threshold range(att)/30"""
+        numerical attributes are close enough and the categorical
+        attributes are the same.
+        
+        Args:
+            thres_percent (float): The threshold for numericals (multiplyer for range(att))
+        
+        Returns:
+            dict: The results of the metric
+        
+        Example:
+            >>> import pandas as pd
+            >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> HR = HittingRate(real, fake, cat_cols=['a'], num_cols=['b'], do_preprocessing=False)
+            >>> HR.evaluate()
+            {'hit rate': 1.0}
+        """
+
         self.thres_percent = thres_percent
         thres = thres_percent*(self.real_data.max() - self.real_data.min())
         thres[self.cat_cols] = 0
@@ -61,10 +77,8 @@ class HittingRate(MetricClass):
             name2  p  0.0  0.0    0.0    0.0
         """
         if self.results != {}:
-            # val_non_lin = np.exp(-5*self.results['hit rate'])
             return [{'metric': 'hit_rate', 'dim': 'p', 
                      'val': self.results['hit rate'], 
                      'n_val': 1-self.results['hit rate'], 
-                    #  'idx_val': val_non_lin, 
                      }]
         else: pass

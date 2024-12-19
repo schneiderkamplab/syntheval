@@ -7,10 +7,9 @@ import glob
 import time
 import os
 
-import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from typing import Literal
+from typing import Literal, List, Dict
 from pandas import DataFrame
 
 from .metrics import load_metrics
@@ -26,10 +25,24 @@ def _has_not_slash_backslash_or_dot(input_string):
     return not ('/' in input_string or '\\' in input_string or '.' in input_string)
 
 class SynthEval():
+    """Primary object for accessing the SynthEval evaluation framework. Create with the real data used for training
+    and use either evaluate of benchmark methods for evaluating synthetic datasets.
+
+    Attributes:
+    real (DataFrame): real dataset, in dataframe format.
+    fake (DataFrame): synthetic dataset, in dataframe format.
+    holdout (DataFrame): real data that was not used for training the generative model
+
+    categorical_columns (List[str]): complete list of categorical columns column names (inferred if not specified).
+    numerical_columns (List[str]): complete list of numerical columns column names (inferred if not specified).
+
+    _raw_results (Dict[str, Any]) : raw output from the metrics.
+
+    """
     def __init__(self, 
                  real_dataframe: DataFrame, 
                  holdout_dataframe: DataFrame = None,
-                 cat_cols: list = None,
+                 cat_cols: List[str] = None,
                  nn_distance: Literal['gower', 'euclid', 'EXPERIMENTAL_gower'] = 'gower', 
                  unique_threshold: int = 10,
                  verbose: bool = True,
@@ -37,13 +50,13 @@ class SynthEval():
         """Primary object for accessing the SynthEval evaluation framework. Create with the real data used for training 
         and use either evaluate of benchmark methods for evaluating synthetic datasets.
         
-        Parameters:
+        Args:
             real_dataframe      : real dataset, in dataframe format. 
             holdout_dataframe   : (optional) real data that was not used for training the generative model
             cat_cols            : (optional) complete list of categorical columns column names. 
             nn_distance         : {default= 'gower', 'euclid', 'EXPERIMENTAL_gower'} distance metric for NN distances.
             unique_threshold    : threshold of unique levels in non-object columns to be considered categoricals.    
-            verbose             : flag fo printing to console and making figures
+            verbose             : flag fo printing to console and making figures.
         """
 
         self.real = real_dataframe
@@ -53,7 +66,7 @@ class SynthEval():
             # Make sure columns and their order are the same.
             if len(real_dataframe.columns) == len(holdout_dataframe.columns):
                 holdout_dataframe = holdout_dataframe[real_dataframe.columns.tolist()]
-            assert real_dataframe.columns.tolist() == holdout_dataframe.columns.tolist(), 'Columns in real and houldout dataframe are not the same'
+            assert real_dataframe.columns.tolist() == holdout_dataframe.columns.tolist(), 'Columns in train and test dataframe are not the same'
 
             self.hold_out = holdout_dataframe
         else:
@@ -67,16 +80,15 @@ class SynthEval():
         self.numerical_columns = [column for column in real_dataframe.columns if column not in cat_cols]
 
         self.nn_dist = nn_distance
-        
         pass
 
-    def _update_syn_data(self, synt):
+    def _update_syn_data(self, synt: DataFrame) -> None:
         """Function for adding/updating the synthetic data"""
         self.synt = synt
 
         if len(self.real.columns) == len(synt.columns):
             synt = synt[self.real.columns.tolist()]
-        assert self.real.columns.tolist() == synt.columns.tolist(), 'Columns in real and fake dataframe are not the same'
+        assert self.real.columns.tolist() == synt.columns.tolist(), 'Columns in real and synthetic dataframe are not the same'
         if self.verbose: print('SynthEval: synthetic data read successfully')
         pass
 
@@ -85,13 +97,13 @@ class SynthEval():
         print(loaded_metrics)
         pass
 
-    def evaluate(self, synthetic_dataframe, analysis_target_var=None, presets_file=None, **kwargs):
+    def evaluate(self, synthetic_dataframe: DataFrame, analysis_target_var: str = None, presets_file: str = None, **kwargs):
         """Method for generating the SynthEval evaluation report on a synthetic dataset. Includes the metrics specified in the 
         presets file or through the keyword arguments. Returns a dataframe with the primary results, and prints to console if 
         verbose. The raw output can be accessed as a charateristic of the SynthEval object after running this method 
         (e.i. self._raw_results).
         
-        Parameters:
+        Args.:
             synthetic_dataframe     : synthetic dataset, in dataframe format. 
             analysis_target_var     : string column name of categorical variable to check.
             presets_file            : {default=None, 'full_eval', 'fast_eval', 'privacy'} or json file path.
@@ -99,6 +111,13 @@ class SynthEval():
 
         Returns:
             key_results : dataframe with the primary result(s) from each of the included metrics.
+
+        Example:
+            >>> import pandas as pd
+            >>> real_data = pd.read_csv('guides/example/penguins_train.csv')
+            >>> synthetic_data = pd.read_csv('guides/example/penguins_BN_syn.csv')
+            >>> SE = SynthEval(real_data, verbose = False)
+            >>> res = SE.evaluate(synthetic_data, analysis_target_var='species', ks_test={}, eps_risk={})
         """
         self._update_syn_data(synthetic_dataframe)
         
@@ -124,49 +143,57 @@ class SynthEval():
 
         utility_output_txt = ''
         privacy_output_txt = ''
+        fairness_output_txt = ''
 
         methods = evaluation_config.keys()
 
         raw_results = {}
         key_results = None
-        #scores = {'utility':{'val':[],'err':[]}, 'privacy':{'val':[],'err':[]}}
         pbar = tqdm(methods, disable= not self.verbose)
         for method in pbar:
             pbar.set_description(f'Syntheval: {method}')
             if method not in loaded_metrics.keys():
                 print(f"Unrecognised keyword: {method}")
-                #raise Exception(f"Unrecognised keyword: {method}")
                 continue
             
+            #TODO: Add object manager to increase efficiency by reusing nn distances and trained classification models between metrics. 
             M = loaded_metrics[method](real_data, synt_data, hout_data, self.categorical_columns, self.numerical_columns, self.nn_dist, analysis_target_var, do_preprocessing=CLE, verbose=self.verbose)
             raw_results[method] = M.evaluate(**evaluation_config[method])
 
             string       = M.format_output()
             extra_string = M.extra_formatted_output()
-            if string is not None:
-                if loaded_metrics[method].type() == 'utility':
-                    utility_output_txt += string + '\n'
-                    if extra_string is not None: privacy_output_txt += extra_string + '\n'
-                else:
-                    privacy_output_txt += string + '\n'
-                    if extra_string is not None: utility_output_txt += extra_string + '\n'
 
+            if string is not None:
+                match loaded_metrics[method].type():
+                    case 'utility':
+                        utility_output_txt += string + '\n'
+                    case 'privacy':
+                        privacy_output_txt += string + '\n'
+                    case 'fairness':
+                        fairness_output_txt += string + '\n'
+
+            # TODO: Get rid of the extra_formatted_output thing by using this method instead.
+            if extra_string is not None:
+                for key in extra_string.keys():
+                    match key:
+                        case 'utility':
+                            utility_output_txt += extra_string[key] + '\n'
+                        case 'privacy':
+                            privacy_output_txt += extra_string[key] + '\n'
+                        case 'fairness':
+                            fairness_output_txt += extra_string[key] + '\n'
+        
             normalized_result = M.normalize_output()
             if normalized_result is not None: 
                 if key_results is None:
-                    key_results = pd.DataFrame(M.normalize_output(), columns=['metric', 'dim', 'val','err','n_val','n_err'])#,'idx_val','idx_err'])
+                    key_results = pd.DataFrame(M.normalize_output(), columns=['metric', 'dim', 'val','err','n_val','n_err'])
                 else:
-                    tmp_df = pd.DataFrame(M.normalize_output(), columns=['metric', 'dim', 'val','err','n_val','n_err'])#,'idx_val','idx_err'])
-                    key_results = pd.concat((key_results,tmp_df), axis = 0).reset_index(drop=True)
+                    tmp_df = pd.DataFrame(M.normalize_output(), columns=['metric', 'dim', 'val','err','n_val','n_err'])
+                    key_results = pd.concat((key_results, tmp_df), axis = 0).reset_index(drop=True)
 
-        # scores = {'utility':{'val': key_results[key_results['dim'] == 'u']['idx_val'].dropna().tolist(),
-        #                      'err': key_results[key_results['dim'] == 'u']['idx_err'].dropna().tolist()},
-        #           'privacy':{'val': key_results[key_results['dim'] == 'p']['idx_val'].dropna().tolist(),
-        #                      'err': key_results[key_results['dim'] == 'p']['idx_err'].dropna().tolist()}
-        #                      }
+        if self.verbose: print_results_to_console(utility_output_txt, privacy_output_txt, fairness_output_txt)
 
-        if self.verbose: print_results_to_console(utility_output_txt,privacy_output_txt)#,scores)
-
+        # Save non-standard evaluation config to a json file
         if (kwargs != {} and self.verbose):
             with open('SE_config.json', "w") as json_file:
                 json.dump(evaluation_config, json_file)
@@ -174,20 +201,29 @@ class SynthEval():
         self._raw_results = raw_results
         return key_results
 
-    def benchmark(self, dict_or_path_to_syn_file_folder, analysis_target_var=None, presets_file=None, rank_strategy='linear', **kwargs):
+    def benchmark(self, dfs_or_path: Dict[str, DataFrame] | str, analysis_target_var=None, presets_file=None, rank_strategy='linear', **kwargs):
         """Method for running SynthEval multiple times across all synthetic data files in a
         specified directory. Making a results file, and calculating rank-derived utility 
         and privacy scores.
         
         Parameters:
-            dict_or_path_to_syn_file_folder : dict of dataframes or string like '/example/ex_data_dir/' to folder with datasets
-            analysis_target_var             : string column name of categorical variable to check
-            rank_strategy                   : {default='linear', 'normal', 'quantile', 'summation'} see descriptions below
+            dfs_or_path         : dict of dataframes or string like '/example/ex_data_dir/' to folder with datasets
+            analysis_target_var : string column name of categorical variable to check
+            rank_strategy       : {default='linear', 'normal', 'quantile', 'summation'} see descriptions below
 
         Returns:
             comb_df : dataframe with the metrics and their rank derived scores
             rank_df : dataframe with the ranks used to make the scores
-            """
+
+        Example:
+            >>> import pandas as pd
+            >>> real_data = pd.read_csv('guides/example/penguins_train.csv')
+            >>> synthetic_data = pd.read_csv('guides/example/penguins_BN_syn.csv')
+            >>> SE = SynthEval(real_data, verbose = False)
+            >>> res, rank = SE.benchmark({'d1':synthetic_data, 'd2':synthetic_data}, analysis_target_var='species', rank_strategy='summation', p_mse={})
+            >>> isinstance(res, pd.DataFrame)
+            True
+        """
 
         # Part to avoid printing in the following and resetting to user preference after
         verbose_flag = False
@@ -195,14 +231,15 @@ class SynthEval():
             verbose_flag = True
             self.verbose = False
 
-        # Part to make sure input is the correct format
-        if isinstance(dict_or_path_to_syn_file_folder, str):
-            csv_files = sorted(glob.glob(dict_or_path_to_syn_file_folder + '*.csv'))
+        # Part to process the input
+        if isinstance(dfs_or_path, str):
+            assert os.path.isdir(dfs_or_path), 'Input is not a valid directory'
+            csv_files = sorted(glob.glob(dfs_or_path + '*.csv'))
             
             df_dict = {}
             for file in csv_files: df_dict[file.split(os.path.sep)[-1].replace('.csv', '')] = pd.read_csv(file)
-        elif isinstance(dict_or_path_to_syn_file_folder, dict):
-            df_dict = dict_or_path_to_syn_file_folder
+        elif isinstance(dfs_or_path, dict):
+            df_dict = dfs_or_path
         else:
             raise Exception("Error: input was not instance of dictionary or filepath!")
 
@@ -218,6 +255,7 @@ class SynthEval():
 
         utility_mets = tmp_df[tmp_df['dim'] == 'u']['metric'].tolist()
         privacy_mets = tmp_df[tmp_df['dim'] == 'p']['metric'].tolist()
+        fairness_mets = tmp_df[tmp_df['dim'] == 'f']['metric'].tolist()
 
         vals_df = pd.DataFrame(columns=tmp_df['metric'])
         errs_df = pd.DataFrame(columns=tmp_df['metric'])
@@ -238,10 +276,12 @@ class SynthEval():
         errs_df = errs_df.set_index('dataset')
         rank_df = rank_df.set_index('dataset')
 
-        if rank_strategy == 'normal': rank_df = extremes_ranking(rank_df,utility_mets,privacy_mets)
-        if rank_strategy == 'linear': rank_df = linear_ranking(rank_df,utility_mets,privacy_mets)
-        if rank_strategy == 'quantile': rank_df = quantile_ranking(rank_df,utility_mets,privacy_mets)
-        if rank_strategy == 'summation': rank_df = summation_ranking(rank_df,utility_mets,privacy_mets)
+        match rank_strategy:
+            case 'normal': rank_df = extremes_ranking(rank_df, utility_mets, privacy_mets, fairness_mets)
+            case'linear': rank_df = linear_ranking(rank_df, utility_mets, privacy_mets, fairness_mets)
+            case 'quantile': rank_df = quantile_ranking(rank_df, utility_mets, privacy_mets, fairness_mets)
+            case 'summation': rank_df = summation_ranking(rank_df, utility_mets, privacy_mets, fairness_mets)
+            case _: raise Exception("Error: unrecognised rank_strategy keyword!")
 
         comb_df = pd.DataFrame()
         for column in vals_df.columns:
@@ -252,6 +292,7 @@ class SynthEval():
         comb_df['rank'] = rank_df['rank']
         comb_df['u_rank'] = rank_df['u_rank']
         comb_df['p_rank'] = rank_df['p_rank']
+        comb_df['f_rank'] = rank_df['f_rank']
 
         name_tag = str(int(time.time()))
         temp_df = comb_df.copy()

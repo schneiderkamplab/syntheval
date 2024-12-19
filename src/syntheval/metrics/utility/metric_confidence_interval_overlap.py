@@ -6,7 +6,7 @@ import numpy as np
 
 from scipy.stats import sem
 
-from ..core.metric import MetricClass
+from syntheval.metrics.core.metric import MetricClass
 
 class ConfidenceIntervalOverlap(MetricClass):
     """The Metric Class is an abstract class that interfaces with 
@@ -33,7 +33,22 @@ class ConfidenceIntervalOverlap(MetricClass):
 
     def evaluate(self,confidence=95) -> float | dict:
         """Function for calculating the average CIO, also returns the 
-        number of nonoverlapping interval"""
+        number of nonoverlapping interval
+        
+        Args:
+            confidence (int): Confidence level for the confidence interval
+        
+        Returns:
+            dict: Average confidence interval overlap, overlap error, number of non-overlapping intervals, and fraction of non-overlapping intervals
+        
+        Example:
+            >>> import pandas as pd
+            >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> CIO = ConfidenceIntervalOverlap(real, fake, cat_cols=[], num_cols=['a','b'], do_preprocessing=False)
+            >>> CIO.evaluate() # doctest: +ELLIPSIS
+            {'avg overlap': 1.0, ...}
+        """
         confidence_table = {80: 1.28, 90: 1.645, 95: 1.96, 98: 2.33, 99: 2.58}
         try:
             assert len(self.num_cols) > 0
@@ -97,15 +112,10 @@ class ConfidenceIntervalOverlap(MetricClass):
             name2  p  0.0  0.0    0.0    0.0
         """
         if self.results != {}:
-            # power = np.exp(-8*(self.results['avg overlap']-0.5))
-            # val_non_lin     = 1/(1+power)
-            # val_non_lin_err = 8*power/((1+power)**2)*self.results['overlap err']
             return [{'metric': 'avg_cio', 'dim': 'u', 
                      'val': self.results['avg overlap'], 
                      'err': self.results['overlap err'], 
                      'n_val': self.results['avg overlap'], 
                      'n_err': self.results['overlap err'], 
-                    #  'idx_val': val_non_lin, 
-                    #  'idx_err': val_non_lin_err
                      }]
         else: pass

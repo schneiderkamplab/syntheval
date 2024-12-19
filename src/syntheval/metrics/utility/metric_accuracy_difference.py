@@ -10,12 +10,35 @@ from sklearn.model_selection import KFold
 from sklearn.tree import DecisionTreeClassifier
 from tqdm import tqdm
 
-from ..core.metric import MetricClass
-
+from syntheval.metrics.core.metric import MetricClass
 
 def class_test(real_models, fake_models, real, fake, test, F1_type):
     """Function for running a training session and getting predictions 
-    on the SciPy model provided, and data."""
+    on the SciPy model provided, and data.
+    
+    Args:
+        real_models (list): List of SciPy models
+        fake_models (list): List of SciPy models
+        real (list): List of real data
+        fake (list): List of synthetic data
+        test (list): List of test data
+        F1_type (str): Type of F1 score to compute
+
+    Returns:
+        np.array: F1 scores for real and fake data
+    
+    Example:
+        >>> import numpy as np
+        >>> from sklearn.tree import DecisionTreeClassifier
+        >>> real_models = [DecisionTreeClassifier(), DecisionTreeClassifier()]
+        >>> fake_models = [DecisionTreeClassifier(), DecisionTreeClassifier()]
+        >>> real = [np.array([[1, 2], [3, 4]]) , np.array([0, 1])]
+        >>> fake = [np.array([[1, 2], [3, 4]]) , np.array([0, 1])]
+        >>> test = [np.array([[1, 2], [3, 4]]) , np.array([0, 1])]
+
+        >>> class_test(real_models, fake_models, real, fake, test, 'micro') # doctest: +ELLIPSIS
+        array([[1., 1.],...])
+    """
     res = []
     for r_mod, f_mod in zip(real_models, fake_models):
         r_mod.fit(real[0],real[1])
@@ -55,8 +78,31 @@ class ClassificationAccuracy(MetricClass):
         return 'utility'
 
     def evaluate(self, F1_type='micro',k_folds=5) -> dict:
-        """ Function for training classifiers"""
-        if (self.analysis_target is not None and self.analysis_target in self.cat_cols):
+        """ Function for training classifiers
+        
+        Args:
+            F1_type (str): Type of F1 score to compute
+            k_folds (int): Number of folds for cross-validation
+
+        Returns:
+            dict: Various accuracy and accuracy difference metrics
+        
+        Example:
+            >>> import pandas as pd
+            >>> real = pd.DataFrame({'a': [1, 2, 3, 2], 'b': [4, 5, 6, 4], 'label': [1, 0, 1, 0]})
+            >>> fake = pd.DataFrame({'a': [1, 2, 3, 1], 'b': [4, 5, 6, 1], 'label': [1, 0, 1, 0]})
+            >>> cls_acc = ClassificationAccuracy(real, fake, cat_cols=['label'], analysis_target='label', do_preprocessing=False)
+            >>> cls_acc.evaluate(k_folds=2) # doctest: +ELLIPSIS
+            {'avg diff': 0.0, ...}
+        
+        """
+        try:
+            assert self.analysis_target is not None, "Analysis target variable not set!"
+            assert self.analysis_target in self.cat_cols, "Analysis target variable not categorical!"
+        except AssertionError:
+            print(" Warning: Classification accuracy metric did not run, analysis target variable not supplied or is not categorical!")
+            pass
+        else:
             real_x, real_y = self.real_data.drop([self.analysis_target], axis=1), self.real_data[self.analysis_target]
             fake_x, fake_y = self.synt_data.drop([self.analysis_target], axis=1), self.synt_data[self.analysis_target]
 
@@ -114,17 +160,8 @@ class ClassificationAccuracy(MetricClass):
                 self.results['avg diff hout'] = np.mean(holdout_diff)
                 self.results['avg diff err hout'] = np.std(holdout_diff,ddof=1)/np.sqrt(4)
                 self.results['diffs hout'] = holdout_diff
-
             return self.results
-
-        elif self.analysis_target is None: 
-            print('Error: Classification accuracy metric did not run, analysis class variable not set!')
-            pass
-        else:
-            print('Error: Classification accuracy metric did not run, provided class not in list of categoricals!')
-            pass
         
-
     def format_output(self) -> str:
         """ Return string for formatting the output, when the
         metric is part of SynthEval. 
@@ -175,9 +212,6 @@ hres[0,2], hres[1,2], hdiff[2],
 hres[0,3], hres[1,3], hdiff[3],
 np.mean(hres[:,0]), np.mean(hres[:,1]), self.results['avg diff hout'], self.results['avg diff err hout']
 )
-#         else:
-#             string += """\
-# +---------------------------------------------------------------+"""
         return string
 
     def normalize_output(self) -> list:
@@ -190,28 +224,18 @@ np.mean(hres[:,0]), np.mean(hres[:,1]), self.results['avg diff hout'], self.resu
             name2  0.0  0.0    0.0    0.0    0.0     0.0
         """
         if self.results !={}:
-            # val_non_lin     = np.exp(-8*self.results['avg diff'])
-            # val_non_lin_err = 8*val_non_lin*self.results['avg diff err']
-
             output = [{'metric': 'cls_F1_diff', 'dim': 'u',
                        'val': self.results['avg diff'], 
                        'err': self.results['avg diff err'], 
                        'n_val': 1-self.results['avg diff'], 
                        'n_err': self.results['avg diff err'], 
-                    #    'idx_val': val_non_lin, 
-                    #    'idx_err': val_non_lin_err
                        }]
             if (self.hout_data is not None):
-                # val_non_lin_2       = np.exp(-8*self.results['avg diff hout'])
-                # val_non_lin_err_2   = 8*val_non_lin_2*self.results['avg diff err hout']
-
                 output.extend([{'metric': 'cls_F1_diff_hout', 'dim': 'u',
                        'val': self.results['avg diff hout'], 
                        'err': self.results['avg diff err hout'], 
                        'n_val': 1-self.results['avg diff hout'], 
                        'n_err': self.results['avg diff err hout'], 
-                    #    'idx_val': val_non_lin_2, 
-                    #    'idx_err': val_non_lin_err_2
                        }])
             return output
         else: pass
