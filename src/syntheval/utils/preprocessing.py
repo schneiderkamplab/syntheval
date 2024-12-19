@@ -47,8 +47,6 @@ class consistent_label_encoding:
             self.num_cols = nummerical_columns
         else:
             self.num_cols = None
-
-        # self.num_attribute_range = np.max(np.stack((np.array(np.ptp(joint_dataframe[nummerical_columns]),dtype=np.float64),np.ones(len(nummerical_columns)))),axis=0)
         pass
 
     def encode(self, data):

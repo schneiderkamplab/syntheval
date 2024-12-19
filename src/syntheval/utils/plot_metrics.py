@@ -25,7 +25,6 @@ def plot_dimensionwise_means(means, sem, labels):
         m_diff = means[:,0]-means[:,1]
         pr_sem = np.sqrt(np.sum(sem**2,axis=1))
         fig, ax = plt.subplots(figsize=(6,5))
-        #plt.scatter(m_diff,range(len(m_diff)))
         plt.errorbar(m_diff,range(len(m_diff)),xerr=np.array(pr_sem)*1.96,marker='o',linestyle='none', capsize=6, markersize="6")
         labels = [label[:10] + '...' if len(label) > 10 else label for label in labels]
         plt.yticks(range(len(m_diff)), labels)
@@ -36,12 +35,10 @@ def plot_dimensionwise_means(means, sem, labels):
         plt.tight_layout()
         plt.grid(linestyle='--', alpha=0.5)
         plt.savefig('SE_dwm_' +str(int(time.time()))+'.png')
-        #plt.show()
     else:
         y = lambda x, a : a*x
         popt, pcov = curve_fit(y, means[:,0], means[:,1])
         xline = np.linspace(min(means[:,0])-0.01, max(means[:,0])+0.01, 10)
-        #print(popt,pcov)
 
         fig, ax = plt.subplots(figsize=(5,5))
         
@@ -59,7 +56,6 @@ def plot_dimensionwise_means(means, sem, labels):
         plt.tight_layout()
         plt.grid(linestyle='--', alpha=0.3)
         plt.savefig('SE_dwm_' +str(int(time.time()))+'.png')
-        #plt.show()
     pass
 
 def plot_principal_components(reals, fakes):
@@ -100,7 +96,6 @@ def plot_principal_components(reals, fakes):
                     axs[i, j].set_ylabel(components[i])
                 elif i == comp_num and j== comp_num:
                     axs[i, j].set_xlabel(components[j])
-                    #axs[i, j].axis('off')
 
         # Create a single legend for both subplots
         handles, labels = axs[1,2].get_legend_handles_labels()
@@ -148,8 +143,6 @@ def plot_significantly_dissimilar_variables(real, fake, labels, cat_cols):
         
         if column in cat_cols: sns.histplot(data=df, x=column, hue='real', stat='probability', common_norm=False, discrete=True, multiple="dodge", alpha=0.5, shrink=.8, ax=axes[i])
         else: sns.histplot(data=df, x=column, hue='real', stat='probability', common_norm=False, multiple="layer", alpha=0.5, shrink=.8, ax=axes[i])
-        # axes[i].hist(df_real[column].dropna(), alpha=0.5, label='real_data')
-        # axes[i].hist(df_fake[column].dropna(), alpha=0.5, label='synt_data')
         
         axes[i].set_title(f'Variable {column}',fontsize=8)
         
@@ -200,39 +193,3 @@ def plot_roc_curves(real_roc_mean, real_roc_conf, fake_roc, fake_roc_conf, title
     plt.savefig('SE_' + file_name +'_' +str(int(time.time()))+ '.png')
     
     pass
-
-# def plot_correlation(mat):
-#     """Plotting the correlation difference matrix"""
-#     # Plotting
-#     s = max(8,int(np.shape(mat)[0]/3))
-#     fig, ax = plt.subplots(figsize=(s,s))
-#     if s <= 8: sns.heatmap(mat, annot=True, fmt='.2f', cmap='RdBu', ax=ax, cbar=True, mask=np.triu(np.ones(mat.shape), k=1))
-#     else: sns.heatmap(mat, cmap='RdBu', ax=ax, cbar=True, mask=np.triu(np.ones(mat.shape), k=1))
-
-#     plt.title("Correlation matrix difference")
-#     labels = _shortened_labels(ax.get_xticklabels())
-#     ax.set_xticks(ax.get_xticks(), labels, rotation=45, ha='right')
-#     ax.set_yticks(ax.get_yticks(), labels)
-#     fig.tight_layout()
-#     plt.savefig('plot_corr.png')
-#     #plt.show()
-#     pass
-
-# def plot_mutual_information(mat):
-#     """Plotting the pairwise mutual information matrix difference"""
-#     # Plotting
-#     s = max(8,int(np.shape(mat)[0]/3))
-#     fig, ax = plt.subplots(figsize=(s,s))
-#     if s <= 8: sns.heatmap(mat, annot=True, fmt='.2f', cmap='RdBu', ax=ax, cbar=True, mask=np.triu(np.ones(mat.shape), k=1))
-#     else: sns.heatmap(mat, cmap='RdBu', ax=ax, cbar=True, mask=np.triu(np.ones(mat.shape), k=1))
-
-#     plt.title("Mutual information matrix difference")
-#     labels = _shortened_labels(ax.get_xticklabels())
-#     ax.set_xticks(ax.get_xticks(), labels, rotation=45, ha='right')
-#     ax.set_yticks(ax.get_yticks(), labels)
-#     fig.tight_layout()
-#     plt.savefig('plot_mi.png')
-#     #plt.show()
-#     pass
-
-
