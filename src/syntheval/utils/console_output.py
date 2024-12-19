@@ -31,6 +31,15 @@ Privacy metric description                    value   error
 +---------------------------------------------------------------+
     """)
         
+#     if not scores['privacy']['val'] == []:
+#         scores_lst = np.sqrt(sum(np.square(scores['privacy']['err'])))/len(scores['privacy']['val'])
+#         print("""\
+# | Privacy index (avg. of %2d scores)        :   %.4f  %.4f   |""" % (len(scores['privacy']['val']),np.mean(scores['privacy']['val']), scores_lst)
+#         )
+
+#     print("""\
+# +---------------------------------------------------------------+"""
+#         )
     if fairness_output_txt != '':
         print("""\
 Fairness metric description                   value   error                                 
@@ -39,4 +48,19 @@ Fairness metric description                   value   error
         print(fairness_output_txt.rstrip())
         print("""\
 +---------------------------------------------------------------+
-    """)
+
+
+def format_metric_string(name: str, value: float, error: float) -> str:
+    """Return string for formatting the output, when the
+    metric is part of SynthEval.
+    """
+    if len(name) >= 40:
+        name = name[:39]
+
+    metric_value = f"{value:.4f}"
+    metric_error = f"{error:.4f}"
+
+    name = name + ":"
+    string = f""
+    string += f"| {name:<40}   {metric_value:<7}  {metric_error:<7}   |\n"
+    return string
