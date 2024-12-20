@@ -201,7 +201,7 @@ class MIAClassifier(MetricClass):
                     "dim": "p",
                     "val": self.results["MIA precision"],
                     "err": self.results["MIA precision se"],
-                    "n_val": abs(0.5 - self.results["MIA precision"]),
+                    "n_val": 1-2*abs(0.5 - self.results["MIA precision"]),
                     "n_err": self.results["MIA precision se"],
                 }]
         else: pass
