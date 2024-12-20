@@ -154,7 +154,6 @@ test.py
 *.png
 test.py
 *.svg
-*.png
 SE_*.json
 SE_*.csv
 SE_*.png

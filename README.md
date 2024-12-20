@@ -1,10 +1,16 @@
 [![PyPI version](https://badge.fury.io/py/syntheval.svg)](https://badge.fury.io/py/syntheval)
+[![doctests](https://github.com/schneiderkamplab/syntheval/blob/main/.github/workflows/doctests.yml/badge.svg)](https://github.com/schneiderkamplab/syntheval/blob/main/.github/workflows/doctests.yml)
+[![arXiv](https://img.shields.io/badge/arXiv-2404.15821-b31b1b.svg)](https://arxiv.org/abs/2404.15821)
 
 # SynthEval
 The SynthEval library is a framework for evaluating the fidelity of tabularised synthetic data compared with real data. Synthetic data is microdata that is artificially generated and thus does not directly correspond to real-world individuals, making it a possible alternative to regular data anonymity. This tool builds on many previous works and compiles them into a single tool to make the evaluation of synthetic data utility and privacy easier for data scientists and researchers alike.
 
+<div align="center">
+![image](https://github.com/schneiderkamplab/syntheval/tree/main/guides/sketch.png "SynthEval framework")
+<\div>
+
 ## Latest version
-The current version of the tool offers a wide selection of utility metrics, to evaluate how well your synthetic data aligns on privacy and utility. In the current several metrics are available, and can be used in preconfigured or custom evaluation reports. The benchmark module enables multiaxis comparison of several synthetic versions of the same dataset in parallel.  
+The current version of the tool offers a wide selection of metrics, to evaluate how well your synthetic data aligns on privacy and utility. In the current version several metrics are available, and can be used in preconfigured or custom evaluation reports. The benchmark module enables multiaxis comparison of several synthetic versions of the same dataset in parallel.  
 
 If you use our library in your work, you can reference us by citing our paper:
 ```
@@ -106,6 +112,11 @@ Privacy is a crucial aspect of evaluating synthetic data, we include only three 
 - Epsilon identifiability risk (calculated using weighted NN distance)
 - Membership Inference Attack
 - Attribute Disclosure Risk (with or without holdout data)
+
+### Fairness Metrics
+Fairness is an emerging property of synthetic data, we recently added support to evaluate this aspect, and include for now:
+- Statistical Parity Difference (Also known as Demographic Parity)
+
 
 ## Creating new metrics
 SynthEval is designed with modularity in mind. Creating new, custom metrics is as easy as copying the [metrics template file](https://github.com/schneiderkamplab/syntheval/blob/main/src/syntheval/metrics/metric_template.py), and filling in the five required functions. Because SynthEval has very little hardcoding wrt. the metrics, making new metrics work locally should require no changes other than adding the metrics script in the metrics folder.
