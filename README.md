@@ -5,7 +5,7 @@
 The SynthEval library is a framework for evaluating the fidelity of tabularised synthetic data compared with real data. Synthetic data is microdata that is artificially generated and thus does not directly correspond to real-world individuals, making it a possible alternative to regular data anonymity. This tool builds on many previous works and compiles them into a single tool to make the evaluation of synthetic data utility and privacy easier for data scientists and researchers alike.
 
 <div align="center">
-![image](./guides/sketch.png "SynthEval framework")
+![image](guides/sketch.png)
 </div>
 
 ## Latest version
