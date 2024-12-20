@@ -10,7 +10,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
-from .preprocessing import stack
+from syntheval.utils.preprocessing import stack
 
 # params = {'text.usetex' : True,
 #           'font.size' : 14,

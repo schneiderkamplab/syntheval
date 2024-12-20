@@ -30,16 +30,6 @@ Privacy metric description                    value   error
         print("""\
 +---------------------------------------------------------------+
     """)
-        
-#     if not scores['privacy']['val'] == []:
-#         scores_lst = np.sqrt(sum(np.square(scores['privacy']['err'])))/len(scores['privacy']['val'])
-#         print("""\
-# | Privacy index (avg. of %2d scores)        :   %.4f  %.4f   |""" % (len(scores['privacy']['val']),np.mean(scores['privacy']['val']), scores_lst)
-#         )
-
-#     print("""\
-# +---------------------------------------------------------------+"""
-#         )
     if fairness_output_txt != '':
         print("""\
 Fairness metric description                   value   error                                 

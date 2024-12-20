@@ -4,13 +4,16 @@
 
 import numpy as np
 import pandas as pd
+
 from logging import warning
 from warnings import warn
-from ..core.metric import MetricClass
-from syntheval.utils.console_output import format_metric_string
+
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import KFold
 
+from syntheval.metrics.core.metric import MetricClass
+
+from syntheval.utils.console_output import format_metric_string
 
 class StatisticalParity(MetricClass):
     """The Metric Class is an abstract class that interfaces with
@@ -57,6 +60,15 @@ class StatisticalParity(MetricClass):
         -------
         float
             The statistical parity difference between the protected group and the unprotected group.
+
+        Example:
+            >>> import pandas as pd
+            >>> import numpy as np
+            >>> X = pd.DataFrame({'A': [0, 1, 0, 1], 'B': [1, 0, 1, 0]})
+            >>> preds = np.array([0, 1, 0, 1])
+            >>> S = 'A'
+            >>> StatisticalParity.statistical_parity(X, S, preds)
+            1.0
         """
         assert len(X) == len(
             preds
@@ -94,6 +106,14 @@ class StatisticalParity(MetricClass):
         -------
         float | dict
             The statistical parity difference between the protected group and the unprotected group.
+
+        Example:
+            >>> import pandas as pd
+            >>> real = pd.DataFrame({'A': [0, 1, 0, 1], 'B': [1, 0, 1, 0]})
+            >>> fake = pd.DataFrame({'A': [0, 1, 0, 1], 'B': [1, 0, 1, 0]})
+            >>> SP = StatisticalParity(real, fake, cat_cols=['A'], analysis_target='B', do_preprocessing=False)
+            >>> SP.evaluate('A', 1, folds=2) # doctest: +ELLIPSIS
+            {'statistical_parity': -1.0, ...}
         """
         assert (
             protected_attribute in self.synt_data.columns
@@ -140,11 +160,6 @@ class StatisticalParity(MetricClass):
             self.results["statistical_parity"],
             self.results["statistical_parity se"],
         )
-#         string = """\
-# | Statistical Parity difference:   %.4f  %.4f   |""" % (
-#             self.results["statistical_parity"],
-#             self.results["statistical_parity se"],
-#         )
         return string
 
     def normalize_output(self) -> list:
