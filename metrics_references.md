@@ -7,9 +7,9 @@ In the following we provide a list of metrics that are included in the SynthEval
 ### Quantile MSE
 Quantile MSE measures the mean squared error of the **10%** percent quantiles of the synthetic data as dictated by the real data. This metric is used to evaluate the distribution of the synthetic data. The metric is calculated as follows:
 
-$
+$$
 \text{qMSE} = \frac{1}{N_{quant}} \sum_{j=1}^{N_{quant}} \left( x_j - \frac{1}{N_{quant}} \right)^2,
-$
+$$
 
 where $x_j$ is the estimated probability in each of the $N_{quant}$ quantiles. The metric is calculated for each column in the data, and the average is taken over all columns. The metric is used to evaluate the distribution of the synthetic data, and a low value indicates that the synthetic data is a good representation of the real data. 
 
