@@ -1,5 +1,5 @@
 [![PyPI version](https://badge.fury.io/py/syntheval.svg)](https://badge.fury.io/py/syntheval)
-[![doctests](https://github.com/schneiderkamplab/syntheval/blob/main/.github/workflows/doctests.yml/badge.svg)](https://github.com/schneiderkamplab/syntheval/blob/main/.github/workflows/doctests.yml)
+[![doctests](https://github.com/schneiderkamplab/syntheval/actions/workflows/doctests.yml/badge.svg)](https://github.com/schneiderkamplab/syntheval/actions/workflows/doctests.yml)
 [![arXiv](https://img.shields.io/badge/arXiv-2404.15821-b31b1b.svg)](https://arxiv.org/abs/2404.15821)
 
 # SynthEval
@@ -7,7 +7,8 @@ The SynthEval library is a framework for evaluating the fidelity of tabularised 
 
 <div align="center">
 ![image](https://github.com/schneiderkamplab/syntheval/tree/main/guides/sketch.png "SynthEval framework")
-<\div>
+
+</div>
 
 ## Latest version
 The current version of the tool offers a wide selection of metrics, to evaluate how well your synthetic data aligns on privacy and utility. In the current version several metrics are available, and can be used in preconfigured or custom evaluation reports. The benchmark module enables multiaxis comparison of several synthetic versions of the same dataset in parallel.  
