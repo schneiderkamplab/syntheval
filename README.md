@@ -1,12 +1,11 @@
 [![PyPI version](https://badge.fury.io/py/syntheval.svg)](https://badge.fury.io/py/syntheval)
 [![doctests](https://github.com/schneiderkamplab/syntheval/actions/workflows/doctests.yml/badge.svg)](https://github.com/schneiderkamplab/syntheval/actions/workflows/doctests.yml)
-[![arXiv](https://img.shields.io/badge/arXiv-2404.15821-b31b1b.svg)](https://arxiv.org/abs/2404.15821)
 
 # SynthEval
 The SynthEval library is a framework for evaluating the fidelity of tabularised synthetic data compared with real data. Synthetic data is microdata that is artificially generated and thus does not directly correspond to real-world individuals, making it a possible alternative to regular data anonymity. This tool builds on many previous works and compiles them into a single tool to make the evaluation of synthetic data utility and privacy easier for data scientists and researchers alike.
 
 <div align="center">
-![image](https://github.com/schneiderkamplab/syntheval/raw/main/guides/sketch.png "SynthEval framework")
+![image](./guides/sketch.png "SynthEval framework")
 </div>
 
 ## Latest version
