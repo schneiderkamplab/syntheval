@@ -57,7 +57,7 @@ class MetricClassName(MetricClass):
             >>> hout = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6], 'label': [0, 1, 0]})
             >>> AUROC = MetricClassName(real, fake, hout, analysis_target='label', verbose=False, do_preprocessing=False)
             >>> AUROC.evaluate(model='log_reg', num_boots=1)
-            {'model': 'log_reg', 'auroc_diff': 0.0}       
+            {'model': 'log_reg', 'auroc_diff': 0.0}
         """
         try:
             assert self.analysis_target is not None
