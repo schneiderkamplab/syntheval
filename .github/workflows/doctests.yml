@@ -11,8 +11,12 @@ name: Doctests
 on:
   push:
     branches: [main]
+    paths:
+      - "src/**"
   pull_request:
     types: [opened, synchronize, reopened]
+    paths:
+      - "src/**"
 
 jobs:
   run-doctests:

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "syntheval"
-version = "1.6.0"
+version = "1.6.1"
 authors = [
   { name="Anton D. Lautrup"},
   { name="Tobias Hyrup"},
@@ -21,6 +21,7 @@ dependencies = [
     "seaborn",
     "tqdm",
     "lightgbm",
+    "pcametric ~= 1.0.3",
 ]
 
 description = "A package for evaluating synthetic data fidelity on various performance dimensions."
