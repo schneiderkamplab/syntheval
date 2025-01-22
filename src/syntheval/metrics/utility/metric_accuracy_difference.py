@@ -99,6 +99,7 @@ class ClassificationAccuracy(MetricClass):
         try:
             assert self.analysis_target is not None, "Analysis target variable not set!"
             assert self.analysis_target in self.cat_cols, "Analysis target variable not categorical!"
+            assert len(self.synt_data[self.analysis_target].unique()) >= 2, "Synthetic label column has less than 2 unique values!"  
         except AssertionError:
             print(" Warning: Classification accuracy metric did not run, analysis target variable not supplied or is not categorical!")
             pass

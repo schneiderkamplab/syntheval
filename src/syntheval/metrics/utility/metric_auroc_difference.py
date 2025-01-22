@@ -62,6 +62,7 @@ class MetricClassName(MetricClass):
         try:
             assert self.analysis_target is not None
             assert len(pd.unique(self.real_data[self.analysis_target])) == 2
+            assert len(pd.unique(self.synt_data[self.analysis_target])) == 2
             assert self.hout_data is not None
         except AssertionError:
             print(" Warning: AUROC metric did not run, analysis target variable did not have appropriate number levels (i.e. 2) or test data was not supplied!")
