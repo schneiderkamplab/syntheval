@@ -6,7 +6,7 @@ import numpy as np
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import f1_score
-from sklearn.model_selection import KFold
+from sklearn.model_selection import StratifiedKFold
 from sklearn.tree import DecisionTreeClassifier
 from tqdm import tqdm
 
@@ -117,10 +117,10 @@ class ClassificationAccuracy(MetricClass):
             fake_models = [F_DT, F_AB, F_RF, F_LG]
 
             ### Run 5-fold cross-validation
-            kf = KFold(n_splits=k_folds)
+            kf = StratifiedKFold(n_splits=k_folds)
             res = []
             smol = real_y if len(real_y)<len(fake_y) else fake_y
-            for train_index, test_index in tqdm(kf.split(smol), desc='cls_acc', total=k_folds, disable = not self.verbose):
+            for train_index, test_index in tqdm(kf.split(smol,smol), desc='cls_acc', total=k_folds, disable = not self.verbose):
                 real_x_train = real_x.iloc[train_index]
                 real_x_test = real_x.iloc[test_index]
                 real_y_train = real_y.iloc[train_index]
