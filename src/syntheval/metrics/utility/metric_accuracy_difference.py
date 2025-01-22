@@ -7,8 +7,11 @@ from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import f1_score
 from sklearn.model_selection import StratifiedKFold
+from sklearn.utils import resample
 from sklearn.tree import DecisionTreeClassifier
 from tqdm import tqdm
+
+import copy
 
 from syntheval.metrics.core.metric import MetricClass
 
@@ -40,7 +43,8 @@ def class_test(real_models, fake_models, real, fake, test, F1_type):
         array([[1., 1.],...])
     """
     res = []
-    for r_mod, f_mod in zip(real_models, fake_models):
+    for r_mod_, f_mod_ in zip(real_models, fake_models):
+        r_mod, f_mod = copy.copy(r_mod_), copy.copy(f_mod_)
         r_mod.fit(real[0],real[1])
         f_mod.fit(fake[0],fake[1])
 
@@ -93,7 +97,7 @@ class ClassificationAccuracy(MetricClass):
             >>> fake = pd.DataFrame({'a': [1, 2, 3, 1], 'b': [4, 5, 6, 1], 'label': [1, 0, 1, 0]})
             >>> cls_acc = ClassificationAccuracy(real, fake, cat_cols=['label'], analysis_target='label', do_preprocessing=False)
             >>> cls_acc.evaluate(k_folds=2) # doctest: +ELLIPSIS
-            {'avg diff': 0.0, ...}
+            {'avg diff': 0.25, ...}
         
         """
         try:
@@ -105,7 +109,7 @@ class ClassificationAccuracy(MetricClass):
             pass
         else:
             real_x, real_y = self.real_data.drop([self.analysis_target], axis=1), self.real_data[self.analysis_target]
-            fake_x, fake_y = self.synt_data.drop([self.analysis_target], axis=1), self.synt_data[self.analysis_target]
+            fake_x, fake_y = self.synt_data.drop([self.analysis_target], axis=1), self.synt_data[self.analysis_target]   
 
             ### Build Classification the models            
             R_DT, F_DT = DecisionTreeClassifier(max_depth=15,random_state=42), DecisionTreeClassifier(max_depth=15,random_state=42)
@@ -117,16 +121,25 @@ class ClassificationAccuracy(MetricClass):
             fake_models = [F_DT, F_AB, F_RF, F_LG]
 
             ### Run 5-fold cross-validation
-            kf = StratifiedKFold(n_splits=k_folds)
+            kf = StratifiedKFold(n_splits=k_folds, random_state=42, shuffle=True)
             res = []
-            smol = real_y if len(real_y)<len(fake_y) else fake_y
-            for train_index, test_index in tqdm(kf.split(smol,smol), desc='cls_acc', total=k_folds, disable = not self.verbose):
-                real_x_train = real_x.iloc[train_index]
-                real_x_test = real_x.iloc[test_index]
-                real_y_train = real_y.iloc[train_index]
-                real_y_test = real_y.iloc[test_index]
-                fake_x_train = fake_x.iloc[train_index]
-                fake_y_train = fake_y.iloc[train_index]
+
+            # ensure that the two models are trained on a similar amount of samples.
+            max_len = len(real_y) if len(real_y)>len(fake_y) else len(fake_y)
+
+            # resample data to ensure equal length
+            real_x_sub, real_y_sub = resample(real_x, real_y, n_samples=max_len, stratify=real_y, random_state=42)
+            fake_x_sub, fake_y_sub = resample(fake_x, fake_y, n_samples=max_len, stratify=fake_y, random_state=42)           
+
+            # run stratified k-fold
+            for (train_index_real, test_index_fake), (train_index_fake, _) in tqdm(zip(kf.split(real_x_sub, real_y_sub), kf.split(fake_x_sub, fake_y_sub)), 
+                                                                                             desc='cls_acc', total=k_folds, disable = not self.verbose):
+                real_x_train = real_x_sub.iloc[train_index_real]
+                real_x_test = real_x_sub.iloc[test_index_fake]
+                real_y_train = real_y_sub.iloc[train_index_real]
+                real_y_test = real_y_sub.iloc[test_index_fake]
+                fake_x_train = fake_x_sub.iloc[train_index_fake]
+                fake_y_train = fake_y_sub.iloc[train_index_fake]
 
                 res.append(class_test(real_models,fake_models,[real_x_train, real_y_train],
                                                             [fake_x_train, fake_y_train],
