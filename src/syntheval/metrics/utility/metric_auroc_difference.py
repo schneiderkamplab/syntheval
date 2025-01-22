@@ -86,8 +86,8 @@ class MetricClassName(MetricClass):
             roc_curves_fake = []
             for i in range(num_boots):
                 if num_boots != 1:
-                    real_x_sub, real_y_sub = resample(real_x, real_y, n_samples=int(len(real_x)/2), random_state=i)
-                    fake_x_sub, fake_y_sub = resample(fake_x, fake_y, n_samples=int(len(fake_x)/2))
+                    real_x_sub, real_y_sub = resample(real_x, real_y, n_samples=int(len(real_x)/2), stratify=real_y,random_state=i)
+                    fake_x_sub, fake_y_sub = resample(fake_x, fake_y, n_samples=int(len(fake_x)/2), stratify=fake_y, random_state=i)
                 else:
                     real_x_sub, real_y_sub = real_x, real_y
                     fake_x_sub, fake_y_sub = fake_x, fake_y
