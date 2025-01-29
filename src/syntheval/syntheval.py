@@ -44,7 +44,7 @@ class SynthEval():
                  holdout_dataframe: DataFrame = None,
                  cat_cols: List[str] = None,
                  nn_distance: Literal['gower', 'euclid', 'EXPERIMENTAL_gower'] = 'gower', 
-                 unique_threshold: int = 10,
+                 unique_threshold: int = 64,
                  verbose: bool = True,
         ) -> None:
         """Primary object for accessing the SynthEval evaluation framework. Create with the real data used for training 
@@ -74,7 +74,8 @@ class SynthEval():
 
         if cat_cols is None:
             cat_cols = get_cat_variables(real_dataframe, unique_threshold)
-            if self.verbose: print('SynthEval: inferred categorical columns...')
+            if self.verbose:
+                print(f"Inferred categorical columns (unique threshold: {unique_threshold}):\n{cat_cols}")
         
         self.categorical_columns = cat_cols
         self.numerical_columns = [column for column in real_dataframe.columns if column not in cat_cols]
