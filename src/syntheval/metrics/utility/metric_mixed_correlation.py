@@ -71,7 +71,7 @@ def _correlation_ratio(categories, measurements):
     y_avg_array = np.zeros(cat_num)
     n_array = np.zeros(cat_num)
     for i in range(0,cat_num):
-        cat_measures = measurements[np.argwhere(fcat == i).flatten()]
+        cat_measures = measurements[fcat == i]
         n_array[i] = len(cat_measures)
         y_avg_array[i] = np.average(cat_measures)
     y_total_avg = np.sum(np.multiply(y_avg_array,n_array))/np.sum(n_array)
