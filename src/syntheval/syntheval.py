@@ -44,7 +44,7 @@ class SynthEval():
                  holdout_dataframe: DataFrame = None,
                  cat_cols: List[str] = None,
                  nn_distance: Literal['gower', 'euclid', 'EXPERIMENTAL_gower'] = 'gower', 
-                 unique_threshold: int = 64,
+                 unique_threshold: int = 10,
                  verbose: bool = True,
         ) -> None:
         """Primary object for accessing the SynthEval evaluation framework. Create with the real data used for training 
@@ -243,6 +243,8 @@ class SynthEval():
             df_dict = dfs_or_path
         else:
             raise Exception("Error: input was not instance of dictionary or filepath!")
+
+        assert len(df_dict) > 0, 'Error: Too few datasets for benchmarking!'
 
         # Evaluate the datasets in parallel
         from joblib import Parallel, delayed
