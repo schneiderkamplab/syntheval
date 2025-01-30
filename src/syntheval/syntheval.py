@@ -244,17 +244,10 @@ class SynthEval():
         else:
             raise Exception("Error: input was not instance of dictionary or filepath!")
 
-        if len(df_dict) > 1:
-            # Evaluate the datasets in parallel
-            from joblib import Parallel, delayed
-            res_list = Parallel(n_jobs=-2)(delayed(self.evaluate)(dataframe, analysis_target_var, presets_file, **kwargs) for dataframe in df_dict.values())
-        elif len(df_dict) == 1:
-            # Do not use parallel class when evaluating a single
-            # dataset to aid with debugging (otherwise we get remote traceback)
-            res_list = [self.evaluate(list(df_dict.values())[0], analysis_target_var, presets_file, **kwargs)]
-        else:
-            raise Exception("Error: no datasets found!")
-
+        # Evaluate the datasets in parallel
+        from joblib import Parallel, delayed
+        res_list = Parallel(n_jobs=-2)(delayed(self.evaluate)(dataframe, analysis_target_var, presets_file, **kwargs) for dataframe in df_dict.values())
+        
         results = {}
         for res, key in zip(res_list,list(df_dict.keys())): results[key] = res
 
