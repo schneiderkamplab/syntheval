@@ -11,9 +11,14 @@ import pandas as pd
 from tqdm import tqdm
 from typing import Literal, List, Dict
 from pandas import DataFrame
+from rich.console import Console
+from rich.table import Table
+from rich.live import Live
+from rich.spinner import Spinner
+import traceback
 
 from .metrics import load_metrics
-from .utils.console_output import print_results_to_console
+from .utils.console_output import print_results_to_console, ConsoleOutput
 from .utils.preprocessing import consistent_label_encoding
 from .utils.postprocessing import extremes_ranking, linear_ranking, quantile_ranking, summation_ranking
 from .utils.variable_detection import get_cat_variables
@@ -147,51 +152,90 @@ class SynthEval():
 
         methods = evaluation_config.keys()
 
+        methods = [method for method in methods if method in loaded_metrics.keys()]
+        method_types = [loaded_metrics[method].type() for method in methods]
+        # sort methods by type
+        methods_sorted = [x for _, x in sorted(zip(method_types, methods))]
+
+        co = ConsoleOutput("SynthEval Results", methods_sorted)
+        output_screen = co.output
+        console = co.console
+
         raw_results = {}
         key_results = None
-        pbar = tqdm(methods, disable= not self.verbose)
-        for method in pbar:
-            pbar.set_description(f'Syntheval: {method}')
-            if method not in loaded_metrics.keys():
-                print(f"Unrecognised keyword: {method}")
-                continue
-            
-            #TODO: Add object manager to increase efficiency by reusing nn distances and trained classification models between metrics. 
-            M = loaded_metrics[method](real_data, synt_data, hout_data, self.categorical_columns, self.numerical_columns, self.nn_dist, analysis_target_var, do_preprocessing=CLE, verbose=self.verbose)
-            raw_results[method] = M.evaluate(**evaluation_config[method])
-
-            string       = M.format_output()
-            extra_string = M.extra_formatted_output()
-
-            if string is not None:
-                match loaded_metrics[method].type():
-                    case 'utility':
-                        utility_output_txt += string + '\n'
-                    case 'privacy':
-                        privacy_output_txt += string + '\n'
-                    case 'fairness':
-                        fairness_output_txt += string + '\n'
-
-            # TODO: Get rid of the extra_formatted_output thing by using this method instead.
-            if extra_string is not None:
-                for key in extra_string.keys():
-                    match key:
-                        case 'utility':
-                            utility_output_txt += extra_string[key] + '\n'
-                        case 'privacy':
-                            privacy_output_txt += extra_string[key] + '\n'
-                        case 'fairness':
-                            fairness_output_txt += extra_string[key] + '\n'
+        # pbar = tqdm(methods, disable= not self.verbose)
+        pbar = tqdm(methods, disable=True)
         
-            normalized_result = M.normalize_output()
-            if normalized_result is not None: 
-                if key_results is None:
-                    key_results = pd.DataFrame(M.normalize_output(), columns=['metric', 'dim', 'val','err','n_val','n_err'])
-                else:
-                    tmp_df = pd.DataFrame(M.normalize_output(), columns=['metric', 'dim', 'val','err','n_val','n_err'])
-                    key_results = pd.concat((key_results, tmp_df), axis = 0).reset_index(drop=True)
+        with Live(output_screen, console=console, refresh_per_second=10, transient=False, screen=True, vertical_overflow="visible") as live:
+            console.show_cursor(True)
+            for method in pbar:
+                pbar.set_description(f'Syntheval: {method}')
+                if method not in loaded_metrics.keys():
+                    print(f"Unrecognised keyword: {method}")
+                    continue
+                
+                try:
+                    #TODO: Add object manager to increase efficiency by reusing nn distances and trained classification models between metrics. 
+                    M = loaded_metrics[method](real_data, synt_data, hout_data, self.categorical_columns, self.numerical_columns, self.nn_dist, analysis_target_var, do_preprocessing=CLE, verbose=self.verbose)
+                    raw_results[method] = M.evaluate(**evaluation_config[method])
+                                  
+                    normalized_output = M.normalize_output()
+                    value = normalized_output[0]["val"]
+                    error = normalized_output[0]["err"] if "err" in normalized_output[0] else None
+                    if len(normalized_output) > 1:
+                        for i in range(1, len(normalized_output)):
+                            sub_metric = normalized_output[i]["metric"]
+                            sub_value = normalized_output[i]["val"]
+                            sub_error = normalized_output[i]["err"] if "err" in normalized_output[i] else None
+                            parent = method
+                            co.insert_row(metric=sub_metric, value=sub_value, error=sub_error, parent=parent)
 
-        if self.verbose: print_results_to_console(utility_output_txt, privacy_output_txt, fairness_output_txt)
+                    error_message = None
+
+                except Exception as e:
+                    live.console.print(f"{method} failed to run. excpetion: {e}")
+                    value = "FAILED"
+                    error = None
+                    error_message = traceback.format_exc()
+                    co.add_error_message(message=error_message)
+                    continue
+                finally:
+                    co.insert_values(metric=method, value=value, error=error)
+                    live.update(output_screen)
+
+                string       = M.format_output()
+                extra_string = M.extra_formatted_output()
+
+                if string is not None:
+                    match loaded_metrics[method].type():
+                        case 'utility':
+                            utility_output_txt += string + '\n'
+                        case 'privacy':
+                            privacy_output_txt += string + '\n'
+                        case 'fairness':
+                            fairness_output_txt += string + '\n'
+
+                # TODO: Get rid of the extra_formatted_output thing by using this method instead.
+                if extra_string is not None:
+                    for key in extra_string.keys():
+                        match key:
+                            case 'utility':
+                                utility_output_txt += extra_string[key] + '\n'
+                            case 'privacy':
+                                privacy_output_txt += extra_string[key] + '\n'
+                            case 'fairness':
+                                fairness_output_txt += extra_string[key] + '\n'
+            
+                normalized_result = M.normalize_output()
+                if normalized_result is not None: 
+                    if key_results is None:
+                        key_results = pd.DataFrame(M.normalize_output(), columns=['metric', 'dim', 'val','err','n_val','n_err'])
+                    else:
+                        tmp_df = pd.DataFrame(M.normalize_output(), columns=['metric', 'dim', 'val','err','n_val','n_err'])
+                        key_results = pd.concat((key_results, tmp_df), axis = 0).reset_index(drop=True)
+        console.print(co.output)
+                
+        # if self.verbose: print_results_to_console(utility_output_txt, privacy_output_txt, fairness_output_txt)
 
         # Save non-standard evaluation config to a json file
         if (kwargs != {} and self.verbose):
