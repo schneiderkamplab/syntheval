@@ -113,7 +113,7 @@ class ClassificationAccuracy(MetricClass):
 
             ### Build Classification the models            
             R_DT, F_DT = DecisionTreeClassifier(max_depth=15,random_state=42), DecisionTreeClassifier(max_depth=15,random_state=42)
-            R_AB, F_AB = AdaBoostClassifier(n_estimators=10,algorithm='SAMME',learning_rate=1,random_state=42),AdaBoostClassifier(n_estimators=10,algorithm='SAMME',learning_rate=1,random_state=42)
+            R_AB, F_AB = AdaBoostClassifier(n_estimators=10,learning_rate=1,random_state=42),AdaBoostClassifier(n_estimators=10,learning_rate=1,random_state=42)
             R_RF, F_RF = RandomForestClassifier(n_estimators=10,max_depth=15, random_state=42),RandomForestClassifier(n_estimators=10,max_depth=15, random_state=42)
             R_LG, F_LG = LogisticRegression(solver='saga', max_iter=5000, random_state=42), LogisticRegression(solver='saga', max_iter=5000, random_state=42)
 
