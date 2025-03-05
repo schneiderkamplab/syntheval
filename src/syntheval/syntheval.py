@@ -76,7 +76,8 @@ class SynthEval():
 
         if cat_cols is None:
             cat_cols = get_cat_variables(real_dataframe, unique_threshold)
-            if self.verbose: print('SynthEval: inferred categorical columns...')
+            if self.verbose:
+                print(f"Inferred categorical columns (unique threshold: {unique_threshold}):\n{cat_cols}")
         
         self.categorical_columns = cat_cols
         self.numerical_columns = [column for column in real_dataframe.columns if column not in cat_cols]
@@ -247,6 +248,8 @@ class SynthEval():
             df_dict = dfs_or_path
         else:
             raise Exception("Error: input was not instance of dictionary or filepath!")
+
+        assert len(df_dict) > 0, 'Error: Too few datasets for benchmarking!'
 
         # Evaluate the datasets in parallel
         from joblib import Parallel, delayed
