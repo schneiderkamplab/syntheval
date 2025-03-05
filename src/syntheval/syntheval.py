@@ -2,10 +2,12 @@
 # Author: Anton D. Lautrup
 # Date: 16-08-2023
 
+import os
 import json
 import glob
 import time
-import os
+
+import traceback
 
 import pandas as pd
 from tqdm import tqdm
@@ -155,10 +157,13 @@ class SynthEval():
             if method not in loaded_metrics.keys():
                 print(f"Unrecognised keyword: {method}")
                 continue
-            
-            #TODO: Add object manager to increase efficiency by reusing nn distances and trained classification models between metrics. 
-            M = loaded_metrics[method](real_data, synt_data, hout_data, self.categorical_columns, self.numerical_columns, self.nn_dist, analysis_target_var, do_preprocessing=CLE, verbose=self.verbose)
-            raw_results[method] = M.evaluate(**evaluation_config[method])
+            try:
+                #TODO: Add object manager to increase efficiency by reusing nn distances and trained classification models between metrics. 
+                M = loaded_metrics[method](real_data, synt_data, hout_data, self.categorical_columns, self.numerical_columns, self.nn_dist, analysis_target_var, do_preprocessing=CLE, verbose=self.verbose)
+                raw_results[method] = M.evaluate(**evaluation_config[method])
+            except Exception as e:
+                print(f"{method} failed to run. Exception: {e}")
+                continue
 
             string       = M.format_output()
             extra_string = M.extra_formatted_output()
