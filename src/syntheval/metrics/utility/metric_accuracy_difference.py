@@ -1,19 +1,42 @@
 # Description: Metric implementation of the classification accuracy difference.
 # Author: Anton D. Lautrup
-# Date: 22-08-2023
-
-import numpy as np
-from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import f1_score
-from sklearn.model_selection import StratifiedKFold
-from sklearn.utils import resample
-from sklearn.tree import DecisionTreeClassifier
-from tqdm import tqdm
+# Date: 05-03-2023
 
 import copy
 
+import numpy as np
+from tqdm import tqdm
+
+from sklearn.utils import resample
+from sklearn.metrics import f1_score
+from sklearn.model_selection import StratifiedKFold
+
+from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+
 from syntheval.metrics.core.metric import MetricClass
+
+model_name_dict = {
+    'dt': 'DecisionTreeClassifier', 
+    'rf': 'RandomForestClassifier', 
+    'adaboost': 'AdaBoostClassifier', 
+    'logreg': 'LogisticRegression'
+    }
+
+def _get_model(model_name: str) -> object:
+    """Function for returning a classification model based on the input string"""
+    match model_name:
+        case 'dt':
+            return DecisionTreeClassifier(max_depth=15, random_state=42)
+        case 'rf':
+            return RandomForestClassifier(n_estimators=10, max_depth=15, random_state=42)
+        case 'adaboost':
+            return AdaBoostClassifier(n_estimators=10, learning_rate=1, random_state=42)
+        case 'logreg':
+            return LogisticRegression(solver='saga', max_iter=5000, random_state=42)
+        case _:
+            raise ValueError(f"SynthEval(cls_acc): Model {model_name} not currently implemented!")
 
 def class_test(real_models, fake_models, real, fake, test, F1_type):
     """Function for running a training session and getting predictions 
@@ -81,152 +104,138 @@ class ClassificationAccuracy(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'utility'
 
-    def evaluate(self, F1_type='micro',k_folds=5) -> dict:
-        """ Function for training classifiers
-        
+    def evaluate(self, cls_models = ['dt', 'rf', 'adaboost', 'logreg'], F1_type='micro', k_folds=5) -> dict:
+
+        """ Function for evaluating the metric
+
         Args:
-            F1_type (str): Type of F1 score to compute
-            k_folds (int): Number of folds for cross-validation
+            cls_models (list): List of classification models to use
+                - 'dt' : Decision Tree Classifier
+                - 'rf' : Random Forest Classifier
+                - 'adaboost' : AdaBoost Classifier
+                - 'logreg' : Logistic Regression Classifier
+            F1_type (str): Type of F1 score to use
+            k_folds (int): Number of folds to use in cross-validation
 
         Returns:
-            dict: Various accuracy and accuracy difference metrics
-        
-        Example:
-            >>> import pandas as pd
-            >>> real = pd.DataFrame({'a': [1, 2, 3, 2], 'b': [4, 5, 6, 4], 'label': [1, 0, 1, 0]})
-            >>> fake = pd.DataFrame({'a': [1, 2, 3, 1], 'b': [4, 5, 6, 1], 'label': [1, 0, 1, 0]})
-            >>> cls_acc = ClassificationAccuracy(real, fake, cat_cols=['label'], analysis_target='label', do_preprocessing=False)
-            >>> cls_acc.evaluate(k_folds=2) # doctest: +ELLIPSIS
-            {'avg diff': 0.25, ...}
-        
+            dict: result variables for the metric
+
         """
         try:
-            assert self.analysis_target is not None, "Analysis target variable not set!"
-            assert self.analysis_target in self.cat_cols, "Analysis target variable not categorical!"
-            assert len(self.synt_data[self.analysis_target].unique()) >= 2, "Synthetic label column has less than 2 unique values!"  
-        except AssertionError:
-            print(" Warning: Classification accuracy metric did not run, analysis target variable not supplied or is not categorical!")
-            pass
+            assert self.analysis_target is not None, "SynthEval(cls_acc): Analysis target variable not set!"
+            assert self.analysis_target in self.cat_cols, "SynthEval(cls_acc): Analysis target variable not categorical!"
+            assert len(self.synt_data[self.analysis_target].unique()) >= 2, "SynthEval(cls_acc): Synthetic label column has less than 2 unique values!"
+            assert cls_models != [], "SynthEval(cls_acc): No classification models provided!"
+        except AssertionError as e:
+            print(e)
+            return {}
         else:
+            self.results = {}
             real_x, real_y = self.real_data.drop([self.analysis_target], axis=1), self.real_data[self.analysis_target]
-            fake_x, fake_y = self.synt_data.drop([self.analysis_target], axis=1), self.synt_data[self.analysis_target]   
+            fake_x, fake_y = self.synt_data.drop([self.analysis_target], axis=1), self.synt_data[self.analysis_target]  
+            
+            # Get models
+            real_models = [_get_model(model_name) for model_name in cls_models]
+            fake_models = [_get_model(model_name) for model_name in cls_models]
 
-            ### Build Classification the models            
-            R_DT, F_DT = DecisionTreeClassifier(max_depth=15,random_state=42), DecisionTreeClassifier(max_depth=15,random_state=42)
-            R_AB, F_AB = AdaBoostClassifier(n_estimators=10,learning_rate=1,random_state=42),AdaBoostClassifier(n_estimators=10,learning_rate=1,random_state=42)
-            R_RF, F_RF = RandomForestClassifier(n_estimators=10,max_depth=15, random_state=42),RandomForestClassifier(n_estimators=10,max_depth=15, random_state=42)
-            R_LG, F_LG = LogisticRegression(solver='saga', max_iter=5000, random_state=42), LogisticRegression(solver='saga', max_iter=5000, random_state=42)
+            self.models = cls_models
 
-            real_models = [R_DT, R_AB, R_RF, R_LG]
-            fake_models = [F_DT, F_AB, F_RF, F_LG]
-
-            ### Run 5-fold cross-validation
-            kf = StratifiedKFold(n_splits=k_folds, random_state=42, shuffle=True)
+            # Setup Validation Run
             res = []
+            max_len = len(real_y) if len(real_y)>len(fake_y) else len(fake_y) # Get the maximum length of the two datasets for resample
 
-            # ensure that the two models are trained on a similar amount of samples.
-            max_len = len(real_y) if len(real_y)>len(fake_y) else len(fake_y)
-
-            # resample data to ensure equal length
             real_x_sub, real_y_sub = resample(real_x, real_y, n_samples=max_len, stratify=real_y, random_state=42)
-            fake_x_sub, fake_y_sub = resample(fake_x, fake_y, n_samples=max_len, stratify=fake_y, random_state=42)           
+            fake_x_sub, fake_y_sub = resample(fake_x, fake_y, n_samples=max_len, stratify=fake_y, random_state=42)
 
-            # run stratified k-fold
+            kf = StratifiedKFold(n_splits=k_folds, random_state=42, shuffle=True)
+
             for (train_index_real, test_index_fake), (train_index_fake, _) in tqdm(zip(kf.split(real_x_sub, real_y_sub), kf.split(fake_x_sub, fake_y_sub)), 
-                                                                                             desc='cls_acc', total=k_folds, disable = not self.verbose):
-                real_x_train = real_x_sub.iloc[train_index_real]
-                real_x_test = real_x_sub.iloc[test_index_fake]
-                real_y_train = real_y_sub.iloc[train_index_real]
-                real_y_test = real_y_sub.iloc[test_index_fake]
-                fake_x_train = fake_x_sub.iloc[train_index_fake]
-                fake_y_train = fake_y_sub.iloc[train_index_fake]
+                                                                                            desc='cls_acc', total=k_folds, disable = not self.verbose):
+                
+                real_x_train, real_y_train = real_x_sub.iloc[train_index_real], real_y_sub.iloc[train_index_real]
+                real_x_test, real_y_test = real_x_sub.iloc[test_index_fake], real_y_sub.iloc[test_index_fake]
+                fake_x_train, fake_y_train = fake_x_sub.iloc[train_index_fake], fake_y_sub.iloc[train_index_fake]
 
                 res.append(class_test(real_models,fake_models,[real_x_train, real_y_train],
                                                             [fake_x_train, fake_y_train],
-                                                            [real_x_test, real_y_test],F1_type))
-            
+                                                            [real_x_test, real_y_test], F1_type))
+                
             self.results = {}
-
             class_avg = np.mean(res,axis=0)
             class_err = np.std(res,axis=0,ddof=1)/np.sqrt(k_folds)
-            class_diff = np.abs(class_avg[0,:]-class_avg[1,:])
+            class_diff = class_avg[1,:]-class_avg[0,:]
             class_diff_err = np.sqrt(class_err[0,:]**2+class_err[1,:]**2)
 
-            self.k_folds = k_folds
+            self.k_folds = k_folds      # Make these items accessible for the user
             self.class_avg = class_avg
 
-            self.results['avg diff'] = np.mean(class_diff)
-            self.results['avg diff err'] = 0.25*np.sqrt(sum(class_diff_err**2))
-            self.results['diffs'] = class_diff
-            self.results['diffs err'] = class_diff_err
+            for i, model in enumerate(cls_models):
+                self.results[model] = {'rr_val_acc': class_avg[0,i], 'rr_val_err': class_err[0,i], 'fr_val_acc': class_avg[1,i], 'fr_val_err': class_err[1,i]}
 
-            if self.hout_data is not None:
+            self.results['avg diff'] = np.mean(class_diff)
+            self.results['avg diff err'] = 1/len(cls_models)*np.sqrt(sum(class_diff_err**2))
+            
+            if (self.hout_data is not None):
                 holdout_res = class_test(real_models, fake_models, [real_x, real_y],
                                                                     [fake_x, fake_y],
                                                                     [self.hout_data.drop([self.analysis_target],axis=1), 
-                                                                    self.hout_data[self.analysis_target]],
-                                                                    F1_type)
-                
-                holdout_diff = np.abs(holdout_res[0,:]-holdout_res[1,:])
+                                                                    self.hout_data[self.analysis_target]], F1_type)
 
-                self.holdout_res = holdout_res
+            for i, model in enumerate(cls_models):
+                self.results[model]['rr_test_acc'] = holdout_res[0,i]
+                self.results[model]['fr_test_acc'] = holdout_res[1,i]
+            
+            holdout_diff = holdout_res[1,:]-holdout_res[0,:]
 
-                self.results['avg diff hout'] = np.mean(holdout_diff)
-                self.results['avg diff err hout'] = np.std(holdout_diff,ddof=1)/np.sqrt(4)
-                self.results['diffs hout'] = holdout_diff
+            self.holdout_res = holdout_res
+            
+            self.results['avg diff hout'] = np.mean(holdout_diff)
+            self.results['avg diff err hout'] = np.std(holdout_diff,ddof=1)/len(cls_models)
+
             return self.results
         
     def format_output(self) -> str:
         """ Return string for formatting the output, when the
         metric is part of SynthEval. 
 |                                          :                    |"""
-        if self.results == {}:
-            string = """\
-| Classification accuracy [FAILED TO RUN]  :   -.----  -.----   |"""
-        else:
+        if self.results != {}:
             avgs = self.class_avg
-            diff = self.results['diffs']
-            err = self.results['diffs err']
             string = """\
 +---------------------------------------------------------------+
 
 Classification accuracy test     
 avg. of %d-fold cross val.:
-classifier model             acc_r   acc_f    |diff|  error
+classifier model             acc_rr  acc_fr    diff   error
 +---------------------------------------------------------------+
-| DecisionTreeClassifier  :   %.4f  %.4f   %.4f  %.4f   |
-| AdaBoostClassifier      :   %.4f  %.4f   %.4f  %.4f   | 
-| RandomForestClassifier  :   %.4f  %.4f   %.4f  %.4f   |
-| LogisticRegression      :   %.4f  %.4f   %.4f  %.4f   |
+""" % self.k_folds
+            for model in self.models:
+                mod_dict = self.results[model]
+                string += f"""\
+| {model_name_dict[model]:<23} :   {mod_dict['rr_val_acc']:.4f}  {mod_dict['fr_val_acc']:.4f}  {mod_dict['fr_val_acc']-mod_dict['rr_val_acc']:>7.4f}  {np.sqrt(mod_dict['rr_val_err']**2+mod_dict['fr_val_err']**2):.4f}   |
+"""
+            string += f"""\
 +---------------------------------------------------------------+
-| Average                 :   %.4f  %.4f   %.4f  %.4f   |\n""" % ( self.k_folds,
-avgs[0,0],avgs[1,0],diff[0],err[0], 
-avgs[0,1],avgs[1,1],diff[1],err[1],
-avgs[0,2],avgs[1,2],diff[2],err[2],
-avgs[0,3],avgs[1,3],diff[3],err[3],
-np.mean(avgs[0,:]),np.mean(avgs[1,:]),self.results['avg diff'], self.results['avg diff err']
-)
-        if (self.results != {} and self.hout_data is not None):
-            hres = self.holdout_res
-            hdiff = self.results['diffs hout']
-            string += """\
+| Average                 :   {np.mean(avgs[0,:]):.4f}  {np.mean(avgs[1,:]):.4f}  {self.results['avg diff']:>7.4f}  {self.results['avg diff err']:.4f}   |
+"""
+            if (self.hout_data is not None):
+                hdiff = self.holdout_res[1,:]-self.holdout_res[0,:]
+                string += """\
 +---------------------------------------------------------------+
 
 hold out data results:
 +---------------------------------------------------------------+
-| DecisionTreeClassifier  :   %.4f  %.4f   %.4f           |
-| AdaBoostClassifier      :   %.4f  %.4f   %.4f           |
-| RandomForestClassifier  :   %.4f  %.4f   %.4f           |
-| LogisticRegression      :   %.4f  %.4f   %.4f           |
+"""
+                for i, model in enumerate(self.models):
+                    mod_dict = self.results[model]
+                    string += f"""\
+| {model_name_dict[model]:<23} :   {mod_dict['rr_test_acc']:.4f}  {mod_dict['fr_test_acc']:.4f}  {hdiff[i]:>7.4f}           |
+"""
+                string += f"""\
 +---------------------------------------------------------------+
-| Average                 :   %.4f  %.4f   %.4f  %.4f   |""" % (
-hres[0,0], hres[1,0], hdiff[0],
-hres[0,1], hres[1,1], hdiff[1],
-hres[0,2], hres[1,2], hdiff[2],
-hres[0,3], hres[1,3], hdiff[3],
-np.mean(hres[:,0]), np.mean(hres[:,1]), self.results['avg diff hout'], self.results['avg diff err hout']
-)
-        return string
+| Average                 :   {np.mean(self.holdout_res[0,:]):.4f}  {np.mean(self.holdout_res[1,:]):.4f}  {self.results['avg diff hout']:>7.4f}  {self.results['avg diff err hout']:.4f}   |
+"""
+            return string
+        else: pass
 
     def normalize_output(self) -> list:
         """ This function is for making a dictionary of the most quintessential
@@ -238,18 +247,44 @@ np.mean(hres[:,0]), np.mean(hres[:,1]), self.results['avg diff hout'], self.resu
             name2  0.0  0.0    0.0    0.0    0.0     0.0
         """
         if self.results !={}:
-            output = [{'metric': 'cls_F1_diff', 'dim': 'u',
+            output = [{'metric': 'avg_F1_diff', 'dim': 'u',
                        'val': self.results['avg diff'], 
                        'err': self.results['avg diff err'], 
-                       'n_val': 1-self.results['avg diff'], 
+                       'n_val': 1-abs(self.results['avg diff']), 
                        'n_err': self.results['avg diff err'], 
                        }]
+            if len(self.models) > 1:
+                for model in self.models:
+                    mod_dict = self.results[model]
+                    output.extend([{'metric': f'{model}_syn_F1', 'dim': 'u',
+                        'val': mod_dict['fr_val_acc'], 
+                        'err': mod_dict['fr_val_err'], 
+                        'n_val': mod_dict['fr_val_acc'], 
+                        'n_err': mod_dict['fr_val_err'], 
+                        }, 
+                        {'metric': f'{model}_F1_diff', 'dim': 'u',
+                            'val': mod_dict['fr_val_acc']-mod_dict['rr_val_acc'],
+                            'err': np.sqrt(mod_dict['rr_val_err']**2+mod_dict['fr_val_err']**2),
+                            'n_val': 1-abs(mod_dict['fr_val_acc']-mod_dict['rr_val_acc']),
+                            'n_err': np.sqrt(mod_dict['rr_val_err']**2+mod_dict['fr_val_err']**2),
+                        }])
             if (self.hout_data is not None):
-                output.extend([{'metric': 'cls_F1_diff_hout', 'dim': 'u',
+                output.extend([{'metric': 'avg_F1_diff_hout', 'dim': 'u',
                        'val': self.results['avg diff hout'], 
                        'err': self.results['avg diff err hout'], 
-                       'n_val': 1-self.results['avg diff hout'], 
+                       'n_val': 1-abs(self.results['avg diff hout']), 
                        'n_err': self.results['avg diff err hout'], 
                        }])
+                if len(self.models) > 1:
+                    for model in self.models:
+                        mod_dict = self.results[model]
+                        output.extend([{'metric': f'{model}_syn_F1_hout', 'dim': 'u',
+                            'val': mod_dict['fr_test_acc'], 
+                            'n_val': mod_dict['fr_test_acc'], 
+                            }, 
+                            {'metric': f'{model}_F1_diff_hout', 'dim': 'u',
+                                'val': mod_dict['fr_test_acc']-mod_dict['rr_test_acc'],
+                                'n_val': 1-abs(mod_dict['fr_test_acc']-mod_dict['rr_test_acc']),
+                            }])
             return output
         else: pass
