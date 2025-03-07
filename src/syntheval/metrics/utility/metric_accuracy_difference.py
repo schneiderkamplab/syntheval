@@ -125,6 +125,13 @@ class ClassificationAccuracy(MetricClass):
         Returns:
             dict: result variables for the metric
 
+        Example:
+            >>> import pandas as pd
+            >>> real = pd.DataFrame({'a': [1, 2, 3, 2], 'b': [4, 5, 6, 4], 'label': [1, 0, 1, 0]})
+            >>> fake = pd.DataFrame({'a': [1, 2, 3, 1], 'b': [4, 5, 6, 1], 'label': [1, 0, 1, 0]})
+            >>> cls_acc = ClassificationAccuracy(real, fake, cat_cols=['label'], analysis_target='label', do_preprocessing=False)
+            >>> cls_acc.evaluate(cls_models = ['rf'], k_folds=2 ) # doctest: +ELLIPSIS
+            {'rf': ...
         """
         try:
             assert self.analysis_target is not None, "SynthEval(cls_acc): Analysis target variable not set!"
@@ -186,16 +193,16 @@ class ClassificationAccuracy(MetricClass):
                                                                     [self.hout_data.drop([self.analysis_target],axis=1), 
                                                                     self.hout_data[self.analysis_target]], F1_type)
 
-            for i, model in enumerate(cls_models):
-                self.results[model]['rr_test_acc'] = holdout_res[0,i]
-                self.results[model]['fr_test_acc'] = holdout_res[1,i]
-            
-            holdout_diff = holdout_res[1,:]-holdout_res[0,:]
+                for i, model in enumerate(cls_models):
+                    self.results[model]['rr_test_acc'] = holdout_res[0,i]
+                    self.results[model]['fr_test_acc'] = holdout_res[1,i]
+                
+                holdout_diff = holdout_res[1,:]-holdout_res[0,:]
 
-            self.holdout_res = holdout_res
-            
-            self.results['avg diff hout'] = np.mean(holdout_diff)
-            self.results['avg diff err hout'] = np.std(holdout_diff,ddof=1)/len(cls_models)
+                self.holdout_res = holdout_res
+                
+                self.results['avg diff hout'] = np.mean(holdout_diff)
+                self.results['avg diff err hout'] = np.std(holdout_diff,ddof=1)/len(cls_models)
 
             return self.results
         
