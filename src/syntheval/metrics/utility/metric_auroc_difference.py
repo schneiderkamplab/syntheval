@@ -130,7 +130,7 @@ class MetricClassName(MetricClass):
                                              [mean_fpr, mean_tpr_fake, std_tpr_fake],
                                              model, 'roc_curves')
 
-            self.results = {'model': model, 'auroc_diff': abs(roc_auc_mean_real - roc_auc_mean_fake)}
+            self.results = {'model': model, 'auroc_diff': roc_auc_mean_fake - roc_auc_mean_real}
             return self.results
 
     def format_output(self) -> str:
@@ -161,6 +161,6 @@ class MetricClassName(MetricClass):
         if self.results != {}:
             return [{'metric': 'auroc', 'dim': 'u', 
                      'val': self.results['auroc_diff'], 
-                     'n_val': 1-self.results['auroc_diff'], 
+                     'n_val': np.tanh(2*self.results['auroc_diff']+1), 
                      }]
         else: pass
