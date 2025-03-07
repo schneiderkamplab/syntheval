@@ -14,11 +14,13 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.svm import SVC
 
 from syntheval.metrics.core.metric import MetricClass
 
 model_name_dict = {
-    'dt': 'DecisionTreeClassifier', 
+    'dt': 'DecisionTreeClassifier',
+    'svm': 'SupportVectorMachine',
     'rf': 'RandomForestClassifier', 
     'adaboost': 'AdaBoostClassifier', 
     'logreg': 'LogisticRegression'
@@ -31,6 +33,8 @@ def _get_model(model_name: str) -> object:
             return DecisionTreeClassifier(max_depth=15, random_state=42)
         case 'rf':
             return RandomForestClassifier(n_estimators=10, max_depth=15, random_state=42)
+        case 'svm':
+            return SVC(kernel='rbf', random_state=42)
         case 'adaboost':
             return AdaBoostClassifier(n_estimators=10, learning_rate=1, random_state=42)
         case 'logreg':
@@ -104,7 +108,7 @@ class ClassificationAccuracy(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'utility'
 
-    def evaluate(self, cls_models = ['dt', 'rf', 'adaboost', 'logreg'], F1_type='micro', k_folds=5) -> dict:
+    def evaluate(self, cls_models = ['rf', 'adaboost', 'svm', 'logreg'], F1_type='micro', k_folds=5, full_output=False) -> dict:
 
         """ Function for evaluating the metric
 
@@ -113,6 +117,7 @@ class ClassificationAccuracy(MetricClass):
                 - 'dt' : Decision Tree Classifier
                 - 'rf' : Random Forest Classifier
                 - 'adaboost' : AdaBoost Classifier
+                - 'svm' : Support Vector Machine Classifier
                 - 'logreg' : Logistic Regression Classifier
             F1_type (str): Type of F1 score to use
             k_folds (int): Number of folds to use in cross-validation
@@ -137,7 +142,6 @@ class ClassificationAccuracy(MetricClass):
             # Get models
             real_models = [_get_model(model_name) for model_name in cls_models]
             fake_models = [_get_model(model_name) for model_name in cls_models]
-
             self.models = cls_models
 
             # Setup Validation Run
@@ -166,6 +170,7 @@ class ClassificationAccuracy(MetricClass):
             class_diff = class_avg[1,:]-class_avg[0,:]
             class_diff_err = np.sqrt(class_err[0,:]**2+class_err[1,:]**2)
 
+            self.full_output = full_output
             self.k_folds = k_folds      # Make these items accessible for the user
             self.class_avg = class_avg
 
@@ -253,7 +258,7 @@ hold out data results:
                        'n_val': 1-abs(self.results['avg diff']), 
                        'n_err': self.results['avg diff err'], 
                        }]
-            if len(self.models) > 1:
+            if self.full_output:
                 for model in self.models:
                     mod_dict = self.results[model]
                     output.extend([{'metric': f'{model}_syn_F1', 'dim': 'u',
@@ -261,13 +266,15 @@ hold out data results:
                         'err': mod_dict['fr_val_err'], 
                         'n_val': mod_dict['fr_val_acc'], 
                         'n_err': mod_dict['fr_val_err'], 
-                        }, 
-                        {'metric': f'{model}_F1_diff', 'dim': 'u',
-                            'val': mod_dict['fr_val_acc']-mod_dict['rr_val_acc'],
-                            'err': np.sqrt(mod_dict['rr_val_err']**2+mod_dict['fr_val_err']**2),
-                            'n_val': 1-abs(mod_dict['fr_val_acc']-mod_dict['rr_val_acc']),
-                            'n_err': np.sqrt(mod_dict['rr_val_err']**2+mod_dict['fr_val_err']**2),
                         }])
+                    if len(self.models) > 1:
+                        output.extend([
+                            {'metric': f'{model}_F1_diff', 'dim': 'u',
+                                'val': mod_dict['fr_val_acc']-mod_dict['rr_val_acc'],
+                                'err': np.sqrt(mod_dict['rr_val_err']**2+mod_dict['fr_val_err']**2),
+                                'n_val': 1-abs(mod_dict['fr_val_acc']-mod_dict['rr_val_acc']),
+                                'n_err': np.sqrt(mod_dict['rr_val_err']**2+mod_dict['fr_val_err']**2),
+                            }])
             if (self.hout_data is not None):
                 output.extend([{'metric': 'avg_F1_diff_hout', 'dim': 'u',
                        'val': self.results['avg diff hout'], 
@@ -275,16 +282,18 @@ hold out data results:
                        'n_val': 1-abs(self.results['avg diff hout']), 
                        'n_err': self.results['avg diff err hout'], 
                        }])
-                if len(self.models) > 1:
+                if self.full_output:
                     for model in self.models:
                         mod_dict = self.results[model]
                         output.extend([{'metric': f'{model}_syn_F1_hout', 'dim': 'u',
                             'val': mod_dict['fr_test_acc'], 
                             'n_val': mod_dict['fr_test_acc'], 
-                            }, 
-                            {'metric': f'{model}_F1_diff_hout', 'dim': 'u',
-                                'val': mod_dict['fr_test_acc']-mod_dict['rr_test_acc'],
-                                'n_val': 1-abs(mod_dict['fr_test_acc']-mod_dict['rr_test_acc']),
                             }])
+                        if len(self.models) > 1:
+                            output.extend([
+                                {'metric': f'{model}_F1_diff_hout', 'dim': 'u',
+                                    'val': mod_dict['fr_test_acc']-mod_dict['rr_test_acc'],
+                                    'n_val': 1-abs(mod_dict['fr_test_acc']-mod_dict['rr_test_acc']),
+                                }])
             return output
         else: pass
