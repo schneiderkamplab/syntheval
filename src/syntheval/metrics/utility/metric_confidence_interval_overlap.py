@@ -68,8 +68,8 @@ class ConfidenceIntervalOverlap(MetricClass):
                 sems = np.array([sem(self.real_data[self.num_cols]),sem(self.synt_data[self.num_cols])]).T
                 
                 CI = sems*z_value
-                us = mus+sems
-                ls = mus-sems
+                us = mus+CI
+                ls = mus-CI
 
                 Jk = []
                 for i in range(len(CI)):
