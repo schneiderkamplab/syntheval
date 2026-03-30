@@ -147,8 +147,8 @@ class AttributeDisclosure(MetricClass):
         
         Example:
             >>> import pandas as pd
-            >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
-            >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
+            >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6], 'c': [7, 8, 9]})
+            >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6], 'c': [7, 8, 9]})
             >>> A = AttributeDisclosure(real, fake, cat_cols=[], num_cols=[], do_preprocessing=False)
             >>> A.evaluate(sensitive=['b']) # doctest: +ELLIPSIS
             {'Attr Dis accuracy': 0.0, ...}
@@ -204,32 +204,42 @@ class AttributeDisclosure(MetricClass):
             pre_results["f1"].append(f1)
 
         # Compute mean accuracy, precision, recall, and F1-score with accompanying standard errors
-        accuracy = np.mean(pre_results["accuracy"])
-        accuracy_se = np.std(pre_results["accuracy"], ddof=1) / np.sqrt(
-            len(pre_results["accuracy"])
-        )
-        precision = np.mean(pre_results["precision"])
-        precision_se = np.std(pre_results["precision"], ddof=1) / np.sqrt(
-            len(pre_results["precision"])
-        )
+        if len(sensitive_columns) == 1:
+            accuracy = pre_results["accuracy"][0]
+            accuracy_se = np.nan
+            precision = pre_results["precision"][0]
+            precision_se = np.nan
+            recall = pre_results["recall"][0]
+            recall_se = np.nan
+            f1 = pre_results["f1"][0]
+            f1_se = np.nan
+        else:
+            accuracy = np.mean(pre_results["accuracy"])
+            accuracy_se = np.std(pre_results["accuracy"], ddof=1) / np.sqrt(
+                len(pre_results["accuracy"])
+            )
+            precision = np.mean(pre_results["precision"])
+            precision_se = np.std(pre_results["precision"], ddof=1) / np.sqrt(
+                len(pre_results["precision"])
+            )
 
-        recall = np.mean(pre_results["recall"])
-        recall_se = np.std(pre_results["recall"], ddof=1) / np.sqrt(
-            len(pre_results["recall"])
-        )
+            recall = np.mean(pre_results["recall"])
+            recall_se = np.std(pre_results["recall"], ddof=1) / np.sqrt(
+                len(pre_results["recall"])
+            )
 
-        f1 = np.mean(pre_results["f1"])
-        f1_se = np.std(pre_results["f1"], ddof=1) / np.sqrt(len(pre_results["f1"]))
+            f1 = np.mean(pre_results["f1"])
+            f1_se = np.std(pre_results["f1"], ddof=1) / np.sqrt(len(pre_results["f1"]))
 
         self.results = {
-            "Attr Dis accuracy": accuracy,
-            "Attr Dis accuracy se": accuracy_se,
-            "Attr Dis precision": precision,
-            "Attr Dis precision se": precision_se,
-            "Attr Dis recall": recall,
-            "Attr Dis recall se": recall_se,
-            "Attr Dis macro F1": f1,
-            "Attr Dis macro F1 se": f1_se,
+            "Attr Dis accuracy": float(accuracy),
+            "Attr Dis accuracy se": float(accuracy_se),
+            "Attr Dis precision": float(precision),
+            "Attr Dis precision se": float(precision_se),
+            "Attr Dis recall": float(recall),
+            "Attr Dis recall se": float(recall_se),
+            "Attr Dis macro F1": float(f1),
+            "Attr Dis macro F1 se": float(f1_se),
         }
 
         return self.results

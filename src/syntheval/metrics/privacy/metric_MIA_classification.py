@@ -101,9 +101,6 @@ class MIAClassifier(MetricClass):
                 
                 # Create test set by combining some random data from the real and holdout data with an equal number of records from each dataframe
                 if len(real) < len(hout_test):
-                    # warning(
-                    #     "The holdout data is larger than the real data. The holdout data will be downsampled to match the size of the real data."
-                    # )
                     hout_sample = hout_test.sample(n=len(real))
                     real_sample = real
                 else:
@@ -120,36 +117,44 @@ class MIAClassifier(MetricClass):
                 y_test = pd.Series([1] * len(real_sample) + [0] * len(hout_sample))
 
                 cls = LGBMClassifier(verbosity=-1).fit(X_train, y_train)
-                # Get predictions
                 holdout_predictions = cls.predict(X_test)
 
                 # Calculate precision, recall, and F1-score
                 pre_results["precision"].append(
-                    precision_score(y_test, holdout_predictions)
+                    precision_score(y_test, holdout_predictions, zero_division=0)
                 )
-                pre_results["recall"].append(recall_score(y_test, holdout_predictions))
+                pre_results["recall"].append(recall_score(y_test, holdout_predictions, zero_division=0))
                 pre_results["f1"].append(
-                    f1_score(y_test, holdout_predictions, average="macro")
+                    f1_score(y_test, holdout_predictions, average="macro", zero_division=0)
                 )
 
             precision = np.mean(pre_results["precision"])
-            precision_se = np.std(pre_results["precision"], ddof=1) / np.sqrt(
-                num_eval_iter
-            )
+            if num_eval_iter < 2:
+                precision_se = np.nan
+            else:
+                precision_se = np.std(pre_results["precision"], ddof=1) / np.sqrt(
+                    num_eval_iter
+                )
 
             recall = np.mean(pre_results["recall"])
-            recall_se = np.std(pre_results["recall"], ddof=1) / np.sqrt(num_eval_iter)
+            if num_eval_iter < 2:
+                recall_se = np.nan
+            else:
+                recall_se = np.std(pre_results["recall"], ddof=1) / np.sqrt(num_eval_iter)
 
             f1 = np.mean(pre_results["f1"])
-            f1_se = np.std(pre_results["f1"], ddof=1) / np.sqrt(num_eval_iter)
+            if num_eval_iter < 2:
+                f1_se = np.nan
+            else:
+                f1_se = np.std(pre_results["f1"], ddof=1) / np.sqrt(num_eval_iter)
 
             self.results = {
-                "MIA precision": precision,
-                "MIA precision se": precision_se,
-                "MIA recall": recall,
-                "MIA recall se": recall_se,
-                "MIA macro F1": f1,
-                "MIA macro F1 se": f1_se,
+                "MIA precision": float(precision),
+                "MIA precision se": float(precision_se),
+                "MIA recall": float(recall),
+                "MIA recall se": float(recall_se),
+                "MIA macro F1": float(f1),
+                "MIA macro F1 se": float(f1_se),
             }
 
             return self.results

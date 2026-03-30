@@ -28,7 +28,7 @@ def _total_variation_distance(x,y):
     X, Y = Counter(x), Counter(y)
     merged = X + Y
 
-    return np.round(0.5*sum([abs(X[key]/len(x)-Y[key]/len(y)) for key in merged.keys()]),4)
+    return float(np.round(0.5*sum([abs(X[key]/len(x)-Y[key]/len(y)) for key in merged.keys()]),4))
 
 def _discrete_ks(x, y, n_perms=1000):
     """Function for doing permutation test of discrete values in the KS test
@@ -48,7 +48,7 @@ def _discrete_ks(x, y, n_perms=1000):
     """
     res = permutation_test((x, y), _total_variation_distance, n_resamples=n_perms, vectorized=False, permutation_type='independent', alternative='greater')
 
-    return res.statistic, res.pvalue
+    return float(res.statistic), float(res.pvalue)
 
 class KolmogorovSmirnovTest(MetricClass):
     """The Metric Class is an abstract class that interfaces with 
@@ -113,19 +113,27 @@ class KolmogorovSmirnovTest(MetricClass):
             if pvalue < sig_lvl:
                 sig_cols.append(category)
 
-        if n_dists == []: avg_ks = np.nan; err_ks = np.nan
-        else: avg_ks = np.mean(n_dists); err_ks = np.std(n_dists,ddof=1)/np.sqrt(len(n_dists))
+        def _mean_and_se(values):
+            if len(values) == 0:
+                return np.nan, np.nan
+            mean_val = float(np.mean(values))
+            if len(values) < 2:
+                return mean_val, np.nan
+            se_val = float(np.std(values, ddof=1) / np.sqrt(len(values)))
+            return mean_val, se_val
 
-        if c_dists == []: avg_tvd = np.nan; err_tvd = np.nan
-        else: avg_tvd = np.mean(c_dists); err_tvd = np.std(c_dists,ddof=1)/np.sqrt(len(c_dists))
+        avg_ks, err_ks = _mean_and_se(n_dists)
+        avg_tvd, err_tvd = _mean_and_se(c_dists)
+        avg_stat, err_stat = _mean_and_se(n_dists + c_dists)
+        avg_pval, err_pval = _mean_and_se(pvals)
 
         ### Calculate number of significant tests, and fraction of significant tests
-        self.results = {'avg stat' : np.mean(n_dists+c_dists), 'stat err' : np.std(n_dists+c_dists,ddof=1)/np.sqrt(len(n_dists+c_dists)),
-                        'avg ks'   : avg_ks, 'ks err'   : err_ks,
-                        'avg tvd'  : avg_tvd, 'tvd err'  : err_tvd,
-                        'avg pval' : np.mean(pvals), 'pval err' : np.std(pvals,ddof=1)/np.sqrt(len(pvals)),
+        self.results = {'avg stat' : float(avg_stat), 'stat err' : float(err_stat),
+                        'avg ks'   : float(avg_ks), 'ks err'   : float(err_ks),
+                        'avg tvd'  : float(avg_tvd), 'tvd err'  : float(err_tvd),
+                        'avg pval' : float(avg_pval), 'pval err' : float(err_pval),
                         'num sigs' : len(sig_cols),
-                        'frac sigs': len(sig_cols)/len(pvals),
+                        'frac sigs': float(len(sig_cols)/len(pvals)),
                         'sigs cols': sig_cols
                         }
 
