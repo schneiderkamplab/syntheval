@@ -81,10 +81,10 @@ class PropensityMeanSquaredError(MetricClass):
             res.append(np.mean((pred[:,0]-num_synths/len(y_test))**2))
             acc.append(f1_score(y_test,mod.predict(x_test),average='macro'))
 
-        self.results = {'avg pMSE': np.mean(res), 
-                        'pMSE err': np.std(res,ddof=1)/np.sqrt(len(res)),
-                        'avg acc': np.mean(acc), 
-                        'acc err': np.std(acc,ddof=1)/np.sqrt(len(acc))
+        self.results = {'avg pMSE': float(np.mean(res)), 
+                        'pMSE err': float(np.std(res,ddof=1)/np.sqrt(len(res))),
+                        'avg acc': float(np.mean(acc)), 
+                        'acc err': float(np.std(acc,ddof=1)/np.sqrt(len(acc)))
                         }
         return self.results
 

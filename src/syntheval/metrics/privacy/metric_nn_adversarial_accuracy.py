@@ -29,7 +29,7 @@ def _adversarial_score(real, fake, cat_cols, metric):
     """
     left = np.mean(_knn_distance(real, fake, cat_cols, 1, metric)[0] > _knn_distance(real, real, cat_cols, 1, metric)[0])
     right = np.mean(_knn_distance(fake, real, cat_cols, 1, metric)[0] > _knn_distance(fake, fake, cat_cols, 1, metric)[0])
-    return 0.5 * (left + right)
+    return float(0.5 * (left + right))
 
 def evaluate_dataset_nnaa(real, fake, num_cols, cat_cols, metric, n_resample):
     """Helper function for running adversarial score multiple times if the 
@@ -70,7 +70,7 @@ def evaluate_dataset_nnaa(real, fake, num_cols, cat_cols, metric, n_resample):
         avg = _adversarial_score(real, fake, cat_cols, metric)
         err = 0.0
 
-    return avg, err
+    return float(avg), float(err)
 
 class NearestNeighbourAdversarialAccuracy(MetricClass):
     """The Metric Class is an abstract class that interfaces with 
@@ -115,15 +115,15 @@ class NearestNeighbourAdversarialAccuracy(MetricClass):
 
         avg, err = evaluate_dataset_nnaa(self.real_data,self.synt_data,self.num_cols,self.cat_cols,self.nn_dist,n_resample)
 
-        self.results = {'avg': avg, 'err': err}
+        self.results = {'avg': float(avg), 'err': float(err)}
 
         if self.hout_data is not None:
             avg_h, err_h = evaluate_dataset_nnaa(self.hout_data,self.synt_data,self.num_cols,self.cat_cols,self.nn_dist,n_resample)
             diff = avg_h - avg
             err_diff = np.sqrt(err_h**2+err**2)
 
-            self.results['priv_loss'] = diff
-            self.results['priv_loss_err'] = err_diff
+            self.results['priv_loss'] = float(diff)
+            self.results['priv_loss_err'] = float(err_diff)
 
         return self.results
 

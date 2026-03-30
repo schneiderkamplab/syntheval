@@ -54,7 +54,7 @@ def _hellinger(p,q):
     sqrt_pdf1 = np.sqrt(p)
     sqrt_pdf2 = np.sqrt(q)
     diff = sqrt_pdf1 - sqrt_pdf2
-    return 1/np.sqrt(2)*np.linalg.norm(diff)
+    return float(1/np.sqrt(2)*np.linalg.norm(diff))
 
 class HellingerDistance(MetricClass):
 
@@ -96,7 +96,7 @@ class HellingerDistance(MetricClass):
             pdfF = np.histogram(self.synt_data[category], bins=n_bins)[0]
             H_dist.append(_hellinger(pdfR/sum(pdfR),pdfF/sum(pdfF)))
 
-        self.results = {'avg': np.mean(H_dist), 'err': np.std(H_dist,ddof=1)/np.sqrt(len(H_dist))}
+        self.results = {'avg': float(np.mean(H_dist)), 'err': float(np.std(H_dist,ddof=1)/np.sqrt(len(H_dist)))}
         return self.results
 
     def format_output(self) -> list:

@@ -55,7 +55,7 @@ class MedianDistanceToClosestRecord(MetricClass):
         if (int_nn == 0 and mut_nn == 0): dcr = 1
         elif (int_nn == 0 and mut_nn != 0): dcr = 0
         else: dcr = mut_nn/int_nn
-        self.results = {'mDCR': dcr}
+        self.results = {'mDCR': float(dcr)}
         return self.results
 
     def format_output(self) -> list:

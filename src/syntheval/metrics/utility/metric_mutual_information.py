@@ -68,7 +68,7 @@ class MutualInformation(MetricClass):
         mi_mat = r_mi - f_mi
         if self.plot_figures: plot_matrix_heatmap(mi_mat,'Mutual information matrix difference', 'mi', axs_lim, axs_scale)
         
-        self.results = {'mutual_inf_diff': np.linalg.norm(mi_mat, ord='fro'),'mi_mat_dims': len(mi_mat)}
+        self.results = {'mutual_inf_diff': float(np.linalg.norm(mi_mat, ord='fro')),'mi_mat_dims': len(mi_mat)}
         return self.results
 
     def format_output(self) -> list:

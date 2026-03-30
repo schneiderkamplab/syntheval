@@ -49,7 +49,7 @@ class NearestNeighbourDistanceRatio(MetricClass):
         dist = _knn_distance(self.real_data, self.synt_data, self.cat_cols, 2, self.nn_dist)
         dr = list(map(lambda x: x[0] / (x[1]+1e-16), np.transpose(dist)))
 
-        self.results = {'avg': np.mean(dr), 'err': np.std(dr,ddof=1)/np.sqrt(len(dr))}
+        self.results = {'avg': float(np.mean(dr)), 'err': float(np.std(dr,ddof=1)/np.sqrt(len(dr)))}
 
         if self.hout_data is not None:
             dist_h = _knn_distance(self.hout_data, self.synt_data, self.cat_cols, 2, self.nn_dist)
@@ -57,8 +57,8 @@ class NearestNeighbourDistanceRatio(MetricClass):
             diff     = np.mean(dr_h) - self.results['avg']
             err_diff = np.sqrt((np.std(dr_h,ddof=1)/np.sqrt(len(dr_h)))**2+self.results['err']**2)
 
-            self.results['priv_loss'] = diff
-            self.results['priv_loss_err'] = err_diff
+            self.results['priv_loss'] = float(diff)
+            self.results['priv_loss_err'] = float(err_diff)
         return self.results
 
     def format_output(self) -> list:

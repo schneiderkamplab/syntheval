@@ -10,7 +10,7 @@ from scipy.stats import sem
 
 from syntheval.utils.plot_metrics import plot_dimensionwise_means
 
-class MetricClassName(MetricClass):
+class DimensionWiseMeans(MetricClass):
     """The Metric Class is an abstract class that interfaces with 
     SynthEval. When initialised the class has the following attributes:
 
@@ -43,7 +43,7 @@ class MetricClassName(MetricClass):
             >>> import pandas as pd
             >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
             >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
-            >>> DWM = MetricClassName(real, fake, num_cols=['a','b'], do_preprocessing=False, plot_figures=False)
+            >>> DWM = DimensionWiseMeans(real, fake, num_cols=['a','b'], do_preprocessing=False, plot_figures=False)
             >>> DWM.evaluate() # doctest: +ELLIPSIS
             {'avg': 0.0, ...}
         """
@@ -62,7 +62,7 @@ class MetricClassName(MetricClass):
             diff_error = np.sqrt(np.sum(mean_errors**2,axis=1))
 
             if self.plot_figures: plot_dimensionwise_means(dim_means, mean_errors, self.num_cols)
-            self.results = {'avg': np.mean(abs(means_diff)), 'err': np.sqrt(sum(diff_error**2))/len(diff_error)}
+            self.results = {'avg': float(np.mean(abs(means_diff))), 'err': float(np.sqrt(sum(diff_error**2))/len(diff_error))}
             return self.results
 
     def format_output(self) -> list:

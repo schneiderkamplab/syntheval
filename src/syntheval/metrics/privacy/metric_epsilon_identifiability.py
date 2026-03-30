@@ -86,7 +86,7 @@ class EpsilonIdentifiability(MetricClass):
         R_Diff = ext_distances - in_dists
         identifiability_value = np.sum(R_Diff < 0) / float(no)
 
-        self.results['eps_risk'] = identifiability_value
+        self.results['eps_risk'] = float(identifiability_value)
 
         if self.hout_data is not None:
             in_dists = _knn_distance(self.hout_data,self.hout_data,self.cat_cols,1,self.nn_dist,W_adjust)[0]
@@ -95,7 +95,7 @@ class EpsilonIdentifiability(MetricClass):
             R_Diff = ext_distances - in_dists
             identifiability_value = np.sum(R_Diff < 0) / float(no)
 
-            self.results['priv_loss'] = self.results['eps_risk'] - identifiability_value
+            self.results['priv_loss'] = float(self.results['eps_risk'] - identifiability_value)
 
         return self.results
 

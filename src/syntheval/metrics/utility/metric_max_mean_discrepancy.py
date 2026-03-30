@@ -76,8 +76,8 @@ class MaximumMeanDiscrepancy(MetricClass):
             >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
             >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
             >>> MMD = MaximumMeanDiscrepancy(real, fake, cat_cols=[], num_cols=['a', 'b'], analysis_target='a', do_preprocessing=False)
-            >>> MMD.evaluate(use_cats=False, kernel='linear')
-            {'kernel': 'linear', 'u_mmd': ..., 'u_mmd_clip': 0, 'b_mmd': 0.0, 'b_mmd_clip': 0.0}
+            >>> MMD.evaluate(use_cats=False, kernel='linear') # doctest: +ELLIPSIS
+            {'kernel': 'linear', 'u_mmd': ..., 'u_mmd_clip': 0.0, 'b_mmd': 0.0, 'b_mmd_clip': 0.0}
         """
         try:
             assert use_cats and len(self.cat_cols) > 0 or not use_cats, "Categorical columns must be specified if use_cats is True."
@@ -116,17 +116,17 @@ class MaximumMeanDiscrepancy(MetricClass):
                     if gamma == 0:  # Handle case where all points are identical
                         gamma = 1.0
 
-                self.results['rbf_gamma'] = gamma
+                self.results['rbf_gamma'] = float(gamma)
                 Kxx = _rbf_kernel(X_scaled, X_scaled, gamma)
                 Kyy = _rbf_kernel(Y_scaled, Y_scaled, gamma)
                 Kxy = _rbf_kernel(X_scaled, Y_scaled, gamma)
 
         self.results['kernel'] = kernel
 
-        self.results['u_mmd'] = _off_diagonal_mean(Kxx) + _off_diagonal_mean(Kyy) - 2 * Kxy.mean()
-        self.results['u_mmd_clip'] = max(self.results['u_mmd'], 0)  # U-statistics can be negative at finite sample sizes due to variance
-        self.results['b_mmd'] = Kxx.mean() + Kyy.mean() - 2 * Kxy.mean()
-        self.results['b_mmd_clip'] = max(self.results['b_mmd'], 0)  # V-statistics can also be negative at finite sample sizes due to variance
+        self.results['u_mmd'] = float(_off_diagonal_mean(Kxx) + _off_diagonal_mean(Kyy) - 2 * Kxy.mean())
+        self.results['u_mmd_clip'] = float(max(self.results['u_mmd'], 0))  # U-statistics can be negative at finite sample sizes due to variance
+        self.results['b_mmd'] = float(Kxx.mean() + Kyy.mean() - 2 * Kxy.mean())
+        self.results['b_mmd_clip'] = float(max(self.results['b_mmd'], 0))  # V-statistics can also be negative at finite sample sizes due to variance
 
         return self.results
 

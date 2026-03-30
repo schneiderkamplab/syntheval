@@ -78,9 +78,9 @@ class PrincipalComponentAnalysis(MetricClass):
                 select_cols = self.num_cols
 
             # Get PCA metrics and projections
-            res = PCAMetric(self.real_data[select_cols], self.synt_data[select_cols], preprocess=preprocess)[0]
+            res, _, _ = PCAMetric(self.real_data[select_cols], self.synt_data[select_cols], preprocess=preprocess)
 
-            self.results = res
+            self.results = {'exp_var_diff': float(res['exp_var_diff']), 'comp_angle_diff': float(res['comp_angle_diff'])}
 
             if self.plot_figures:  # For the pca plots we have to redo some stuff
                 if preprocess == 'mean':

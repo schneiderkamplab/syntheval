@@ -13,7 +13,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_curve, auc
 from sklearn.utils import resample
 
-class MetricClassName(MetricClass):
+class PredictionAUROCDifference(MetricClass):
     """The Metric Class is an abstract class that interfaces with 
     SynthEval. When initialised the class has the following attributes:
 
@@ -55,7 +55,7 @@ class MetricClassName(MetricClass):
             >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6], 'label': [0, 1, 0]})
             >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6], 'label': [0, 1, 0]})
             >>> hout = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6], 'label': [0, 1, 0]})
-            >>> AUROC = MetricClassName(real, fake, hout, analysis_target='label', verbose=False, do_preprocessing=False)
+            >>> AUROC = PredictionAUROCDifference(real, fake, hout, analysis_target='label', verbose=False, do_preprocessing=False)
             >>> AUROC.evaluate(model='log_reg', num_boots=1)
             {'model': 'log_reg', 'auroc_diff': 0.0}
         """
@@ -129,7 +129,7 @@ class MetricClassName(MetricClass):
                                              [mean_fpr, mean_tpr_fake, std_tpr_fake],
                                              model, 'roc_curves')
 
-            self.results = {'model': model, 'auroc_diff': roc_auc_mean_fake - roc_auc_mean_real}
+            self.results = {'model': model, 'auroc_diff': float(roc_auc_mean_fake - roc_auc_mean_real)}
             return self.results
         
     def format_output(self) -> list:

@@ -31,7 +31,7 @@ class ConfidenceIntervalOverlap(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'utility'
 
-    def evaluate(self,confidence=95) -> float | dict:
+    def evaluate(self, confidence=95) -> float | dict:
         """Function for calculating the average CIO, also returns the 
         number of nonoverlapping interval
         
@@ -77,8 +77,8 @@ class ConfidenceIntervalOverlap(MetricClass):
 
                 num = float(sum([j == 0 for j in Jk]))
                 frac = num/len(Jk)
-                self.results = {'avg overlap': np.mean(Jk), 
-                                'overlap err': np.std(Jk,ddof=1)/np.sqrt(len(Jk)), 
+                self.results = {'avg overlap': float(np.mean(Jk)), 
+                                'overlap err': float(np.std(Jk,ddof=1)/np.sqrt(len(Jk))), 
                                 'num non-overlaps': num, 
                                 'frac non-overlaps': frac
                                 }

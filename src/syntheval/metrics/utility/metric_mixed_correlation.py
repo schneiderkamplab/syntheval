@@ -29,7 +29,7 @@ def _cramers_V(var1,var2) :
     stat = chi2_contingency(crosstab)[0] # Keeping of the test statistic of the Chi2 test
     obs = np.sum(crosstab) # Number of observations
     mini = min(crosstab.shape)-1 # Take the minimum value between the columns and the rows of the cross table
-    return (stat/(obs*mini+1e-16))
+    return float((stat/(obs*mini+1e-16)))
 
 def _apply_mat(data,func,labs1,labs2):
     """Help function for constructing a matrix based on func accross labels 1 and 2
@@ -81,7 +81,7 @@ def _correlation_ratio(categories, measurements):
         eta = 0.0
     else:
         eta = numerator/denominator
-    return eta
+    return float(eta)
 
 def mixed_correlation(data,num_cols,cat_cols):
     """Function for calculating a correlation matrix of mixed datatypes.
@@ -170,7 +170,7 @@ class MixedCorrelation(MetricClass):
             corr_mat = r_corr-f_corr
             if self.plot_figures: plot_matrix_heatmap(corr_mat,'Correlation matrix difference (nums only)', 'corr', axs_lim, axs_scale)
         
-        self.results = {'corr_mat_diff': np.linalg.norm(corr_mat,ord='fro'), 'corr_mat_dims': len(corr_mat)}
+        self.results = {'corr_mat_diff': float(np.linalg.norm(corr_mat,ord='fro')), 'corr_mat_dims': len(corr_mat)}
         if return_mats: self.results['real_cor_mat'] = r_corr
         if return_mats: self.results['synt_cor_mat'] = f_corr
         if return_mats: self.results['diff_cor_mat'] = corr_mat

@@ -76,48 +76,47 @@ Options:
 ## Included metrics overview
 The SynthEval library comes equipped with a broad selection of metrics to evaluate various aspects of synthetic tabular data. One of the more interesting properties that makes SynthEval stand out is that many of the metrics have been carefully adapted to accept heterogeneous data. Distances between datapoints are (by default) handled using Gower's distance/similarity measure rather than the Euclidean distance, which negates any requirement of special data encoding.
 
+The metrics are divided into three categories, utility, privacy and fairness, and the results are reported in a standardised format with an average value and an error estimate (where applicable). In addition to using the default preset files, users can select specific metrics and options by using the metric keywords in the evaluate function. The following table gives an overview of the available metrics, their keywords, and links to documentation for each metric.
+
 ### Utility Metrics
 Utility analysis entails resemblance, quality and usability metrics testing how well the synthetic data looks like, behaves like, and substitutes like the real data.
 
-In the code we implemented:
-- Dimension-Wise Means (nums. only, avg. value and plot)
-- Principal Components Analysis (nums. only, plot of first two components)
-- Confidence Interval Overlap (nums. only, number and fraction of significant tests)
-- Correlation Matrix Difference (mixed correlation)
-- Mutual Information Matrix Difference
-- Kolmogorov–Smirnov / Total Variation Distance test (avg. distance, avg. p-value and number and fraction of significant tests)
-- Hellinger Distance (avg. distance)
-- Propensity Mean Squared Error (pMSE and accuracy)
-- Prediction AUROC difference (for binary target variables only)
-- Nearest Neighbour Adversarial Accuracy (NNAA)
-- Quantile MSE
-- Maximum Mean Discrepancy (MMD)
+| keyword | metric name | link to docs | description | 
+| --- | --- | --- | --- |
+| `dwm` | Dimension-Wise Means | [DimensionWiseMeans](src\syntheval\metrics\utility\metric_dimensionwise_means.py) | nums. only, avg. value and plot |
+| `pca` | Principal Components Analysis | [PrincipalComponentsAnalysis](src\syntheval\metrics\utility\metric_principal_component_analysis.py) | [Text Documentation](metrics_references.md#Inter-Dataset-Similarity-Metric-Based-on-PCA) |
+| `cio` | Confidence Interval Overlap | [ConfidenceIntervalOverlap](src\syntheval\metrics\utility\metric_confidence_interval_overlap.py) | nums. only, number and fraction of significant tests |
+| `corr_diff` | Correlation Matrix Difference | [MixedCorrelation](src\syntheval\metrics\utility\metric_mixed_correlation.py) | mixed correlation |
+| `mi_diff` | Mutual Information Matrix Difference | [MutualInformation](src\syntheval\metrics\utility\metric_mutual_information.py) | mixed correlation |
+| `ks_test` | Kolmogorov–Smirnov / Total Variation Distance test | [KolmogorovSmirnov](src\syntheval\metrics\utility\metric_kolmogorov_smirnov.py) | avg. distance, avg. p-value and number and fraction of significant tests |
+| `h_dist` | Hellinger Distance | [HellingerDistance](src\syntheval\metrics\utility\metric_hellinger_distance.py) | avg. distance |
+| `p_MSE` | Propensity Mean Squared Error | [PropensityMeanSquaredError](src\syntheval\metrics\utility\metric_propensity_mse.py) | pMSE and accuracy |
+| `auroc_diff` | Prediction AUROC difference | [PredictionAUROCDifference](src\syntheval\metrics\utility\metric_auroc_difference.py) | for binary target variables only |
+| `cls_acc`| Classification Accuracy | [ClassificationAccuracy](src\syntheval\metrics\utility\metric_accuracy_difference.py) | avg. TRTR, TSTR across four classifiers, with optional holdout data and 5-fold cross-validation |
+| `fio` | Feature Importance Overlap | [FeatureImportanceOverlap](src\syntheval\metrics\utility\metric_feature_importance_overlap.py) | [Text Documentation](metrics_references.md#Feature-Importance-Overlap-(FIO)) |
+| `nnaa` | Nearest Neighbour Adversarial Accuracy | [NearestNeighbourAdversarialAccuracy](src\syntheval\metrics\privacy\metric_nn_adversarial_accuracy.py) | avg. NNAA across all records |
+| `q_mse` | Quantile MSE | [QuantileMSE](src\syntheval\metrics\utility\metric_quantile_mse.py) | [Text Documentation](metrics_references.md#Quantile-MSE) |
+| `mmd` | Maximum Mean Discrepancy (MMD) | [MaximumMeanDiscrepancy](src\syntheval\metrics\utility\metric_max_mean_discrepancy.py) | [Text Documentation](metrics_references.md#Maximum-Mean-Discrepancy-(MMD)) |
 
-### classification accuracy
-In this tool we test useability by training four different <code>sklearn</code> classifiers on real and synthetic data with 5-fold cross-validation (testing both models on the real validation fold). 
-- DecisionTreeClassifier
-- AdaBoostClassifier
-- RandomForestClassifier
-- LogisticRegression
-
-The average accuracy is reported together with the accuracy difference from models trained on real and synthetic data. If a test set is provided, the classifiers are also trained once on the entire training set, and again the accuracy and accuracy differences are reported, but now on the test data.
-
-By default the results are given in terms of accuracy (micro F1 scores). To change, use ‘micro’, ‘macro’ or ‘weighted’ in the preset file or in kwargs.
 
 ### Privacy Metrics
 Privacy is a crucial aspect of evaluating synthetic data, we include only three highlevel metrics with more to be added in the future.
-- Nearest Neighbour Distance Ratio (NNDR)
-- Privacy Losses (difference in NNAA and NNDR between test and training sets, good for checking overfitting too.)
-- Median Distance to Closest Record (normalised by internal NN distance.)
-- Hitting Rate (for numericals defined to be within the attribute range / 30)
-- Epsilon identifiability risk (calculated using weighted NN distance)
-- Membership Inference Attack
-- Attribute Disclosure Risk (with or without holdout data)
+
+| keyword | metric name | link to docs | description | 
+| --- | --- | --- | --- |
+| `nndr` | Nearest Neighbour Distance Ratio | [NearestNeighbourDistanceRatio](src\syntheval\metrics\privacy\metric_nn_distance_ratio.py) | avg. NNDR across all records |
+| `dcr` | Median Distance to Closest Record | [MedianDistanceToClosestRecord](src\syntheval\metrics\privacy\metric_distance_closest_record.py) | normalised by internal NN distance |
+| `hit_rate` | Hitting Rate | [HittingRate](src\syntheval\metrics\privacy\metric_hitting_rate.py) | hits on numericals are within attribute range / 30 |
+| `eps_risk` | Epsilon Identifiability Risk | [EpsilonIdentifiabilityRisk](src\syntheval\metrics\privacy\metric_epsilon_identifiability.py) | calculated using weighted NN distance |
+| `mia` | Membership Inference Attack | [MIAClassifier](src\syntheval\metrics\privacy\metric_MIA_classification.py) | worst case adversarial knowledge attack |
+| `att_discl` | Attribute Disclosure Risk | [AttributeDisclosure](src\syntheval\metrics\privacy\metric_AttrDis.py) | with or without holdout data | 
 
 ### Fairness Metrics
 Fairness is an emerging property of synthetic data, we recently added support to evaluate this aspect, and include for now:
-- Statistical Parity Difference (Also known as Demographic Parity)
 
+| keyword | metric name | link to docs | description | 
+| --- | --- | --- | --- |
+| `statistical_parity` | Statistical Parity Difference | [StatisticalParity](src\syntheval\metrics\fairness\metric_statistical_parity.py) | also known as Demographic Parity | |
 
 ## Creating new metrics
 SynthEval is designed with modularity in mind. Creating new, custom metrics is as easy as copying the [metrics template file](https://github.com/schneiderkamplab/syntheval/blob/main/src/syntheval/metrics/metric_template.py), and filling in the five required functions. Because SynthEval has very little hardcoding wrt. the metrics, making new metrics work locally should require no changes other than adding the metrics script in the metrics folder.

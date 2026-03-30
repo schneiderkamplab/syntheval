@@ -84,7 +84,8 @@ class StatisticalParity(MetricClass):
 
         difference = preds[X[S] == 1].mean() - preds[X[S] == 0].mean()
 
-        return difference if positive_pred == 1 else -difference
+        # Return a Python float for stable doctest repr across NumPy versions.
+        return float(difference if positive_pred == 1 else -difference)
 
     def evaluate(
         self, protected_attribute: str, positive_class: int, folds: int = 5
@@ -145,10 +146,8 @@ class StatisticalParity(MetricClass):
             )
 
         # Compute statistical parity
-        self.results["statistical_parity"] = np.mean(statistical_paraty_differences)
-        self.results["statistical_parity se"] = np.std(
-            statistical_paraty_differences, ddof=1
-        ) / np.sqrt(folds)
+        self.results["statistical_parity"] = float(np.mean(statistical_paraty_differences))
+        self.results["statistical_parity se"] = float(np.std(statistical_paraty_differences, ddof=1) / np.sqrt(folds))
 
         return self.results
 
