@@ -1,10 +1,10 @@
 # Description: Metric for comparing feature importances
 # Author: Anton D. Lautrup
-# Date: 21-08-2023
+# Date: 30-03-2026
 
 import pandas as pd
 
-from typing import List, Dict, Literal, Union
+from typing import List, Literal
 
 from syntheval.metrics.core.metric import MetricClass
 from syntheval.utils.plot_metrics import plot_feature_importance_comparison
@@ -47,6 +47,16 @@ class FeatureImportanceOverlap(MetricClass):
         
         Args:
             model (str): 'rf_cls', 'dt_cls' or 'log_reg'
+
+        Returns:
+            dict: result variables for the metric
+
+        Example:
+        >>> import pandas as pd
+        >>> real = pd.DataFrame({'a': [1, 2, 3, 2], 'b': [4, 5, 6, 4], 'c': [7, 8, 9, 7], 'd': [1, 0, 1, 0], 'target': [0, 1, 0, 1]})
+        >>> fake = pd.DataFrame({'a': [1, 2, 3, 1], 'b': [4, 5, 6, 1], 'c': [7, 8, 9, 1], 'd': [1, 0, 1, 0], 'target': [0, 1, 0, 1]})
+        >>> FIO = FeatureImportanceOverlap(real, fake, analysis_target='target', plot_figures=False, do_preprocessing=False)
+        >>> results = FIO.evaluate(model='rf_cls')
         """
         try:
             assert self.analysis_target is not None, "FIO metric did not run, no analysis target variable supplied!"

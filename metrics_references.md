@@ -30,16 +30,29 @@ Reference:
 
 ### Maximum Mean Discrepancy (MMD)
 MMD is a kernel-based distance measure between two distributions (in our case the real and synthetic data sets). It comes in two flavors: the biased V-statistic and the unbiased U-statistic. The biased V-statistic is calculated as follows:
+
 $$
 \text{MMD}_b^2 = \frac{1}{n^2} \sum_{i,j} k(x_i, x_j) + \frac{1}{m^2} \sum_{i,j} k(y_i, y_j) - \frac{2}{nm} \sum_{i,j} k(x_i, y_j),
 $$
+
 where $k$ is a kernel function, and $x_i$ and $y_j$ are samples from the two distributions. The unbiased U-statistic is calculated as follows:
+
 $$
 \text{MMD}_u^2 = \frac{1}{n(n-1)} \sum_{i \neq j} k(x_i, x_j) + \frac{1}{m(m-1)} \sum_{i \neq j} k(y_i, y_j) - \frac{2}{nm} \sum_{i,j} k(x_i, y_j),
 $$
+
 where the sums are taken over all pairs of samples, excluding the diagonal terms. Both measures can be negative at finite sample sizes due to variance, so it is clipped at $0$ for stability, i.e., $\max(MMD^2,0)$. A lower value of MMD indicates that the two distributions are similar (yet negative values cannot be compared by magnitude). 
 
 As a test statistic, MMD can be used to perform a two-sample test to determine if the two distributions are significantly different. In this case, a value higher than some threshold (determined by the distribution of MMD under the null hypothesis) would indicate that the two distributions are significantly different. In the context of synthetic data evaluation, a low MMD value would indicate that the synthetic data is not unreasonably different.
 
 Reference:
 > Gretton, A., Borgwardt, K.M., Rasch, M.J., Smola, A., Schölkopf, B., & Smola, A. (2012). A Kernel Two-Sample Test. Journal of Machine Learning Research, 13(25), 723–773. [http://jmlr.org/papers/v13/gretton12a.html](http://jmlr.org/papers/v13/gretton12a.html)
+
+### Feature Importance Overlap (FIO)
+FIO is a generic metric that measures the overlap in top-k selected features between a model trained on real data and a model trained on synthetic data in predicting the target analysis variable. The metric is calculated as follows:
+
+$$
+\text{FIO}_k = \frac{|\text{Top-$k$ features from real data} \cap \text{Top-$k$ features from synthetic data}|}{k},
+$$
+
+In the actual implementation we select top-5%, 10%, 25%, and 50% of the features (where possible), and return all successful results. A higher value of FIO indicates that the synthetic data is a good representation of the real data in terms of feature selection. However, for the lowest top-k selections (e.g., 5% or 10%), it should be *very close* to 1 for a good synthetic data set, while for higher top-k selections (e.g., 25% or 50%) it can be more divergent and still indicate a good synthetic data set.
