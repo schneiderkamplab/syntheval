@@ -6,6 +6,7 @@ import numpy as np
 
 from scipy.stats import sem
 
+from typing import Literal
 from syntheval.metrics.core.metric import MetricClass
 
 class ConfidenceIntervalOverlap(MetricClass):
@@ -31,11 +32,12 @@ class ConfidenceIntervalOverlap(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'utility'
 
-    def evaluate(self, confidence=95) -> float | dict:
+    def evaluate(self, ci: Literal['sem', 'std'] = 'std', confidence=95) -> float | dict:
         """Function for calculating the average CIO, also returns the 
         number of nonoverlapping interval
         
         Args:
+            ci (Literal['sem', 'std']): The type of confidence interval to use
             confidence (int): Confidence level for the confidence interval
         
         Returns:
@@ -53,6 +55,7 @@ class ConfidenceIntervalOverlap(MetricClass):
         try:
             assert len(self.num_cols) > 0
             assert confidence in confidence_table.keys()
+            assert ci in ['sem', 'std'], f"ci must be either 'sem' or 'std', got {ci}"
         except AssertionError:
             if len(self.num_cols) == 0:
                 raise ValueError("No nummerical attributes provided for confidence interval overlap metric.")
@@ -65,8 +68,13 @@ class ConfidenceIntervalOverlap(MetricClass):
                 z_value = confidence_table[confidence]
                 mus = np.array([np.mean(self.real_data[self.num_cols],axis=0),np.mean(self.synt_data[self.num_cols],axis=0)]).T
                 sems = np.array([sem(self.real_data[self.num_cols]),sem(self.synt_data[self.num_cols])]).T
+                stds = np.array([np.std(self.real_data[self.num_cols],ddof=1),np.std(self.synt_data[self.num_cols],ddof=1)]).T
                 
-                CI = sems*z_value
+                match ci:
+                    case 'sem':
+                        CI = sems*z_value
+                    case 'std':
+                        CI = stds*z_value
                 us = mus+CI
                 ls = mus-CI
 
@@ -92,23 +100,6 @@ class ConfidenceIntervalOverlap(MetricClass):
             ("utility", f"  -> # non-overlapping COIs at {self.confidence:2d}%", self.results['num non-overlaps'], None),
         ]
         return rows
-
-#     def format_output(self) -> str:
-#         """ Return string for formatting the output, when the
-#         metric is part of SynthEval.
-# |                                          :                    |"""
-#         if self.results != {}:
-#             string = """\
-# | Average confidence interval overlap      :   %.4f  %.4f   |
-# |   -> # non-overlapping COIs at %2d%%       :   %2d               |
-# |   -> fraction of non-overlapping CIs     :   %.4f           |""" % (
-#             self.results['avg overlap'],
-#             self.results['overlap err'],
-#             self.confidence,
-#             self.results['num non-overlaps'],
-#             self.results['frac non-overlaps'])
-#             return string
-#         else: pass
 
     def normalize_output(self) -> list:
         """ This function is for making a dictionary of the most quintessential

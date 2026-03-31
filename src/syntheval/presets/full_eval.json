@@ -1,7 +1,7 @@
 {
-    "dwm"       : {},
+    "dwm"       : {"ci": "std"},
     "pca"       : {"preprocess": "std"},
-    "cio"       : {"confidence": 95},
+    "cio"       : {"ci": "std", "confidence": 95},
     "corr_diff" : {"mixed_corr": true},
     "mi_diff"   : {},
     "ks_test"   : {"sig_lvl": 0.05, "n_perms": 1000},

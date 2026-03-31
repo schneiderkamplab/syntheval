@@ -4,6 +4,8 @@
 
 import numpy as np
 
+from typing import Literal
+
 from syntheval.metrics.core.metric import MetricClass
 
 from scipy.stats import sem
@@ -33,9 +35,12 @@ class DimensionWiseMeans(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'utility'
 
-    def evaluate(self) -> dict:
+    def evaluate(self, ci: Literal['sem', 'std'] = 'std') -> dict:
         """Function for calculating DWM, plotting an appropriate diagram
-        
+
+        Args:
+            ci (Literal['sem', 'std']): The type of confidence interval to use
+
         Returns:
             dict: Average dimensionwise means difference and standard error of the mean
         
@@ -57,9 +62,13 @@ class DimensionWiseMeans(MetricClass):
 
             dim_means = np.array([np.mean(real_data,axis=0),np.mean(synt_data,axis=0)]).T
             means_diff = dim_means[:,0]-dim_means[:,1]
-            
-            mean_errors = np.array([sem(real_data),sem(synt_data)]).T
-            diff_error = np.sqrt(np.sum(mean_errors**2,axis=1))
+            match ci:
+                case 'sem':
+                    mean_errors = np.array([sem(real_data),sem(synt_data)]).T
+                    diff_error = np.sqrt(np.sum(mean_errors**2,axis=1))
+                case 'std':
+                    mean_errors = np.array([np.std(real_data,ddof=1),np.std(synt_data,ddof=1)]).T
+                    diff_error = np.sqrt(np.sum(mean_errors**2,axis=1))
 
             if self.plot_figures: plot_dimensionwise_means(dim_means, mean_errors, self.num_cols)
             self.results = {'avg': float(np.mean(abs(means_diff))), 'err': float(np.sqrt(sum(diff_error**2))/len(diff_error))}
