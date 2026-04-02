@@ -59,69 +59,103 @@ class FeatureImportanceOverlap(MetricClass):
         >>> results = FIO.evaluate(model='rf_cls')
         """
         try:
-            assert self.analysis_target is not None, "FIO metric did not run, no analysis target variable supplied!"
-            assert len(self.real_data.columns.tolist()) > 3, "FIO metric did not run, the data must have more than 3 columns!"
-            assert model in ['rf_cls', 'log_reg', 'dt_cls'], "FIO metric did not run, model must be one of 'rf_cls', 'log_reg' or 'dt_cls'"
+            assert self.analysis_target is not None, "SynthEval(fio): metric did not run, no analysis target variable(s) supplied!"
+            target_vars = [
+                key for (key, value) in self.analysis_target.target_types.items() 
+                if isinstance(value, int) and value >= 2
+                ]
+            assert target_vars != [], "SynthEval(fio): No categorical target variables with 2 or more unique values!"
+            assert len(self.real_data.columns.tolist()) > 3, "SynthEval(fio): metric did not run, the data must have more than 3 columns!"
+            assert model in ['rf_cls', 'log_reg', 'dt_cls'], "SynthEval(fio): metric did not run, model must be one of 'rf_cls', 'log_reg' or 'dt_cls'"
         except AssertionError as e:
             raise AssertionError(e)
         else:
-            real_x, real_y = self.real_data.drop([self.analysis_target], axis=1), self.real_data[self.analysis_target]
-            fake_x, fake_y = self.synt_data.drop([self.analysis_target], axis=1), self.synt_data[self.analysis_target]
-
-            match model:
-                case 'rf_cls':
-                    model_real = RandomForestClassifier(random_state=42)
-                    model_fake = RandomForestClassifier(random_state=42)
-                case 'log_reg':
-                    model_real = LogisticRegression(random_state=42, max_iter=100)
-                    model_fake = LogisticRegression(random_state=42, max_iter=100)
-                case 'dt_cls':
-                    model_real = DecisionTreeClassifier(random_state=42)
-                    model_fake = DecisionTreeClassifier(random_state=42)
-
-            model_real.fit(real_x, real_y); model_fake.fit(fake_x, fake_y)
-
-            importances_real = model_real.feature_importances_
-            importances_real = pd.Series(importances_real, index=real_x.columns).sort_values(ascending=False)
-            importances_fake = model_fake.feature_importances_
-            importances_fake = pd.Series(importances_fake, index=fake_x.columns).sort_values(ascending=False)
-
+            result_rows = []
             compare_percentages = [0.05, 0.1, 0.25, 0.5]
-            for p in compare_percentages:
-                top_real = set(importances_real.index[:int(len(importances_real)*p)])
-                top_fake = set(importances_fake.index[:int(len(importances_fake)*p)])
 
-                if len(top_real) < 2 or len(top_real) > 100:
-                    continue # skip if too few or too many features for meaningful comparison
+            for target_var in target_vars:
+                # Drop confounder variables for the current target variable (if any)
+                confounders = self.analysis_target.confounder_vars[target_var]
+                real_data = self.real_data.drop(confounders, axis=1)
+                synt_data = self.synt_data.drop(confounders, axis=1)
 
-                overlap = len(top_real.intersection(top_fake)) / len(top_real)
-                self.results[f'overlap_top_{int(p*100)}%'] = overlap
+                real_x, real_y = real_data.drop([target_var], axis=1), real_data[target_var]
+                fake_x, fake_y = synt_data.drop([target_var], axis=1), synt_data[target_var]
+                target_var = target_var.replace(' ', '_').lower()
 
-            if self.plot_figures:
-                # Plot only up to the 20 most important features for readability
-                plot_importances_real = importances_real[:20]
-                plot_importances_fake = importances_fake[importances_fake.index.isin(plot_importances_real.index)]
+                match model:
+                    case 'rf_cls':
+                        model_real = RandomForestClassifier(random_state=42)
+                        model_fake = RandomForestClassifier(random_state=42)
+                    case 'log_reg':
+                        model_real = LogisticRegression(random_state=42, max_iter=100)
+                        model_fake = LogisticRegression(random_state=42, max_iter=100)
+                    case 'dt_cls':
+                        model_real = DecisionTreeClassifier(random_state=42)
+                        model_fake = DecisionTreeClassifier(random_state=42)
 
-                plot_importances_real_names = plot_importances_real.index.tolist()
-                plot_feature_importance_comparison(plot_importances_real_names,
-                                                        plot_importances_real.values,
-                                                        plot_importances_fake.values,
-                                                        title=f"{model}, top {min(20, len(importances_real))} features",
-                                                        file_name='feature_importances')
-        
+                model_real.fit(real_x, real_y); model_fake.fit(fake_x, fake_y)
+
+                importances_real = model_real.feature_importances_
+                importances_real = pd.Series(importances_real, index=real_x.columns).sort_values(ascending=False)
+                importances_fake = model_fake.feature_importances_
+                importances_fake = pd.Series(importances_fake, index=fake_x.columns).sort_values(ascending=False)
+
+                res = {}
+                for p in compare_percentages:
+                    top_real = set(importances_real.index[:int(len(importances_real)*p)])
+                    top_fake = set(importances_fake.index[:int(len(importances_fake)*p)])
+
+                    if len(top_real) < 2 or len(top_real) > 100:
+                        continue # skip if too few or too many features for meaningful comparison
+
+                    overlap = len(top_real.intersection(top_fake)) / len(top_real)
+                    res['top_'+str(int(p*100))+ '%'] = overlap
+
+                result_rows.append({
+                    'target_var': target_var,
+                    'model': model,
+                    **res
+                })
+                # self.results[f'overlap_top_{int(p*100)}%'] = overlap
+
+                if self.plot_figures:
+                    # Plot only up to the 20 most important features for readability
+                    plot_importances_real = importances_real[:20]
+                    plot_importances_fake = importances_fake[importances_fake.index.isin(plot_importances_real.index)]
+
+                    plot_importances_real_names = plot_importances_real.index.tolist()
+                    plot_feature_importance_comparison(plot_importances_real_names,
+                                                            plot_importances_real.values,
+                                                            plot_importances_fake.values,
+                                                            title=f"{model}, predicting {target_var}\ntop {min(20, len(importances_real))} features",
+                                                            file_name='feature_importance_'+target_var)
+                    
+            # Average results across target variables if multiple
+            if len(result_rows) > 1:
+                df_results = pd.DataFrame(result_rows)
+                for p in compare_percentages:
+                    #check if the column exists (it may not if there were too few features for comparison)
+                        if 'top_'+str(int(p*100))+ '%' in df_results.columns:
+                            self.results[f'fio_top_{int(p*100)}%'] = float(df_results['top_'+str(int(p*100))+ '%'].mean())
+                            self.results[f'fio_top_{int(p*100)}%_err'] = float(df_results['top_'+str(int(p*100))+ '%'].sem())
+                        else:
+                            continue
+            else:
+                self.results = {'fio_' + key: result_rows[0][key] for key in result_rows[0] if key.startswith('top_')}
         return self.results
 
     def format_output(self) -> List[tuple]:
         """ Return a list of tuples for printing results to the rich console."""
         rows = []
-        if self.results.get('overlap_top_5%') is not None:
-            rows.append(('utility', f"Feature importance overlap top 5%", self.results.get('overlap_top_5%'), None))
-        if self.results.get('overlap_top_10%') is not None:
-            rows.append(('utility', f"Feature importance overlap top 10%", self.results.get('overlap_top_10%'), None))
-        if self.results.get('overlap_top_25%') is not None:
-            rows.append(('utility', f"Feature importance overlap top 25%", self.results.get('overlap_top_25%'), None))
-        if self.results.get('overlap_top_50%') is not None:
-            rows.append(('utility', f"Feature importance overlap top 50%", self.results.get('overlap_top_50%'), None))
+        if self.results.get('fio_top_5%') is not None:
+            rows.append(('utility', f"Feature importance overlap top 5%", self.results['fio_top_5%'], self.results.get('fio_top_5%_err')))
+        if self.results.get('fio_top_10%') is not None:
+            rows.append(('utility', f"Feature importance overlap top 10%", self.results['fio_top_10%'], self.results.get('fio_top_10%_err')))
+        if self.results.get('fio_top_25%') is not None:
+            rows.append(('utility', f"Feature importance overlap top 25%", self.results['fio_top_25%'], self.results.get('fio_top_25%_err')))
+        if self.results.get('fio_top_50%') is not None:
+            rows.append(('utility', f"Feature importance overlap top 50%", self.results['fio_top_50%'], self.results.get('fio_top_50%_err')))
         return rows
 
     def normalize_output(self) -> List[dict]:
@@ -135,12 +169,18 @@ class FeatureImportanceOverlap(MetricClass):
         
         if self.results != {}:
             dict_lst = []
-            dict_keys = ['overlap_top_5%', 'overlap_top_10%', 'overlap_top_25%', 'overlap_top_50%']
+            dict_keys = ['fio_top_5%', 'fio_top_10%', 'fio_top_25%', 'fio_top_50%']
             
             for key in dict_keys:
                 if key not in self.results:
                     self.results[key] = None # ensure all keys are present for consistent output format
                 else:
-                    dict_lst.append({'metric': f"fio_{key.split('_')[-1]}", 'dim': 'u', 'val': self.results[key], 'n_val': self.results[key]})
+                    dict_lst.append({'metric': key, 
+                                     'dim': 'u', 
+                                     'val': self.results[key], 
+                                     'err': self.results.get(f'{key}_err'), 
+                                     'n_val': self.results[key], 
+                                     'n_err': self.results.get(f'{key}_err')
+                                     })
             return dict_lst
         else: pass

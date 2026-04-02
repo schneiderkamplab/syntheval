@@ -40,7 +40,7 @@ from syntheval import SynthEval
 evaluator = SynthEval(df_real, holdout_dataframe = df_test, cat_cols = class_cat_col)
 evaluator.evaluate(df_fake, class_lab_col, presets_file = "full_eval", **kwargs)
 ```
-Where the user supplies <code>df_real, df_test, df_fake</code> as pandas dataframes, the <code>class_cat_col</code> is a complete list of column names (which can be omitted for categoricals to be automatically inferred). Some metrics require a target class, so <code>class_lab_col</code> is a string for designating one column with discrete values as a target for usability predictions and colouration. In the evaluate function, a presets file can be chosen ("full_eval", "fast_eval", or "privacy") or alternatively, a filepath can be supplied to a json file with select metrics keywords. Finally, instead of (or in addition to), keyword arguments can be added in the end with additional metrics and their options. 
+Where the user supplies <code>df_real, df_test, df_fake</code> as pandas dataframes, the <code>class_cat_col</code> is a complete list of column names (which can be omitted for categoricals to be automatically inferred). Some metrics require a target class, so <code>class_lab_col</code> is a string (or list or [AnalysisConfig](guides/syntheval_guide.ipynb#Analysis-Target-Configuration) object) for designating variables as a target for downstream task prediction and plotting colouration. In the evaluate function, a presets file can be chosen ("full_eval", "fast_eval", or "privacy") or alternatively, a filepath can be supplied to a json file with select metrics keywords. Finally, instead of (or in addition to), keyword arguments can be added in the end with additional metrics and their options. 
 
 Version 1.4 introduced the benchmark module, that allows a directory of synthetic datasets to be specified for evaluation (or a dictionary of dataframes). All datasets in the folder are evaluated against the training (and test) data on the selected metrics. Three types of rank-derived scoring are available to choose between ("linear", "normal", or "quantile"), assisting in identifying datasets that perform well overall, and on utility and privacy dimensions.
 ```python
@@ -54,6 +54,9 @@ For more details on how to use the library, see the codebooks below;
 | [Tutorial 1](guides/syntheval_guide.ipynb) | Get started, basic examples |
 | [Tutorial 2](guides/syntheval_benchmark.ipynb) | Dataset benchmark, evaluating and ranking synthetic datasets in bulk |
 | [Tutorial 3](https://github.com/schneiderkamplab/syntheval-model-benchmark-example/blob/main/syntheval_model_benchmark.ipynb) | Model benchmark example, evaluating and ranking models |
+| --- | --- |
+| [Preprocessing Reference](guides/preprocessing.md) | Documentation on data preprocessing steps |
+| [Metrics Reference](guides/metrics_references.md) | Documentation of the newer metrics that are not covered in the SynthEval paper |
 
 ### Command line interface
 SynthEval can also be run from the commandline with the following syntax:
@@ -84,7 +87,7 @@ Utility analysis entails resemblance, quality and usability metrics testing how 
 | keyword | metric name | link to docs | description | 
 | --- | --- | --- | --- |
 | `dwm` | Dimension-Wise Means | [DimensionWiseMeans](src\syntheval\metrics\utility\metric_dimensionwise_means.py) | nums. only, avg. value and plot |
-| `pca` | Principal Components Analysis | [PrincipalComponentsAnalysis](src\syntheval\metrics\utility\metric_principal_component_analysis.py) | [Text Documentation](metrics_references.md#Inter-Dataset-Similarity-Metric-Based-on-PCA) |
+| `pca` | Principal Components Analysis | [PrincipalComponentsAnalysis](src\syntheval\metrics\utility\metric_principal_component_analysis.py) | [Text Documentation](guides/metrics_references.md#Inter-Dataset-Similarity-Metric-Based-on-PCA) |
 | `cio` | Confidence Interval Overlap | [ConfidenceIntervalOverlap](src\syntheval\metrics\utility\metric_confidence_interval_overlap.py) | nums. only, number and fraction of significant tests |
 | `corr_diff` | Correlation Matrix Difference | [MixedCorrelation](src\syntheval\metrics\utility\metric_mixed_correlation.py) | mixed correlation |
 | `mi_diff` | Mutual Information Matrix Difference | [MutualInformation](src\syntheval\metrics\utility\metric_mutual_information.py) | mixed correlation |
@@ -93,10 +96,10 @@ Utility analysis entails resemblance, quality and usability metrics testing how 
 | `p_MSE` | Propensity Mean Squared Error | [PropensityMeanSquaredError](src\syntheval\metrics\utility\metric_propensity_mse.py) | pMSE and accuracy |
 | `auroc_diff` | Prediction AUROC difference | [PredictionAUROCDifference](src\syntheval\metrics\utility\metric_auroc_difference.py) | for binary target variables only |
 | `cls_acc`| Classification Accuracy | [ClassificationAccuracy](src\syntheval\metrics\utility\metric_accuracy_difference.py) | avg. TRTR, TSTR across four classifiers, with optional holdout data and 5-fold cross-validation |
-| `fio` | Feature Importance Overlap | [FeatureImportanceOverlap](src\syntheval\metrics\utility\metric_feature_importance_overlap.py) | [Text Documentation](metrics_references.md#Feature-Importance-Overlap-(FIO)) |
+| `fio` | Feature Importance Overlap | [FeatureImportanceOverlap](src\syntheval\metrics\utility\metric_feature_importance_overlap.py) | [Text Documentation](guides/metrics_references.md#Feature-Importance-Overlap-(FIO)) |
 | `nnaa` | Nearest Neighbour Adversarial Accuracy | [NearestNeighbourAdversarialAccuracy](src\syntheval\metrics\privacy\metric_nn_adversarial_accuracy.py) | avg. NNAA across all records |
-| `q_mse` | Quantile MSE | [QuantileMSE](src\syntheval\metrics\utility\metric_quantile_mse.py) | [Text Documentation](metrics_references.md#Quantile-MSE) |
-| `mmd` | Maximum Mean Discrepancy (MMD) | [MaximumMeanDiscrepancy](src\syntheval\metrics\utility\metric_max_mean_discrepancy.py) | [Text Documentation](metrics_references.md#Maximum-Mean-Discrepancy-(MMD)) |
+| `q_mse` | Quantile MSE | [QuantileMSE](src\syntheval\metrics\utility\metric_quantile_mse.py) | [Text Documentation](guides/metrics_references.md#Quantile-MSE) |
+| `mmd` | Maximum Mean Discrepancy (MMD) | [MaximumMeanDiscrepancy](src\syntheval\metrics\utility\metric_max_mean_discrepancy.py) | [Text Documentation](guides/metrics_references.md#Maximum-Mean-Discrepancy-(MMD)) |
 
 
 ### Privacy Metrics
@@ -116,7 +119,7 @@ Fairness is an emerging property of synthetic data, we recently added support to
 
 | keyword | metric name | link to docs | description | 
 | --- | --- | --- | --- |
-| `statistical_parity` | Statistical Parity Difference | [StatisticalParity](src\syntheval\metrics\fairness\metric_statistical_parity.py) | also known as Demographic Parity | |
+| `statistical_parity` | Statistical Parity Difference | [StatisticalParity](src\syntheval\metrics\fairness\metric_statistical_parity.py) | also known as Demographic Parity |
 
 ## Creating new metrics
 SynthEval is designed with modularity in mind. Creating new, custom metrics is as easy as copying the [metrics template file](https://github.com/schneiderkamplab/syntheval/blob/main/src/syntheval/metrics/metric_template.py), and filling in the five required functions. Because SynthEval has very little hardcoding wrt. the metrics, making new metrics work locally should require no changes other than adding the metrics script in the metrics folder.

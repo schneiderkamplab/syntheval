@@ -5,6 +5,7 @@
 import copy
 
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 from sklearn.utils import resample
@@ -16,6 +17,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.svm import SVC
 
+from typing import Literal
 from syntheval.metrics.core.metric import MetricClass
 
 model_name_dict = {
@@ -42,6 +44,22 @@ def _get_model(model_name: str) -> object:
         case _:
             raise ValueError(f"SynthEval(cls_acc): Model {model_name} not currently implemented!")
 
+
+def _propagated_err(err_values: pd.Series) -> float:
+    """Propagate independent errors for a mean estimate."""
+    values = np.asarray(err_values, dtype=float)
+    if values.size == 0:
+        return np.nan
+    return float(np.sqrt(np.nansum(values ** 2)) / values.size)
+
+
+def _series_sem(values: pd.Series) -> float:
+    """Return SEM using sample std (ddof=1), mirroring pandas semantics."""
+    arr = np.asarray(values, dtype=float)
+    if arr.size < 2:
+        return np.nan
+    return float(np.nanstd(arr, ddof=1) / np.sqrt(arr.size))
+
 def class_test(real_models, fake_models, real, fake, test, F1_type):
     """Function for running a training session and getting predictions 
     on the SciPy model provided, and data.
@@ -66,7 +84,7 @@ def class_test(real_models, fake_models, real, fake, test, F1_type):
         >>> fake = [np.array([[1, 2], [3, 4]]) , np.array([0, 1])]
         >>> test = [np.array([[1, 2], [3, 4]]) , np.array([0, 1])]
 
-        >>> class_test(real_models, fake_models, real, fake, test, 'micro') # doctest: +ELLIPSIS
+        >>> class_test(real_models, fake_models, real, fake, test, 'weighted') # doctest: +ELLIPSIS
         array([[1., 1.],...])
     """
     res = []
@@ -108,7 +126,11 @@ class ClassificationAccuracy(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'utility'
 
-    def evaluate(self, cls_models = ['rf', 'adaboost', 'svm', 'logreg'], F1_type='micro', k_folds=5, full_output=False) -> dict:
+    def evaluate(self, cls_models = ['rf', 'adaboost', 'svm', 'logreg'], 
+                 F1_type: Literal['micro', 'macro', 'weighted'] = 'weighted', 
+                 k_folds: int = 5, 
+                 full_output: bool = False,
+                 ) -> dict:
 
         """ Function for evaluating the metric
 
@@ -120,6 +142,9 @@ class ClassificationAccuracy(MetricClass):
                 - 'svm' : Support Vector Machine Classifier
                 - 'logreg' : Logistic Regression Classifier
             F1_type (str): Type of F1 score to use
+                - 'micro' : Calculate metrics globally by counting the total true positives, false negatives and false positives.
+                - 'macro' : Calculate metrics for each label, and find their unweighted mean. I.e, emphasize the importance of rare labels.
+                - 'weighted' : Calculate metrics for each label, and find their average weighted by support.
             k_folds (int): Number of folds to use in cross-validation
 
         Returns:
@@ -130,163 +155,231 @@ class ClassificationAccuracy(MetricClass):
             >>> real = pd.DataFrame({'a': [1, 2, 3, 2], 'b': [4, 5, 6, 4], 'label': [1, 0, 1, 0]})
             >>> fake = pd.DataFrame({'a': [1, 2, 3, 1], 'b': [4, 5, 6, 1], 'label': [1, 0, 1, 0]})
             >>> cls_acc = ClassificationAccuracy(real, fake, cat_cols=['label'], analysis_target='label', do_preprocessing=False)
-            >>> cls_acc.evaluate(cls_models = ['rf'], k_folds=2 ) # doctest: +ELLIPSIS
-            {'rf': ...
+            >>> cls_acc.evaluate(cls_models = ['rf'], k_folds=2) # doctest: +ELLIPSIS
+            {'train results': ...
         """
-        try:
-            #BUG: these are not raised through the rich interface
-            assert self.analysis_target is not None, "SynthEval(cls_acc): Analysis target variable not set!"
-            assert self.analysis_target in self.cat_cols, "SynthEval(cls_acc): Analysis target variable not categorical!"
-            assert len(self.synt_data[self.analysis_target].unique()) >= 2, "SynthEval(cls_acc): Synthetic label column has less than 2 unique values!"
-            assert cls_models != [], "SynthEval(cls_acc): No classification models provided!"
-        except AssertionError as e:
-            raise AssertionError(e)
-        else:
-            self.results = {}
-            real_x, real_y = self.real_data.drop([self.analysis_target], axis=1), self.real_data[self.analysis_target]
-            fake_x, fake_y = self.synt_data.drop([self.analysis_target], axis=1), self.synt_data[self.analysis_target]  
-            
-            # Get models
+        if self.analysis_target is None:
+            raise AssertionError("SynthEval(cls_acc): Analysis target variable(s) not set!")
+        
+        target_vars = [
+            key for (key, value) in self.analysis_target.target_types.items() 
+            if isinstance(value, int) and value >= 2
+            ]
+
+        if target_vars == []:
+            raise AssertionError("SynthEval(cls_acc): No categorical target variables with 2 or more unique values!")
+        if cls_models == []:
+            raise AssertionError("SynthEval(cls_acc): No classification models provided!")
+
+        train_rows, test_rows = [], []
+
+        self.k_folds = k_folds
+        self.models = cls_models
+        self.full_output = full_output
+
+        for target_var in target_vars:
+            # Drop confounder variables for the current target variable (if any)
+            confounders = self.analysis_target.confounder_vars[target_var]
+            real_data = self.real_data.drop(confounders, axis=1)
+            synt_data = self.synt_data.drop(confounders, axis=1)
+
+            real_x, real_y = real_data.drop([target_var], axis=1), real_data[target_var]
+            fake_x, fake_y = synt_data.drop([target_var], axis=1), synt_data[target_var]
+
+            if self.hout_data is not None:
+                hout_data = self.hout_data.drop(confounders, axis=1)
+
+                hout_x, hout_y = hout_data.drop([target_var], axis=1), hout_data[target_var]
+
             real_models = [_get_model(model_name) for model_name in cls_models]
             fake_models = [_get_model(model_name) for model_name in cls_models]
-            self.models = cls_models
+            target_var = target_var.replace(' ', '_').lower()
 
-            # Setup Validation Run
             res = []
-            max_len = len(real_y) if len(real_y)>len(fake_y) else len(fake_y) # Get the maximum length of the two datasets for resample
-
+            max_len = max(len(real_y), len(fake_y))
             real_x_sub, real_y_sub = resample(real_x, real_y, n_samples=max_len, stratify=real_y, random_state=42)
             fake_x_sub, fake_y_sub = resample(fake_x, fake_y, n_samples=max_len, stratify=fake_y, random_state=42)
 
             kf = StratifiedKFold(n_splits=k_folds, random_state=42, shuffle=True)
+            split_iter = zip(kf.split(real_x_sub, real_y_sub), kf.split(fake_x_sub, fake_y_sub))
 
-            for (train_index_real, test_index_fake), (train_index_fake, _) in tqdm(zip(kf.split(real_x_sub, real_y_sub), kf.split(fake_x_sub, fake_y_sub)), 
-                                                                                            desc='cls_acc', total=k_folds, disable = not self.verbose):
-                
+            for (train_index_real, test_index_real), (train_index_fake, _) in tqdm(
+                split_iter, desc='cls_acc', total=k_folds, disable=not self.verbose,
+                ):
                 real_x_train, real_y_train = real_x_sub.iloc[train_index_real], real_y_sub.iloc[train_index_real]
-                real_x_test, real_y_test = real_x_sub.iloc[test_index_fake], real_y_sub.iloc[test_index_fake]
+                real_x_test, real_y_test = real_x_sub.iloc[test_index_real], real_y_sub.iloc[test_index_real]
                 fake_x_train, fake_y_train = fake_x_sub.iloc[train_index_fake], fake_y_sub.iloc[train_index_fake]
 
-                res.append(class_test(real_models,fake_models,[real_x_train, real_y_train],
-                                                            [fake_x_train, fake_y_train],
-                                                            [real_x_test, real_y_test], F1_type))
-                
-            self.results = {}
-            class_avg = np.mean(res,axis=0)
-            class_err = np.std(res,axis=0,ddof=1)/np.sqrt(k_folds)
-            class_diff = class_avg[1,:]-class_avg[0,:]
-            class_diff_err = np.sqrt(class_err[0,:]**2+class_err[1,:]**2)
+                res.append(
+                    class_test(
+                        real_models,
+                        fake_models,
+                        [real_x_train, real_y_train],
+                        [fake_x_train, fake_y_train],
+                        [real_x_test, real_y_test],
+                        F1_type,
+                    )
+                )
 
-            self.full_output = full_output
-            self.k_folds = k_folds      # Make these items accessible for the user
-            self.class_avg = class_avg
+            class_avg = np.mean(res, axis=0)
+            class_err = np.std(res, axis=0, ddof=1) / np.sqrt(k_folds) if k_folds > 1 else np.zeros_like(class_avg)
+            class_diff = class_avg[1, :] - class_avg[0, :]
+            class_diff_err = np.sqrt(class_err[0, :] ** 2 + class_err[1, :] ** 2)
 
             for i, model in enumerate(cls_models):
-                self.results[model] = {'rr_val_acc': class_avg[0,i], 'rr_val_err': class_err[0,i], 'fr_val_acc': class_avg[1,i], 'fr_val_err': class_err[1,i]}
+                train_rows.append({
+                    'target_var': target_var,
+                    'model': model,
+                    'TRTR_acc': class_avg[0, i],
+                    'TRTR_err': class_err[0, i],
+                    'TSTR_acc': class_avg[1, i],
+                    'TSTR_err': class_err[1, i],
+                    'acc_diff': class_diff[i],
+                    'acc_diff_err': class_diff_err[i],
+                })
 
-            self.results['avg diff'] = np.mean(class_diff)
-            self.results['avg diff err'] = 1/len(cls_models)*np.sqrt(sum(class_diff_err**2))
-            
-            if (self.hout_data is not None):
-                holdout_res = class_test(real_models, fake_models, [real_x, real_y],
-                                                                    [fake_x, fake_y],
-                                                                    [self.hout_data.drop([self.analysis_target],axis=1), 
-                                                                    self.hout_data[self.analysis_target]], F1_type)
-
+            if self.hout_data is not None:
+                holdout_res = class_test(
+                    real_models,
+                    fake_models,
+                    [real_x, real_y],
+                    [fake_x, fake_y],
+                    [hout_x, hout_y],
+                    F1_type,
+                )
                 for i, model in enumerate(cls_models):
-                    self.results[model]['rr_test_acc'] = holdout_res[0,i]
-                    self.results[model]['fr_test_acc'] = holdout_res[1,i]
-                
-                holdout_diff = holdout_res[1,:]-holdout_res[0,:]
+                    test_rows.append({
+                        'target_var': target_var,
+                        'model': model,
+                        'TRTR_acc': holdout_res[0, i],
+                        'TSTR_acc': holdout_res[1, i],
+                        'acc_diff': holdout_res[1, i] - holdout_res[0, i],
+                        'acc_diff_err': np.nan,
+                    })
 
-                self.holdout_res = holdout_res
-                
-                self.results['avg diff hout'] = np.mean(holdout_diff)
-                self.results['avg diff err hout'] = np.std(holdout_diff,ddof=1)/len(cls_models)
+        train_cols = ['target_var', 'model', 'TRTR_acc', 'TRTR_err', 'TSTR_acc', 'TSTR_err', 'acc_diff', 'acc_diff_err']
+        test_cols = ['target_var', 'model', 'TRTR_acc', 'TSTR_acc', 'acc_diff', 'acc_diff_err']
+        results_df_train = pd.DataFrame.from_records(train_rows, columns=train_cols)
+        results_df_test = pd.DataFrame.from_records(test_rows, columns=test_cols)
 
-            return self.results
+        self.results['train results'] = results_df_train
+        self.results['test results'] = results_df_test
+
+        self.results['avg diff'] = float(results_df_train['acc_diff'].mean())
+        self.results['avg diff err'] = _propagated_err(results_df_train['acc_diff_err'])
+
+        if len(results_df_test) > 0:
+            self.results['avg diff hout'] = float(results_df_test['acc_diff'].mean())
+            self.results['avg diff err hout'] = _series_sem(results_df_test['acc_diff'])
+        return self.results
     
     def format_output(self) -> list:
         """ Return a list of tuples for printing results to the rich console."""
-        averages_str = "Averages"
-        if self.results != {}:
+        if self.results !={}:
+            multiple_targets_flag = len(self.results['train results']['target_var'].unique()) > 1
             rows = [('prediction', 'Accuracy Diff. (%d-fold cross val.)' % (self.k_folds), "", "")]
-            for model in self.models:
-                mod_dict = self.results[model]
-                rows.append((
-                    "prediction",
-                    f"{model_name_dict[model]:<22} | RR {mod_dict['rr_val_acc']:.2f} | FR {mod_dict['fr_val_acc']:.2f}",
-                        mod_dict['fr_val_acc'] - mod_dict['rr_val_acc'],
-                        np.sqrt(mod_dict['rr_val_err']**2 + mod_dict['fr_val_err']**2)
-                ))
-            if (len(self.models) > 1):
-                rows.append((
-                    "prediction",
-                    f"{averages_str:<22} | RR {np.mean(self.class_avg[0,:]):.2f} | FR {np.mean(self.class_avg[1,:]):.2f}",
-                    self.results['avg diff'],
-                    self.results['avg diff err']
-                ))
-            if (self.hout_data is not None):
-                rows.append(('prediction', 'Holdout Data Results', "", ""))
-                for i, model in enumerate(self.models):
-                    mod_dict = self.results[model]
+            train_results = self.results['train results']
+            if not multiple_targets_flag:
+                for model in self.models:
+                    model_rows = train_results[train_results['model'] == model]
+                    if len(model_rows) == 0:
+                        continue
+
+                    trtr_avg = float(model_rows['TRTR_acc'].mean())
+                    tstr_avg = float(model_rows['TSTR_acc'].mean())
+                    diff_avg = float(model_rows['acc_diff'].mean())
+                    diff_err = _propagated_err(model_rows['acc_diff_err'])
+
                     rows.append((
-                        "prediction",
-                        f"{model_name_dict[model]:<22} | RR {mod_dict['rr_test_acc']:.2f} | FR {mod_dict['fr_test_acc']:.2f}",
-                            mod_dict['fr_test_acc'] - mod_dict['rr_test_acc'],
-                            None,
+                        'prediction',
+                        f"{model_name_dict.get(model, model):<22} | RR {trtr_avg:.2f} | FR {tstr_avg:.2f}",
+                        diff_avg,
+                        diff_err,
                     ))
-                if (len(self.models) > 1):
+
+                if len(train_results) > 1:
                     rows.append((
-                        "prediction",
-                        f"{averages_str:<22} | RR {np.mean(self.holdout_res[0,:]):.2f} | FR {np.mean(self.holdout_res[1,:]):.2f}",
+                        'prediction',
+                        f"{'Averages':<22} | RR {train_results['TRTR_acc'].mean():.2f} | FR {train_results['TSTR_acc'].mean():.2f}",
+                        self.results['avg diff'],
+                        self.results['avg diff err'],
+                    ))
+                
+            else:
+                target_averages = train_results.groupby('target_var').agg({
+                    'TRTR_acc': 'mean',
+                    'TSTR_acc': 'mean',
+                    'acc_diff': 'mean'
+                }).reset_index()
+
+                for _, target_row in target_averages.iterrows():
+                    target_rows = train_results[train_results['target_var'] == target_row['target_var']]
+                    target_err = _propagated_err(target_rows['acc_diff_err'])
+
+                    rows.append((
+                        'prediction',
+                        f"Avg. for {target_row['target_var']:<13} | RR {target_row['TRTR_acc']:.2f} | FR {target_row['TSTR_acc']:.2f}",
+                        float(target_row['acc_diff']),
+                        target_err,
+                    ))
+
+                rows.append((
+                    'prediction',
+                    f"{'Global averages':<22} | RR {train_results['TRTR_acc'].mean():.2f} | FR {train_results['TSTR_acc'].mean():.2f}",
+                    self.results['avg diff'],
+                    self.results['avg diff err'],
+                ))
+
+            if len(self.results['test results']) > 0:
+                test_results = self.results['test results']
+                rows.append(('prediction', 'Holdout Data Results', "", ""))
+
+                if not multiple_targets_flag:
+                    for model in self.models:
+                        model_rows = test_results[test_results['model'] == model]
+                        if len(model_rows) == 0:
+                            continue
+
+                        trtr_avg = float(model_rows['TRTR_acc'].mean())
+                        tstr_avg = float(model_rows['TSTR_acc'].mean())
+                        diff_avg = float(model_rows['acc_diff'].mean())
+
+                        rows.append((
+                            'prediction',
+                            f"{model_name_dict.get(model, model):<22} | RR {trtr_avg:.2f} | FR {tstr_avg:.2f}",
+                            diff_avg,
+                            None,
+                        ))
+                    if len(test_results) > 1:
+                        rows.append((
+                            'prediction',
+                            f"{'Averages':<22} | RR {test_results['TRTR_acc'].mean():.2f} | FR {test_results['TSTR_acc'].mean():.2f}",
+                            self.results['avg diff hout'],
+                            self.results['avg diff err hout']
+                        ))
+                else:
+                    target_test_averages = test_results.groupby('target_var').agg(
+                        TRTR_acc=('TRTR_acc', 'mean'),
+                        TSTR_acc=('TSTR_acc', 'mean'),
+                        acc_diff=('acc_diff', 'mean'),
+                        acc_diff_sem=('acc_diff', 'sem'),
+                    ).reset_index()
+
+                    for _, target_row in target_test_averages.iterrows():
+                        rows.append((
+                            'prediction',
+                            f"Avg. for {target_row['target_var']:<13} | RR {target_row['TRTR_acc']:.2f} | FR {target_row['TSTR_acc']:.2f}",
+                            float(target_row['acc_diff']),
+                            float(target_row['acc_diff_sem'])
+                        ))
+
+                    rows.append((
+                        'prediction',
+                        f"{'Global averages':<22} | RR {test_results['TRTR_acc'].mean():.2f} | FR {test_results['TSTR_acc'].mean():.2f}",
                         self.results['avg diff hout'],
                         self.results['avg diff err hout']
                     ))
             return rows
-
-#     def format_output(self) -> str:
-#         """ Return string for formatting the output, when the
-#         metric is part of SynthEval. 
-# |                                          :                    |"""
-#         if self.results != {}:
-#             avgs = self.class_avg
-#             string = """\
-# +---------------------------------------------------------------+
-
-# Classification accuracy test     
-# avg. of %d-fold cross val.:
-# classifier model             acc_rr  acc_fr    diff   error
-# +---------------------------------------------------------------+
-# """ % self.k_folds
-#             for model in self.models:
-#                 mod_dict = self.results[model]
-#                 string += f"""\
-# | {model_name_dict[model]:<23} :   {mod_dict['rr_val_acc']:.4f}  {mod_dict['fr_val_acc']:.4f}  {mod_dict['fr_val_acc']-mod_dict['rr_val_acc']:>7.4f}  {np.sqrt(mod_dict['rr_val_err']**2+mod_dict['fr_val_err']**2):.4f}   |
-# """
-#             string += f"""\
-# +---------------------------------------------------------------+
-# | Average                 :   {np.mean(avgs[0,:]):.4f}  {np.mean(avgs[1,:]):.4f}  {self.results['avg diff']:>7.4f}  {self.results['avg diff err']:.4f}   |
-# """
-#             if (self.hout_data is not None):
-#                 hdiff = self.holdout_res[1,:]-self.holdout_res[0,:]
-#                 string += """\
-# +---------------------------------------------------------------+
-
-# hold out data results:
-# +---------------------------------------------------------------+
-# """
-#                 for i, model in enumerate(self.models):
-#                     mod_dict = self.results[model]
-#                     string += f"""\
-# | {model_name_dict[model]:<23} :   {mod_dict['rr_test_acc']:.4f}  {mod_dict['fr_test_acc']:.4f}  {hdiff[i]:>7.4f}           |
-# """
-#                 string += f"""\
-# +---------------------------------------------------------------+
-# | Average                 :   {np.mean(self.holdout_res[0,:]):.4f}  {np.mean(self.holdout_res[1,:]):.4f}  {self.results['avg diff hout']:>7.4f}  {self.results['avg diff err hout']:.4f}   |
-# """
-#             return string
-#         else: pass
 
     def normalize_output(self) -> list:
         """ This function is for making a dictionary of the most quintessential
@@ -298,48 +391,86 @@ class ClassificationAccuracy(MetricClass):
             name2  0.0  0.0    0.0    0.0    0.0     0.0
         """
         if self.results !={}:
+            train_results = self.results['train results']
+            test_results = self.results['test results']
+            multiple_targets_flag = len(train_results['target_var'].unique()) > 1
+
+            avg_diff = self.results.get('avg diff', float(train_results['acc_diff'].mean()))
+            avg_diff_err = self.results.get('avg diff err', _propagated_err(train_results['acc_diff_err']))
+
             output = [{'metric': 'avg_F1_diff', 'dim': 'u',
-                       'val': self.results['avg diff'], 
-                       'err': self.results['avg diff err'], 
-                       'n_val': 1-abs(self.results['avg diff']), 
-                       'n_err': self.results['avg diff err'], 
+                       'val': avg_diff,
+                       'err': avg_diff_err,
+                       'n_val': 1-abs(avg_diff),
+                       'n_err': avg_diff_err,
                        }]
+
+            target_groups_train = [
+                (target_var, train_results[train_results['target_var'] == target_var])
+                for target_var in train_results['target_var'].unique()
+            ] if multiple_targets_flag else [(None, train_results)]
+
             if self.full_output:
-                for model in self.models:
-                    mod_dict = self.results[model]
-                    output.extend([{'metric': f'{model}_syn_F1', 'dim': 'u',
-                        'val': mod_dict['fr_val_acc'], 
-                        'err': mod_dict['fr_val_err'], 
-                        'n_val': mod_dict['fr_val_acc'], 
-                        'n_err': mod_dict['fr_val_err'], 
-                        }])
-                    if len(self.models) > 1:
-                        output.extend([
-                            {'metric': f'{model}_F1_diff', 'dim': 'u',
-                                'val': mod_dict['fr_val_acc']-mod_dict['rr_val_acc'],
-                                'err': np.sqrt(mod_dict['rr_val_err']**2+mod_dict['fr_val_err']**2),
-                                'n_val': 1-abs(mod_dict['fr_val_acc']-mod_dict['rr_val_acc']),
-                                'n_err': np.sqrt(mod_dict['rr_val_err']**2+mod_dict['fr_val_err']**2),
-                            }])
-            if (self.hout_data is not None):
-                output.extend([{'metric': 'avg_F1_diff_hout', 'dim': 'u',
-                       'val': self.results['avg diff hout'], 
-                       'err': self.results['avg diff err hout'], 
-                       'n_val': 1-abs(self.results['avg diff hout']), 
-                       'n_err': self.results['avg diff err hout'], 
-                       }])
-                if self.full_output:
+                for target_var, target_rows in target_groups_train:
                     for model in self.models:
-                        mod_dict = self.results[model]
-                        output.extend([{'metric': f'{model}_syn_F1_hout', 'dim': 'u',
-                            'val': mod_dict['fr_test_acc'], 
-                            'n_val': mod_dict['fr_test_acc'], 
+                        model_rows = target_rows[target_rows['model'] == model]
+                        if len(model_rows) == 0:
+                            continue
+
+                        metric_prefix = f'{target_var}_{model}' if target_var is not None else model
+                        syn_f1 = float(model_rows['TSTR_acc'].mean())
+                        syn_f1_err = _propagated_err(model_rows['TSTR_err'])
+                        model_diff = float(model_rows['acc_diff'].mean())
+                        model_diff_err = _propagated_err(model_rows['acc_diff_err'])
+
+                        output.extend([{'metric': f'{metric_prefix}_syn_F1', 'dim': 'u',
+                            'val': syn_f1,
+                            'err': syn_f1_err,
+                            'n_val': syn_f1,
+                            'n_err': syn_f1_err,
                             }])
-                        if len(self.models) > 1:
+
+                        output.extend([
+                            {'metric': f'{metric_prefix}_F1_diff', 'dim': 'u',
+                                'val': model_diff,
+                                'err': model_diff_err,
+                                'n_val': 1-abs(model_diff),
+                                'n_err': model_diff_err,
+                            }])
+            if len(test_results) > 0:
+                avg_diff_hout = self.results.get('avg diff hout', float(test_results['acc_diff'].mean()))
+                output.extend([{'metric': 'avg_F1_diff_hout', 'dim': 'u',
+                       'val': avg_diff_hout,
+                       'err': self.results.get('avg diff err hout', None),
+                       'n_val': 1-abs(avg_diff_hout),
+                       'n_err': self.results.get('avg diff err hout', None),
+                       }])
+
+                target_groups_test = [
+                    (target_var, test_results[test_results['target_var'] == target_var])
+                    for target_var in test_results['target_var'].unique()
+                ] if multiple_targets_flag else [(None, test_results)]
+
+                if self.full_output:
+                    for target_var, target_rows in target_groups_test:
+                        for model in self.models:
+                            model_rows = target_rows[target_rows['model'] == model]
+                            if len(model_rows) == 0:
+                                continue
+
+                            metric_prefix = f'{target_var}_{model}' if target_var is not None else model
+                            syn_f1_hout = float(model_rows['TSTR_acc'].mean())
+                            model_diff_hout = float(model_rows['acc_diff'].mean())
+
+                            output.extend([{'metric': f'{metric_prefix}_syn_F1_hout', 'dim': 'u',
+                                'val': syn_f1_hout,
+                                'n_val': syn_f1_hout,
+                                }])
+
                             output.extend([
-                                {'metric': f'{model}_F1_diff_hout', 'dim': 'u',
-                                    'val': mod_dict['fr_test_acc']-mod_dict['rr_test_acc'],
-                                    'n_val': 1-abs(mod_dict['fr_test_acc']-mod_dict['rr_test_acc']),
+                                {'metric': f'{metric_prefix}_F1_diff_hout', 'dim': 'u',
+                                    'val': model_diff_hout,
+                                    'n_val': 1-abs(model_diff_hout),
                                 }])
             return output
         else: pass

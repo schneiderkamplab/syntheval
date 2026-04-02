@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 
 from ...utils.variable_detection import get_cat_variables
 from ...utils.preprocessing import consistent_label_encoding
+from ...utils.configuration import AnalysisConfig, _analysis_target_parser
 
 class MetricClass(ABC):
     """
@@ -21,7 +22,7 @@ class MetricClass(ABC):
         cat_cols (List[str]) : List of strings
         num_cols (List[str]) : List of strings
         nn_dist (str) : keyword literal for NN module (not used by all metrics)
-        analysis_target (str) : target variable name (not used by all metrics)
+        analysis_target (str|AnalysisConfig) : target variable name (not used by all metrics)
         do_preprocessing (bool|object) : whether to preprocess the data or module to use for preprocessing
         verbose (bool) : whether to enable prints
         plot_figures (bool) : whether to plot figures
@@ -35,10 +36,11 @@ class MetricClass(ABC):
             cat_cols: List[str] = None,
             num_cols: List[str] = None,
             nn_dist: str = None,
-            analysis_target : str = None,
+            analysis_target : AnalysisConfig | str = None,
             do_preprocessing: bool | object = True,
             verbose: bool = True,
-            plot_figures: bool = True
+            plot_figures: bool = True,
+            **kwargs
     ) -> None:
         
         if isinstance(do_preprocessing, (int, bool)) and do_preprocessing == True:
@@ -54,6 +56,11 @@ class MetricClass(ABC):
             self.encoder = CLE
         elif not isinstance(do_preprocessing, (int, bool)):
             self.encoder = do_preprocessing
+
+        # Parse control kwargs before building metric evaluation config.
+        analysis_target_var = kwargs.pop('analysis_target_var', None)
+        if (analysis_target is not None) or (analysis_target_var is not None):
+            analysis_target = _analysis_target_parser(real_data, analysis_target, analysis_target_var)
 
         self.real_data = real_data
         self.synt_data = synt_data

@@ -190,7 +190,7 @@ def plot_roc_curves(real_roc_mean, real_roc_conf, fake_roc, fake_roc_conf, title
     plt.ylim([0.0, 1.0])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
-    plt.title(f'ROC Curves for {title} models')
+    plt.title(f'ROC Curves for {title}')
     plt.legend(loc='lower right')
     plt.savefig('SE_' + file_name +'_' +str(int(time.time()))+ '.png')
     
@@ -198,10 +198,7 @@ def plot_roc_curves(real_roc_mean, real_roc_conf, fake_roc, fake_roc_conf, title
 
 def plot_feature_importance_comparison(feature_names, importances_real, importances_fake, title, file_name):
     """Plotting comparison of feature importances"""
-    import pandas as pd
     fig, ax = plt.subplots(figsize=(6, 5))
-
-    
     sns.barplot(x=importances_real, y=feature_names, color='blue', alpha=0.5, label='real data', ax=ax)
     sns.barplot(x=importances_fake, y=feature_names, color='red', alpha=0.5, label='synthetic data',ax=ax)
     plt.title(f'Comparison for {title}')

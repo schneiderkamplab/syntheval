@@ -63,14 +63,17 @@ class PrincipalComponentAnalysis(MetricClass):
         """
 
         try:
-            assert ((self.analysis_target is not None and self.analysis_target in self.cat_cols) and (use_cats or len(self.num_cols)>=2))
-        except AssertionError:
-            if use_cats or len(self.num_cols)<2:
-                raise ValueError("Too few numerical attributes provided for principal component analysis metric.")
-            elif self.analysis_target is None: 
-                raise ValueError("No analysis target provided for principal component analysis metric.")
-            else:
-                raise ValueError("Provided class not in list of categoricals for principal component analysis metric.")
+            assert self.analysis_target is not None, "SynthEval(pca): metric did not run, no analysis target variable(s) supplied!"
+
+            target_vars = [
+                key for (key, value) in self.analysis_target.target_types.items() 
+                if isinstance(value, int) and value >= 2
+                ]
+            
+            assert target_vars != [], "SynthEval(pca): No categorical target variables with 2 or more unique values!"
+            assert use_cats or len(self.num_cols) >= 2, "SynthEval(pca): Too few attributes provided for principal component analysis metric."
+        except AssertionError as e:
+            raise AssertionError(e)
         else:
             if use_cats:
                 select_cols = self.num_cols + self.cat_cols
@@ -116,8 +119,8 @@ class PrincipalComponentAnalysis(MetricClass):
                 f_proj = pd.DataFrame(f_proj,columns=labels)
                 s_proj = pd.DataFrame(s_proj,columns=labels)
 
-                r_proj['target'] = self.real_data[self.analysis_target]
-                f_proj['target'] = self.synt_data[self.analysis_target]
+                r_proj['target'] = self.real_data[target_vars[0]]
+                f_proj['target'] = self.synt_data[target_vars[0]]
                 plot_principal_components(r_proj,f_proj)
                 plot_own_principal_component_pairplot(stack(r_proj,s_proj))
 

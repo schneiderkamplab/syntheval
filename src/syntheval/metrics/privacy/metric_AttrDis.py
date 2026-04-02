@@ -135,113 +135,128 @@ class AttributeDisclosure(MetricClass):
 
         return accuracy, precision, recall, f1
 
-    def evaluate(self, numerical_dist_thresh: float = 1 / 30, sensitive: list = None) -> float | dict:
+    def evaluate(self, numerical_dist_thresh: float = 1 / 30, all_sensitive_fallback: bool = True) -> float | dict:
         """Evaluate the attribute disclosure risk of the synthetic data
 
         Args:
             numerical_dist_thresh (float): Threshold for numerical attributes
-            sensitive (list): List of sensitive attributes to evaluate
+            all_sensitive_fallback (bool): If True and no sensitive variables are specified, 
+                all variables will be treated as sensitive. If False and no sensitive variables are specified, an error will be raised.
         
         Returns:
             dict: Dictionary with attribute disclosure risk and standard error
         
         Example:
             >>> import pandas as pd
-            >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6], 'c': [7, 8, 9]})
-            >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6], 'c': [7, 8, 9]})
-            >>> A = AttributeDisclosure(real, fake, cat_cols=[], num_cols=[], do_preprocessing=False)
-            >>> A.evaluate(sensitive=['b']) # doctest: +ELLIPSIS
+            >>> from syntheval import AnalysisConfig
+            >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6], 'c': [7, 8, 9], 'label': [0, 1, 0]})
+            >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6], 'c': [7, 8, 9], 'label': [0, 1, 0]})
+            >>> config = AnalysisConfig(dataset=real, target_vars='label', sensitive_vars=['c'])
+            >>> A = AttributeDisclosure(real, fake, cat_cols=[], num_cols=[], analysis_target=config, do_preprocessing=False)
+            >>> A.evaluate() # doctest: +ELLIPSIS
             {'Attr Dis accuracy': 0.0, ...}
         """
-        pre_results = {
-            "accuracy": [],
-            "precision": [],
-            "recall": [],
-            "f1": [],
-        }
-
-        # Scale the numeric attributes
-        if self.hout_data is not None:
-            combined_data = pd.concat(
-                [self.real_data, self.synt_data, self.hout_data], ignore_index=True
-            )
+        try:
+            assert self.analysis_target is not None, "SynthEval(AttrDiscl): metric did not run, no analysis target variable(s) supplied!"
+            
+            if self.analysis_target.sensitive_vars != [None]:
+                sensitive_columns = self.analysis_target.sensitive_vars
+            elif all_sensitive_fallback:
+                sensitive_columns = self.real_data.columns.tolist()
+            else: 
+                raise AssertionError("SynthEval(AttrDiscl): metric did not run, no sensitive variables specified!")
+            
+        except AssertionError as e:
+            raise AssertionError(e)
         else:
-            combined_data = pd.concat(
-                [self.real_data, self.synt_data], ignore_index=True
-            )
-        scaled = self._minmaxscale(combined_data.copy(deep=True), self.num_cols)
 
-        real_scaled = scaled.iloc[: len(self.real_data)]
-        syn_scaled = scaled.iloc[
-            len(self.real_data) : len(self.real_data) + len(self.synt_data)
-        ]
-        hout_scaled = (
-            scaled.iloc[len(self.real_data) + len(self.synt_data) :]
-            if self.hout_data is not None
-            else None
-        )
+            pre_results = {
+                "accuracy": [],
+                "precision": [],
+                "recall": [],
+                "f1": [],
+            }
 
-        # Compute attribute disclosure for each attribute with maximum adversarial knowledge
-        sensitive_columns = sensitive if sensitive is not None else self.real_data.columns
-        for column in sensitive_columns:
-            if column in self.cat_cols:
-                accuracy, precision, recall, f1 = self._predict_cat_target(
-                    real=real_scaled, syn=syn_scaled, hout=hout_scaled, target=column
+            # Scale the numeric attributes
+            if self.hout_data is not None:
+                combined_data = pd.concat(
+                    [self.real_data, self.synt_data, self.hout_data], ignore_index=True
                 )
-
             else:
-                accuracy, precision, recall, f1 = self._predict_num_target(
-                    real=real_scaled,
-                    syn=syn_scaled,
-                    hout=hout_scaled,
-                    target=column,
-                    threshold=numerical_dist_thresh,
+                combined_data = pd.concat(
+                    [self.real_data, self.synt_data], ignore_index=True
+                )
+            scaled = self._minmaxscale(combined_data.copy(deep=True), self.num_cols)
+
+            real_scaled = scaled.iloc[: len(self.real_data)]
+            syn_scaled = scaled.iloc[
+                len(self.real_data) : len(self.real_data) + len(self.synt_data)
+            ]
+            hout_scaled = (
+                scaled.iloc[len(self.real_data) + len(self.synt_data) :]
+                if self.hout_data is not None
+                else None
+            )
+
+            # Compute attribute disclosure for each attribute with maximum adversarial knowledge
+            for column in sensitive_columns:
+                if column in self.cat_cols:
+                    accuracy, precision, recall, f1 = self._predict_cat_target(
+                        real=real_scaled, syn=syn_scaled, hout=hout_scaled, target=column
+                    )
+
+                else:
+                    accuracy, precision, recall, f1 = self._predict_num_target(
+                        real=real_scaled,
+                        syn=syn_scaled,
+                        hout=hout_scaled,
+                        target=column,
+                        threshold=numerical_dist_thresh,
+                    )
+
+                pre_results["accuracy"].append(accuracy)
+                pre_results["precision"].append(precision)
+                pre_results["recall"].append(recall)
+                pre_results["f1"].append(f1)
+
+            # Compute mean accuracy, precision, recall, and F1-score with accompanying standard errors
+            if len(sensitive_columns) == 1:
+                accuracy = pre_results["accuracy"][0]
+                accuracy_se = np.nan
+                precision = pre_results["precision"][0]
+                precision_se = np.nan
+                recall = pre_results["recall"][0]
+                recall_se = np.nan
+                f1 = pre_results["f1"][0]
+                f1_se = np.nan
+            else:
+                accuracy = np.mean(pre_results["accuracy"])
+                accuracy_se = np.std(pre_results["accuracy"], ddof=1) / np.sqrt(
+                    len(pre_results["accuracy"])
+                )
+                precision = np.mean(pre_results["precision"])
+                precision_se = np.std(pre_results["precision"], ddof=1) / np.sqrt(
+                    len(pre_results["precision"])
                 )
 
-            pre_results["accuracy"].append(accuracy)
-            pre_results["precision"].append(precision)
-            pre_results["recall"].append(recall)
-            pre_results["f1"].append(f1)
+                recall = np.mean(pre_results["recall"])
+                recall_se = np.std(pre_results["recall"], ddof=1) / np.sqrt(
+                    len(pre_results["recall"])
+                )
 
-        # Compute mean accuracy, precision, recall, and F1-score with accompanying standard errors
-        if len(sensitive_columns) == 1:
-            accuracy = pre_results["accuracy"][0]
-            accuracy_se = np.nan
-            precision = pre_results["precision"][0]
-            precision_se = np.nan
-            recall = pre_results["recall"][0]
-            recall_se = np.nan
-            f1 = pre_results["f1"][0]
-            f1_se = np.nan
-        else:
-            accuracy = np.mean(pre_results["accuracy"])
-            accuracy_se = np.std(pre_results["accuracy"], ddof=1) / np.sqrt(
-                len(pre_results["accuracy"])
-            )
-            precision = np.mean(pre_results["precision"])
-            precision_se = np.std(pre_results["precision"], ddof=1) / np.sqrt(
-                len(pre_results["precision"])
-            )
+                f1 = np.mean(pre_results["f1"])
+                f1_se = np.std(pre_results["f1"], ddof=1) / np.sqrt(len(pre_results["f1"]))
 
-            recall = np.mean(pre_results["recall"])
-            recall_se = np.std(pre_results["recall"], ddof=1) / np.sqrt(
-                len(pre_results["recall"])
-            )
-
-            f1 = np.mean(pre_results["f1"])
-            f1_se = np.std(pre_results["f1"], ddof=1) / np.sqrt(len(pre_results["f1"]))
-
-        self.results = {
-            "Attr Dis accuracy": float(accuracy),
-            "Attr Dis accuracy se": float(accuracy_se),
-            "Attr Dis precision": float(precision),
-            "Attr Dis precision se": float(precision_se),
-            "Attr Dis recall": float(recall),
-            "Attr Dis recall se": float(recall_se),
-            "Attr Dis macro F1": float(f1),
-            "Attr Dis macro F1 se": float(f1_se),
-        }
-
+            self.results = {
+                "Attr Dis accuracy": float(accuracy),
+                "Attr Dis accuracy se": float(accuracy_se),
+                "Attr Dis precision": float(precision),
+                "Attr Dis precision se": float(precision_se),
+                "Attr Dis recall": float(recall),
+                "Attr Dis recall se": float(recall_se),
+                "Attr Dis macro F1": float(f1),
+                "Attr Dis macro F1 se": float(f1_se),
+            }
         return self.results
 
     def format_output(self) -> list:
@@ -250,13 +265,15 @@ class AttributeDisclosure(MetricClass):
             row = [("privacy", 
                     "Attr. disclosure risk (acc. with holdout)", 
                     self.results["Attr Dis accuracy"],
-                    self.results["Attr Dis accuracy se"])]
+                    self.results["Attr Dis accuracy se"] if self.results["Attr Dis accuracy se"] is not None else None
+                    )]
             return row
         else:
             row = [("privacy", 
                     "Attr. disclosure risk (accuracy)", 
                     self.results["Attr Dis accuracy"],
-                    self.results["Attr Dis accuracy se"])]
+                    self.results["Attr Dis accuracy se"] if self.results["Attr Dis accuracy se"] is not None else None
+                    )]
             return row
 
     def normalize_output(self) -> list:
@@ -274,9 +291,9 @@ class AttributeDisclosure(MetricClass):
                     "metric": "att_discl_risk",
                     "dim": "p",
                     "val": self.results["Attr Dis accuracy"],
-                    "err": self.results["Attr Dis accuracy se"],
+                    "err": self.results["Attr Dis accuracy se"] if self.results["Attr Dis accuracy se"] is not None else None,
                     "n_val": 1 - self.results["Attr Dis accuracy"],
-                    "n_err": self.results["Attr Dis accuracy se"],
+                    "n_err": self.results["Attr Dis accuracy se"] if self.results["Attr Dis accuracy se"] is not None else None,
                 }
             ]
         else:

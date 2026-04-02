@@ -6,6 +6,7 @@ import os
 import json
 import glob
 import time
+import threading
 
 import asyncio
 import traceback
@@ -20,6 +21,7 @@ from .metrics import load_metrics
 from .utils.rich_console import RichConsole, in_notebook
 from .utils.ascii_console import AsciiConsole
 from .utils.preprocessing import consistent_label_encoding
+from .utils.configuration import AnalysisConfig, _analysis_target_parser
 from .utils.postprocessing import extremes_ranking, linear_ranking, quantile_ranking, summation_ranking
 from .utils.variable_detection import get_cat_variables
 
@@ -41,6 +43,30 @@ def _metric_work(method, evaluation_config, worker_args):
 
 async def _run_metric_with_timeout(method, evaluation_config, worker_args, timeout):
     return await asyncio.wait_for(asyncio.to_thread(_metric_work, method, evaluation_config, worker_args), timeout=timeout)
+
+def _run_coroutine_sync(coro):
+    """Run a coroutine from sync code, including notebook environments with a running loop."""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+
+    result_holder = {}
+    error_holder = {}
+
+    def _thread_target():
+        try:
+            result_holder['value'] = asyncio.run(coro)
+        except Exception as exc:
+            error_holder['error'] = exc
+
+    worker = threading.Thread(target=_thread_target, daemon=True)
+    worker.start()
+    worker.join()
+
+    if 'error' in error_holder:
+        raise error_holder['error']
+    return result_holder['value']
 
 def _add_key_results(key_results, key_result):
     if key_result is None:
@@ -142,7 +168,7 @@ class SynthEval():
         print(loaded_metrics)
         pass
 
-    def evaluate(self, synthetic_dataframe: DataFrame, analysis_target_var: str = None, presets_file: str = None, **kwargs):
+    def evaluate(self, synthetic_dataframe: DataFrame, analysis_target: AnalysisConfig | str = None, presets_file: str = None, **kwargs):
         """Method for generating the SynthEval evaluation report on a synthetic dataset. Includes the metrics specified in the 
         presets file or through the keyword arguments. Returns a dataframe with the primary results, and prints to console if 
         verbose. The raw output can be accessed as a charateristic of the SynthEval object after running this method 
@@ -150,10 +176,13 @@ class SynthEval():
         
         Args.:
             synthetic_dataframe     : synthetic dataset, in dataframe format. 
-            analysis_target_var     : string column name of categorical variable to check.
+            analysis_target         : string column name of categorical variable to check or an instance of AnalysisConfig.
             presets_file            : {default=None, 'full_eval', 'fast_eval', 'privacy'} or json file path.
             **kwargs                : keyword arguments for metrics e.g. ks_test={}, eps_risk={}, ...
 
+        Deprecated:
+            analysis_target_var     : deprecated alias for analysis_target. Will be removed in a future release.
+        
         Returns:
             key_results : dataframe with the primary result(s) from each of the included metrics.
 
@@ -161,10 +190,17 @@ class SynthEval():
             >>> import pandas as pd
             >>> real_data = pd.read_csv('guides/example/penguins_train.csv')
             >>> synthetic_data = pd.read_csv('guides/example/penguins_BN_syn.csv')
-            >>> SE = SynthEval(real_data, verbose = False, console='off', enable_plots=False)
-            >>> res = SE.evaluate(synthetic_data, analysis_target_var='species', ks_test={}, eps_risk={})
+            >>> SE = SynthEval(real_data, verbose = False, console = 'off', enable_plots = False)
+            >>> res = SE.evaluate(synthetic_data, analysis_target = 'species', ks_test={}, eps_risk={})
         """
         self._update_syn_data(synthetic_dataframe)
+
+        # Parse control kwargs before building metric evaluation config.
+        analysis_target_var = kwargs.pop('analysis_target_var', None)
+        if (analysis_target is not None) or (analysis_target_var is not None):
+            analysis_target = _analysis_target_parser(self.real, analysis_target, analysis_target_var)
+
+        metric_kwargs = kwargs
         
         loaded_preset = {}
         if presets_file is not None:
@@ -178,7 +214,7 @@ class SynthEval():
             else:
                 raise Exception("Error: unrecognised preset keyword or file format!")
         
-        evaluation_config = {**loaded_preset, **kwargs}
+        evaluation_config = {**loaded_preset, **metric_kwargs}
 
         CLE = consistent_label_encoding(self.real, self.synt, self.categorical_columns, self.numerical_columns, self.hold_out)
         real_data = CLE.encode(self.real)
@@ -203,7 +239,7 @@ class SynthEval():
             'cat_cols': self.categorical_columns,
             'num_cols': self.numerical_columns,
             'nn_dist': self.nn_dist,
-            'analysis_target' : analysis_target_var,
+            'analysis_target' : analysis_target,
             'do_preprocessing': CLE,
             'verbose': self.verbose,
             'plot_figures': self.enable_plots
@@ -221,8 +257,10 @@ class SynthEval():
                 console.show_cursor(True)
                 for method in methods_loaded:
                     try:
-                        raw, formatted_output, key_result, error = asyncio.run(
-                            _run_metric_with_timeout(loaded_metrics[method], evaluation_config[method], worker_args, self.timeout)
+                        raw, formatted_output, key_result, error = _run_coroutine_sync(
+                            _run_metric_with_timeout(
+                                loaded_metrics[method], evaluation_config[method], worker_args, self.timeout
+                            )
                         )
                         if error is not None:
                             raise error
@@ -255,8 +293,10 @@ class SynthEval():
             for method in pbar:
                 pbar.set_description(f'Syntheval: {method}')
                 try:                    
-                    raw, formatted_output, key_result, error = asyncio.run(
-                            _run_metric_with_timeout(loaded_metrics[method], evaluation_config[method], worker_args, self.timeout)
+                    raw, formatted_output, key_result, error = _run_coroutine_sync(
+                            _run_metric_with_timeout(
+                                loaded_metrics[method], evaluation_config[method], worker_args, self.timeout
+                            )
                         )
                     if error is not None:
                         raise error
@@ -279,8 +319,10 @@ class SynthEval():
             timed_out_methods = [] 
             for method in methods_loaded:
                 try:
-                    raw, formatted_output, key_result, error = asyncio.run(
-                            _run_metric_with_timeout(loaded_metrics[method], evaluation_config[method], worker_args, self.timeout)
+                    raw, formatted_output, key_result, error = _run_coroutine_sync(
+                            _run_metric_with_timeout(
+                                loaded_metrics[method], evaluation_config[method], worker_args, self.timeout
+                            )
                         )
                     if error is not None:
                         raise error
@@ -296,22 +338,26 @@ class SynthEval():
                 print(f"Some methods timed out after {self.timeout} seconds:\n{', '.join(timed_out_methods)}")
 
         # Save non-standard evaluation config to a json file
-        if (kwargs != {} and self.verbose):
-            with open('SE_config.json', "w") as json_file:
+        if (metric_kwargs != {} and self.verbose):
+            with open('SE_metrics_config.json', "w") as json_file:
                 json.dump(evaluation_config, json_file)
 
+        self.analysis_target_config = analysis_target
         self._raw_results = raw_results
         return key_results
 
-    def benchmark(self, dfs_or_path: Dict[str, DataFrame] | str, analysis_target_var=None, presets_file=None, rank_strategy='summation', **kwargs):
+    def benchmark(self, dfs_or_path: Dict[str, DataFrame] | str, analysis_target=None, presets_file=None, rank_strategy='summation', **kwargs):
         """Method for running SynthEval multiple times across all synthetic data files in a
         specified directory. Making a results file, and calculating rank-derived utility 
         and privacy scores.
         
         Parameters:
             dfs_or_path         : dict of dataframes or string like '/example/ex_data_dir/' to folder with datasets
-            analysis_target_var : string column name of categorical variable to check
+            analysis_target     : string column name of categorical variable to check, or an AnalysisConfig instance
             rank_strategy       : {default='summation', 'normal', 'quantile', 'linear'}, see descriptions below.
+
+        Deprecated:
+            analysis_target_var : deprecated alias for analysis_target. Will be removed in a future release.
 
         Details on rank strategies:
             "summation": Uses default normalisation sums the normalised numbers. A higher number is better.
@@ -328,13 +374,12 @@ class SynthEval():
             >>> real_data = pd.read_csv('guides/example/penguins_train.csv')
             >>> synthetic_data = pd.read_csv('guides/example/penguins_BN_syn.csv')
             >>> SE = SynthEval(real_data, verbose = False)
-            >>> res, rank = SE.benchmark({'d1':synthetic_data, 'd2':synthetic_data}, analysis_target_var='species', rank_strategy='summation', p_mse={})
+            >>> res, rank = SE.benchmark({'d1':synthetic_data, 'd2':synthetic_data}, analysis_target='species', rank_strategy='summation', p_mse={})
             >>> isinstance(res, pd.DataFrame)
             True
         """
         # TODO: integrate the rich console with this method as well.
         # Part to avoid printing in the following and resetting to user preference after
-
         reset_verbose, reset_plotting, reset_console = self.verbose, self.enable_plots, self.console
         self.verbose, self.enable_plots, self.console = False, False, 'off'
 
@@ -352,9 +397,19 @@ class SynthEval():
 
         assert len(df_dict) > 0, 'Error: Too few datasets for benchmarking!'
 
+        # Parser for argument type flexibility and deprecation handling for the analysis target variable(s).
+        analysis_target_var = kwargs.pop('analysis_target_var', None)
+        if (analysis_target is not None) or (analysis_target_var is not None):
+            analysis_target = _analysis_target_parser(self.real, analysis_target, analysis_target_var)
+
+        metric_kwargs = kwargs
+
         # Evaluate the datasets in parallel
         from joblib import Parallel, delayed
-        res_list = Parallel(n_jobs=-2)(delayed(self.evaluate)(dataframe, analysis_target_var, presets_file, **kwargs) for dataframe in df_dict.values())
+        res_list = Parallel(n_jobs=-2)(
+            delayed(self.evaluate)(dataframe, analysis_target, presets_file, **metric_kwargs)
+            for dataframe in df_dict.values()
+        )
         
         results = {}
         for res, key in zip(res_list,list(df_dict.keys())): results[key] = res
