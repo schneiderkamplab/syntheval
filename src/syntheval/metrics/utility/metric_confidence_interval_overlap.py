@@ -67,13 +67,16 @@ class ConfidenceIntervalOverlap(MetricClass):
             if confidence in confidence_table.keys():
                 z_value = confidence_table[confidence]
                 mus = np.array([np.mean(self.real_data[self.num_cols],axis=0),np.mean(self.synt_data[self.num_cols],axis=0)]).T
-                sems = np.array([sem(self.real_data[self.num_cols]),sem(self.synt_data[self.num_cols])]).T
-                stds = np.array([np.std(self.real_data[self.num_cols],ddof=1),np.std(self.synt_data[self.num_cols],ddof=1)]).T
-                
+                      
                 match ci:
                     case 'sem':
+                        sems = np.array([sem(self.real_data[self.num_cols]),sem(self.synt_data[self.num_cols])]).T
                         CI = sems*z_value
                     case 'std':
+                        stds = np.array([
+                            np.std(self.real_data[self.num_cols].to_numpy(), axis=0, ddof=1),
+                            np.std(self.synt_data[self.num_cols].to_numpy(), axis=0, ddof=1)
+                        ]).T
                         CI = stds*z_value
                 us = mus+CI
                 ls = mus-CI

@@ -1,5 +1,5 @@
 {
-    "dwm"       : {"ci": "std"},
+    "dwm"       : {},
     "pca"       : {"preprocess": "std"},
     "cio"       : {"ci": "std", "confidence": 95},
     "ks_test"   : {"sig_lvl": 0.05, "n_perms": 1000},
