@@ -23,7 +23,7 @@ from .utils.ascii_console import AsciiConsole
 from .utils.preprocessing import consistent_label_encoding
 from .utils.configuration import AnalysisConfig, _analysis_target_parser
 from .utils.postprocessing import extremes_ranking, linear_ranking, quantile_ranking, summation_ranking
-from .utils.variable_detection import get_cat_variables
+from .utils.variable_detection import get_cat_variables, check_missing_values
 
 loaded_metrics = load_metrics()
 
@@ -98,7 +98,8 @@ class SynthEval():
                  holdout_dataframe: DataFrame = None,
                  cat_cols: List[str] = None,
                  nn_distance: Literal['gower', 'euclid', 'EXPERIMENTAL_gower'] = 'gower', 
-                 unique_threshold: int = 10,
+                 unique_threshold: int = 10,                 
+                 missing_directive: Literal['raise', 'ignore', 'drop'] = 'raise',
                  verbose: bool = True,
                  enable_plots: bool = True,
                  console: Literal['rich', 'ascii', 'off'] = 'rich',
@@ -112,14 +113,13 @@ class SynthEval():
             holdout_dataframe   : (optional) real data that was not used for training the generative model
             cat_cols            : (optional) complete list of categorical columns column names. 
             nn_distance         : {default= 'gower', 'euclid', 'EXPERIMENTAL_gower'} distance metric for NN distances.
-            unique_threshold    : threshold of unique levels in non-object columns to be considered categoricals.    
+            unique_threshold    : threshold of unique levels in non-object columns to be considered categoricals.  
+            missing_directive   : {default= 'raise', 'ignore', 'drop'} directive for how to behave if missing values are present.  
             verbose             : flag for printing heads-up information to the console.
             enable_plots        : flag for enabling plot generation.
             console             : type of console output to use ('rich', 'ascii', 'off').
             timeout             : time in seconds after which a metric evaluation will be interrupted and skipped. Default is None (no timeout).
         """
-
-        self.real = real_dataframe
         self.verbose = verbose
         self.enable_plots = enable_plots
 
@@ -137,10 +137,12 @@ class SynthEval():
                 holdout_dataframe = holdout_dataframe[real_dataframe.columns.tolist()]
             assert real_dataframe.columns.tolist() == holdout_dataframe.columns.tolist(), 'Columns in train and test dataframe are not the same'
 
-            self.hold_out = holdout_dataframe
+            self.hold_out = check_missing_values(holdout_dataframe, missing_directive)
         else:
             self.hold_out = None
-        
+
+        self.real = check_missing_values(real_dataframe, missing_directive)
+
         if cat_cols is None:
             cat_cols = get_cat_variables(real_dataframe, unique_threshold)
             if self.verbose:
@@ -149,12 +151,13 @@ class SynthEval():
         self.categorical_columns = cat_cols
         self.numerical_columns = [column for column in real_dataframe.columns if column not in cat_cols]
 
+        self.missing_directive = missing_directive
         self.nn_dist = nn_distance
         pass
 
     def _update_syn_data(self, synt: DataFrame) -> None:
         """Function for adding/updating the synthetic data"""
-        self.synt = synt
+        self.synt = check_missing_values(synt, self.missing_directive)
 
         if len(self.real.columns) == len(synt.columns):
             synt = synt[self.real.columns.tolist()]

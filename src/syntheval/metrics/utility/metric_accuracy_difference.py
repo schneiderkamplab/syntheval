@@ -318,7 +318,7 @@ class ClassificationAccuracy(MetricClass):
 
                     rows.append((
                         'prediction',
-                        f"Avg. for {target_row['target_var']:<13} | RR {target_row['TRTR_acc']:.2f} | FR {target_row['TSTR_acc']:.2f}",
+                        f"Avg. for {target_row['target_var']:<13.13} | RR {target_row['TRTR_acc']:.2f} | FR {target_row['TSTR_acc']:.2f}",
                         float(target_row['acc_diff']),
                         target_err,
                     ))
@@ -368,7 +368,7 @@ class ClassificationAccuracy(MetricClass):
                     for _, target_row in target_test_averages.iterrows():
                         rows.append((
                             'prediction',
-                            f"Avg. for {target_row['target_var']:<13} | RR {target_row['TRTR_acc']:.2f} | FR {target_row['TSTR_acc']:.2f}",
+                            f"Avg. for {target_row['target_var']:<13.13} | RR {target_row['TRTR_acc']:.2f} | FR {target_row['TSTR_acc']:.2f}",
                             float(target_row['acc_diff']),
                             float(target_row['acc_diff_sem'])
                         ))

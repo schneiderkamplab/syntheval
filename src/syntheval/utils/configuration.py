@@ -42,13 +42,13 @@ class AnalysisConfig:
         if isinstance(confounder_vars, str):
             self.confounder_vars = {var: [confounder_vars] for var in self.target_vars}
         elif isinstance(confounder_vars, list):
-            self.confounder_vars = {var: confounder_vars for var in self.target_vars}
+            self.confounder_vars = {var: list(confounder_vars) for var in self.target_vars}
         elif isinstance(confounder_vars, dict):
             self.confounder_vars = confounder_vars
         else:
             self.confounder_vars = {var: [] for var in self.target_vars}
         
-        # remove instances where the key is also in the confounder list
+        # remove instances where the key is also in its own confounder list
         for key in self.confounder_vars.keys():
             if key in self.confounder_vars[key]:
                 self.confounder_vars[key].remove(key)

@@ -24,10 +24,10 @@ def stack(real, fake):
 
 class consistent_label_encoding:
     def __init__(
-        self, real, fake, categorical_columns, nummerical_columns, hout=None
+        self, real, fake, categorical_columns, numerical_columns, hout=None
     ) -> None:
         assert (
-            len(categorical_columns) > 0 or len(nummerical_columns) > 0
+            len(categorical_columns) > 0 or len(numerical_columns) > 0
         ), "Either categorical or nummerical columns must be provided."
 
         joint_dataframe = pd.concat((real.reset_index(), fake.reset_index()), axis=0)
@@ -42,9 +42,9 @@ class consistent_label_encoding:
         else:
             self.cat_cols = None
 
-        if len(nummerical_columns) > 0:
-            self.num_encoder = MinMaxScaler().fit(joint_dataframe[nummerical_columns])
-            self.num_cols = nummerical_columns
+        if len(numerical_columns) > 0:
+            self.num_encoder = MinMaxScaler().fit(joint_dataframe[numerical_columns])
+            self.num_cols = numerical_columns
         else:
             self.num_cols = None
         pass
