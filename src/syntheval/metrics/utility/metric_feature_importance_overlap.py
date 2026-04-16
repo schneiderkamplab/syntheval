@@ -115,10 +115,9 @@ class FeatureImportanceOverlap(MetricClass):
                     res['top_'+str(int(p*100))+ '%'] = overlap
                 
                 # Compute importance value consistency (e.g. mean absolute error of importance values)
-                # make sure that the features are aligned for the two importance series (fill missing features with 0 importance)
                 importance_diff = (importances_real - importances_fake).abs()
                 res['mae_importance'] = importance_diff.mean()
-                res['mae_weighted_importance'] = (importance_diff * importances_real).mean()
+                res['mae_weighted_importance'] = (importance_diff * importances_real).sum() / importances_real.sum()
 
                 result_rows.append({
                     'target_var': target_var,
@@ -197,7 +196,7 @@ class FeatureImportanceOverlap(MetricClass):
         
         if self.results != {}:
             dict_lst = []
-            dict_keys = ['fio_diff','fio_diff_weighted','fio_top_5%', 'fio_top_10%', 'fio_top_25%', 'fio_top_50%']
+            dict_keys = ['fio_diff', 'fio_diff_weighted', 'fio_top_5%', 'fio_top_10%', 'fio_top_25%', 'fio_top_50%']
             
             for key in dict_keys:
                 if key not in self.results:
