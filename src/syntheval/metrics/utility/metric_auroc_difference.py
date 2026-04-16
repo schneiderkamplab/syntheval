@@ -165,7 +165,7 @@ class PredictionAUROCDifference(MetricClass):
         
     def format_output(self) -> list:
         """ Return a list of tuples for printing results to the rich console."""
-        row = ("utility", f"Prediction AUROC difference ({self.results['model']:<7})", self.results['auroc_diff'], self.results.get('auroc_diff_err'))
+        row = ("prediction", f"Prediction AUROC difference ({self.results['model']:<7})", self.results['auroc_diff'], self.results.get('auroc_diff_err'))
         return [row]
 
     def normalize_output(self) -> list:
