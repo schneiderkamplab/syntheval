@@ -5,7 +5,7 @@
 from syntheval.metrics.core.metric import MetricClass
 import numpy as np
 
-class MetricClassName(MetricClass):
+class QuantileMSE(MetricClass):
     """The Metric Class is an abstract class that interfaces with 
     SynthEval. When initialised the class has the following attributes:
 
@@ -45,14 +45,14 @@ class MetricClassName(MetricClass):
             >>> import pandas as pd
             >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
             >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
-            >>> QMSE = MetricClassName(real, fake, cat_cols=[], num_cols=[], do_preprocessing=False)
+            >>> QMSE = QuantileMSE(real, fake, cat_cols=[], num_cols=[], do_preprocessing=False)
             >>> QMSE.evaluate(num_quants=5, cat_mse=True) # doctest: +ELLIPSIS
             {'avg qMSE': ...
         """
         try:
             assert (len(self.num_cols)>=1 or cat_mse)
         except AssertionError:
-            print('Error: Quantile mse did not run, no nummerical attributes, or cat_mse not enabled!')
+            raise ValueError("Quantile mse did not run, no nummerical attributes, or cat_mse not enabled!")
         else:
             qMSE_lst = []
             for category in self.real_data.columns:
@@ -75,22 +75,17 @@ class MetricClassName(MetricClass):
 
                     qMSE_lst.append(np.mean((synth_frac - 1/num_quants)**2))
             
-            self.results = {'avg qMSE': np.mean(qMSE_lst), 
-                            'qMSE err': np.std(qMSE_lst, ddof=1) / np.sqrt(len(qMSE_lst))
+            self.results = {'avg qMSE': float(np.mean(qMSE_lst)), 
+                            'qMSE err': float(np.std(qMSE_lst, ddof=1) / np.sqrt(len(qMSE_lst)))
                             }
             return self.results
 
-    def format_output(self) -> str:
-        """ Return string for formatting the output, when the
-        metric is part of SynthEval. 
-|                                          :                    |"""
+    def format_output(self) -> list:
+        """ Return a list of tuples for printing results to the rich console."""
         if self.results != {}:
-            string = """\
-| Quantile mean squared error (qMSE)       :   %.4f  %.4f   |""" % (
-            self.results['avg qMSE'],
-            self.results['qMSE err'],
-            )
-            return string
+            row = ('utility', 'Quantile mean squared error (qMSE)', 
+                   self.results['avg qMSE'], self.results['qMSE err'])
+            return [row]
         else: pass
 
     def normalize_output(self) -> list:

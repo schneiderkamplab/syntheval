@@ -58,7 +58,7 @@ class MutualInformation(MetricClass):
             >>> import pandas as pd
             >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
             >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
-            >>> M = MutualInformation(real, fake, do_preprocessing=False, verbose=False)
+            >>> M = MutualInformation(real, fake, do_preprocessing=False, plot_figures=False)
             >>> M.evaluate()
             {'mutual_inf_diff': 0.0, 'mi_mat_dims': 2}
         """
@@ -66,18 +66,15 @@ class MutualInformation(MetricClass):
         f_mi = _pairwise_attributes_mutual_information(self.synt_data)
 
         mi_mat = r_mi - f_mi
-        if self.verbose: plot_matrix_heatmap(mi_mat,'Mutual information matrix difference', 'mi', axs_lim, axs_scale)
+        if self.plot_figures: plot_matrix_heatmap(mi_mat,'Mutual information matrix difference', 'mi', axs_lim, axs_scale)
         
-        self.results = {'mutual_inf_diff': np.linalg.norm(mi_mat, ord='fro'),'mi_mat_dims': len(mi_mat)}
+        self.results = {'mutual_inf_diff': float(np.linalg.norm(mi_mat, ord='fro')),'mi_mat_dims': len(mi_mat)}
         return self.results
 
-    def format_output(self) -> str:
-        """ Return string for formatting the output, when the
-        metric is part of SynthEval.        
-        """
-        string = """\
-| Pairwise mutual information difference   :   %.4f           |""" % (self.results['mutual_inf_diff'])
-        return string
+    def format_output(self) -> list:
+        """ Return a list of tuples for printing results to the rich console."""
+        row = [('utility','Pairwise mutual information difference', self.results['mutual_inf_diff'], None)]
+        return row
 
     def normalize_output(self) -> list:
         """ This function is for making a dictionary of the most quintessential

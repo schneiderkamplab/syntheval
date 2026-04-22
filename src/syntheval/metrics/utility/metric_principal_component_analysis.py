@@ -41,7 +41,7 @@ class PrincipalComponentAnalysis(MetricClass):
         """ Set to 'privacy' or 'utility' """
         return 'utility'
 
-    def evaluate(self, num_components = 2, preprocess: Literal['mean', 'std'] = 'mean', use_cats: bool = False) -> float | dict:
+    def evaluate(self, num_components = 2, preprocess: Literal['mean', 'std'] = 'std', use_cats: bool = False) -> float | dict:
         """ Function for evaluating the metric
         
         Args:
@@ -54,23 +54,26 @@ class PrincipalComponentAnalysis(MetricClass):
 
         Example:
             >>> import pandas as pd
-            >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
-            >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6]})
-            >>> PCA = PrincipalComponentAnalysis(real, fake, cat_cols=[], analysis_target='a', do_preprocessing=False, verbose=False)
+            >>> real = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6], 'c': ['x', 'y', 'z']})
+            >>> fake = pd.DataFrame({'a': [1, 2, 3], 'b': [4, 5, 6], 'c': ['x', 'y', 'z']})
+            >>> PCA = PrincipalComponentAnalysis(real, fake, cat_cols=['c'], num_cols=['a', 'b'], 
+            ...     analysis_target='c', do_preprocessing=False, plot_figures=False)
             >>> PCA.evaluate()
+            {'exp_var_diff': 0.0, 'comp_angle_diff': ...}
         """
 
         try:
-            assert ((self.analysis_target is not None and self.analysis_target in self.cat_cols) and (use_cats or len(self.num_cols)>=2))
-        except AssertionError:
-            if self.verbose:
-                if use_cats or len(self.num_cols)<2:
-                    print('Error: Principal component analysis did not run, too few attributes!')
-                elif self.analysis_target is None: 
-                    print('Error: Principal component analysis did not run, analysis class variable not set!')
-                else:
-                    print('Error: Principal component analysis did not run, provided class not in list of categoricals!')
-            pass
+            assert self.analysis_target is not None, "SynthEval(pca): metric did not run, no analysis target variable(s) supplied!"
+
+            target_vars = [
+                key for (key, value) in self.analysis_target.target_types.items() 
+                if isinstance(value, int) and value >= 2
+                ]
+            
+            assert target_vars != [], "SynthEval(pca): No categorical target variables with 2 or more unique values!"
+            assert use_cats or len(self.num_cols) >= 2, "SynthEval(pca): Too few attributes provided for principal component analysis metric."
+        except AssertionError as e:
+            raise AssertionError(e)
         else:
             if use_cats:
                 select_cols = self.num_cols + self.cat_cols
@@ -78,12 +81,11 @@ class PrincipalComponentAnalysis(MetricClass):
                 select_cols = self.num_cols
 
             # Get PCA metrics and projections
-            res = PCAMetric(self.real_data[select_cols], self.synt_data[select_cols], preprocess=preprocess)[0]
+            res, _, _ = PCAMetric(self.real_data[select_cols], self.synt_data[select_cols], preprocess=preprocess)
 
-            self.results = res
+            self.results = {'exp_var_diff': float(res['exp_var_diff']), 'comp_angle_diff': float(res['comp_angle_diff'])}
 
-            if self.verbose:  # For the pca plots we have to redo some stuff
-
+            if self.plot_figures:  # For the pca plots we have to redo some stuff
                 if preprocess == 'mean':
                     real_data = self.encoder.decode(self.real_data)
                     synt_data = self.encoder.decode(self.synt_data)
@@ -117,23 +119,21 @@ class PrincipalComponentAnalysis(MetricClass):
                 f_proj = pd.DataFrame(f_proj,columns=labels)
                 s_proj = pd.DataFrame(s_proj,columns=labels)
 
-                r_proj['target'] = self.real_data[self.analysis_target]
-                f_proj['target'] = self.synt_data[self.analysis_target]
+                r_proj['target'] = self.real_data[target_vars[0]]
+                f_proj['target'] = self.synt_data[target_vars[0]]
                 plot_principal_components(r_proj,f_proj)
                 plot_own_principal_component_pairplot(stack(r_proj,s_proj))
 
             return self.results
 
-    def format_output(self) -> str:
-        """ Return string for formatting the output, when the
-        metric is part of SynthEval. 
-|                                          :                    |"""
+    def format_output(self) -> list:
+        """ Return a list of tuples for printing results to the rich console."""
         if self.results != {}:
-            string = """\
-| PCA difference in eigenvalues (exp. var.):   %.4f           |
-| PCA angle diff. between eigenvectors     :   %.4f           |""" % (self.results['exp_var_diff'], 
-                                                                      self.results['comp_angle_diff'])
-            return string
+            rows =[
+                ("utility", "PCA difference in eigenvalues (exp. var.)", self.results['exp_var_diff'], None),
+                ("utility", "PCA angle diff. between eigenvectors", self.results['comp_angle_diff'], None),
+            ]
+            return rows
         else: pass
 
     def normalize_output(self) -> list:

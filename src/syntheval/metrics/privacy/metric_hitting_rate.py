@@ -59,14 +59,15 @@ class HittingRate(MetricClass):
         self.results = {'hit rate': hit_rate}
         return self.results
 
-    def format_output(self) -> str:
-        """ Return string for formatting the output, when the
-        metric is part of SynthEval. 
-|                                          :                    |"""
-        string = """\
-| Hitting rate (%.2f x range(att))         :   %.4f           |""" % (self.thres_percent, self.results['hit rate'])
-        return string
-    
+    def format_output(self) -> list:
+        """ Return a list of tuples for printing results to the rich console."""
+        rows = []
+        rows.append(("privacy",
+                    "Hitting rate (%.2f x range(att))" % self.thres_percent,
+                    self.results['hit rate'],
+                    None))
+        return rows
+
     def normalize_output(self) -> list:
         """ This function is for making a dictionary of the most quintessential
         nummerical results of running this metric (to be turned into a dataframe).

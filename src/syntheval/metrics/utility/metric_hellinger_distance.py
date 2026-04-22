@@ -24,11 +24,18 @@ def _scott_ref_rule(set1,set2):
     samples = np.concatenate((set1, set2))
     std = np.std(samples)
     n = len(samples)
-    bin_width = np.ceil(n**(1/3) * std / (3.5 * (np.percentile(samples, 75) - np.percentile(samples, 25)))).astype(int)
-
-    min_edge = min(samples); max_edge = max(samples)
-    N = min(abs(int((max_edge-min_edge)/bin_width)),10000); Nplus1 = N + 1
-    return np.linspace(min_edge, max_edge, Nplus1)
+    if np.percentile(samples, 75) - np.percentile(samples, 25) == 0:
+        bins = np.percentile(samples, [0, 10, 25, 75, 90, 100])
+        bins = np.unique(bins)
+        if len(bins) < 2:
+            bins = np.unique(samples)
+        return bins
+    else:
+        bin_width = np.ceil(n**(1/3) * std / (3.5 * (np.percentile(samples, 75) - np.percentile(samples, 25)))).astype(int)
+        min_edge = min(samples); max_edge = max(samples)
+        N = min(abs(int((max_edge-min_edge)/bin_width)),10000)
+        bins = np.linspace(min_edge, max_edge, N + 1)
+        return bins
 
 def _hellinger(p,q):
     """Hellinger distance between distributions
@@ -47,7 +54,7 @@ def _hellinger(p,q):
     sqrt_pdf1 = np.sqrt(p)
     sqrt_pdf2 = np.sqrt(q)
     diff = sqrt_pdf1 - sqrt_pdf2
-    return 1/np.sqrt(2)*np.linalg.norm(diff)
+    return float(1/np.sqrt(2)*np.linalg.norm(diff))
 
 class HellingerDistance(MetricClass):
 
@@ -89,16 +96,14 @@ class HellingerDistance(MetricClass):
             pdfF = np.histogram(self.synt_data[category], bins=n_bins)[0]
             H_dist.append(_hellinger(pdfR/sum(pdfR),pdfF/sum(pdfF)))
 
-        self.results = {'avg': np.mean(H_dist), 'err': np.std(H_dist,ddof=1)/np.sqrt(len(H_dist))}
+        self.results = {'avg': float(np.mean(H_dist)), 'err': float(np.std(H_dist,ddof=1)/np.sqrt(len(H_dist)))}
         return self.results
 
-    def format_output(self) -> str:
-        """ Return string for formatting the output, when the
-        metric is part of SynthEval.        
-        """
-        string = """\
-| Average empirical Hellinger distance     :   %.4f  %.4f   |""" % (self.results['avg'], self.results['err'])
-        return string
+    def format_output(self) -> list:
+        """ Return a list of tuples for printing results to the rich console."""
+        row = ('utility', 'Average empirical Hellinger distance', 
+               self.results['avg'], self.results['err'])
+        return [row]
 
     def normalize_output(self) -> list:
         """ This function is for making a dictionary of the most quintessential

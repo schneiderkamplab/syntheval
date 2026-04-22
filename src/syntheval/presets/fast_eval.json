@@ -1,7 +1,7 @@
 {
     "dwm"       : {},
-    "pca"       : {"preprocess": "mean"},
-    "cio"       : {"confidence": 95},
+    "pca"       : {"preprocess": "std"},
+    "cio"       : {"ci": "std", "confidence": 95},
     "ks_test"   : {"sig_lvl": 0.05, "n_perms": 1000},
     "h_dist"    : {},
     "auroc_diff": {"model": "log_reg", "num_boots": 1},

@@ -29,7 +29,7 @@ def _adversarial_score(real, fake, cat_cols, metric):
     """
     left = np.mean(_knn_distance(real, fake, cat_cols, 1, metric)[0] > _knn_distance(real, real, cat_cols, 1, metric)[0])
     right = np.mean(_knn_distance(fake, real, cat_cols, 1, metric)[0] > _knn_distance(fake, fake, cat_cols, 1, metric)[0])
-    return 0.5 * (left + right)
+    return float(0.5 * (left + right))
 
 def evaluate_dataset_nnaa(real, fake, num_cols, cat_cols, metric, n_resample):
     """Helper function for running adversarial score multiple times if the 
@@ -70,7 +70,7 @@ def evaluate_dataset_nnaa(real, fake, num_cols, cat_cols, metric, n_resample):
         avg = _adversarial_score(real, fake, cat_cols, metric)
         err = 0.0
 
-    return avg, err
+    return float(avg), float(err)
 
 class NearestNeighbourAdversarialAccuracy(MetricClass):
     """The Metric Class is an abstract class that interfaces with 
@@ -115,25 +115,31 @@ class NearestNeighbourAdversarialAccuracy(MetricClass):
 
         avg, err = evaluate_dataset_nnaa(self.real_data,self.synt_data,self.num_cols,self.cat_cols,self.nn_dist,n_resample)
 
-        self.results = {'avg': avg, 'err': err}
+        self.results = {'avg': float(avg), 'err': float(err)}
 
         if self.hout_data is not None:
             avg_h, err_h = evaluate_dataset_nnaa(self.hout_data,self.synt_data,self.num_cols,self.cat_cols,self.nn_dist,n_resample)
             diff = avg_h - avg
             err_diff = np.sqrt(err_h**2+err**2)
 
-            self.results['priv_loss'] = diff
-            self.results['priv_loss_err'] = err_diff
+            self.results['priv_loss'] = float(diff)
+            self.results['priv_loss_err'] = float(err_diff)
 
         return self.results
 
-    def format_output(self) -> str:
-        """ Return string for formatting the output, when the
-        metric is part of SynthEval. 
-|                                          :                    |"""
-        string = """\
-| Nearest neighbour adversarial accuracy   :   %.4f  %.4f   |""" % (self.results['avg'], self.results['err'])
-        return string
+    def format_output(self) -> list:
+        """ Return a list of tuples for printing results to the rich console."""
+        rows = []
+        rows.append(("utility",
+                    "Nearest neighbour adversarial accuracy", 
+                    self.results['avg'], 
+                    self.results['err']))
+        if (self.results != {} and self.hout_data is not None):
+            rows.append(("privacy",
+                        "Privacy loss (diff. in NNAA)", 
+                         self.results['priv_loss'], 
+                         self.results['priv_loss_err']))
+        return rows
 
     def normalize_output(self) -> list:
         """ This function is for making a dictionary of the most quintessential
@@ -159,12 +165,4 @@ class NearestNeighbourAdversarialAccuracy(MetricClass):
                         'n_err': self.results['priv_loss_err'], 
                         }])
             return output
-        else: pass
-
-    def extra_formatted_output(self) -> dict:
-        """Bit for printing the privacy loss together with the other privacy metrics"""
-        if (self.results != {} and self.hout_data is not None):
-            string = """\
-| Privacy loss (diff. in NNAA)             :   %.4f  %.4f   |""" % (self.results['priv_loss'], self.results['priv_loss_err'])
-            return {'privacy': string}
         else: pass

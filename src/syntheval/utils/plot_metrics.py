@@ -7,6 +7,8 @@ import math
 
 import numpy as np
 import seaborn as sns
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend for thread safety
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 
@@ -188,8 +190,22 @@ def plot_roc_curves(real_roc_mean, real_roc_conf, fake_roc, fake_roc_conf, title
     plt.ylim([0.0, 1.0])
     plt.xlabel('False Positive Rate')
     plt.ylabel('True Positive Rate')
-    plt.title(f'ROC Curves for {title} models')
+    plt.title(f'ROC Curves for {title}')
     plt.legend(loc='lower right')
     plt.savefig('SE_' + file_name +'_' +str(int(time.time()))+ '.png')
     
+    pass
+
+def plot_feature_importance_comparison(feature_names, importances_real, importances_fake, title, file_name):
+    """Plotting comparison of feature importances"""
+    fig, ax = plt.subplots(figsize=(6, 5))
+    sns.barplot(x=importances_real, y=feature_names, color='blue', alpha=0.5, label='real data', ax=ax)
+    sns.barplot(x=importances_fake, y=feature_names, color='red', alpha=0.5, label='synthetic data',ax=ax)
+    plt.title(f'Comparison for {title}')
+    plt.xlabel('Feature importance')
+    plt.ylabel('Feature')
+    plt.legend(loc='lower right')
+    plt.tight_layout()
+    plt.savefig('SE_' + file_name +'_' +str(int(time.time()))+ '.png')
+    plt.close()
     pass

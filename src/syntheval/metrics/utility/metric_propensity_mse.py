@@ -81,26 +81,20 @@ class PropensityMeanSquaredError(MetricClass):
             res.append(np.mean((pred[:,0]-num_synths/len(y_test))**2))
             acc.append(f1_score(y_test,mod.predict(x_test),average='macro'))
 
-        self.results = {'avg pMSE': np.mean(res), 
-                        'pMSE err': np.std(res,ddof=1)/np.sqrt(len(res)),
-                        'avg acc': np.mean(acc), 
-                        'acc err': np.std(acc,ddof=1)/np.sqrt(len(acc))
+        self.results = {'avg pMSE': float(np.mean(res)), 
+                        'pMSE err': float(np.std(res,ddof=1)/np.sqrt(len(res))),
+                        'avg acc': float(np.mean(acc)), 
+                        'acc err': float(np.std(acc,ddof=1)/np.sqrt(len(acc)))
                         }
         return self.results
 
-    def format_output(self) -> str:
-        """ Return string for formatting the output, when the
-        metric is part of SynthEval. 
-|                                          :                    |"""
-        string = """\
-| Propensity mean squared error (pMSE)     :   %.4f  %.4f   |
-|   -> average pMSE classifier accuracy    :   %.4f  %.4f   |""" % (
-        self.results['avg pMSE'],
-        self.results['pMSE err'],
-        self.results['avg acc'],
-        self.results['acc err']
-        )
-        return string
+    def format_output(self) -> list:
+        """ Return a list of tuples for printing results to the rich console."""
+        rows =[
+            ("utility", "Propensity mean squared error (pMSE)", self.results['avg pMSE'], self.results['pMSE err']),
+            ("utility", "  -> average pMSE classifier accuracy", self.results['avg acc'], self.results['acc err']),
+        ]
+        return rows
     
     def normalize_output(self) -> list:
         """ This function is for making a dictionary of the most quintessential

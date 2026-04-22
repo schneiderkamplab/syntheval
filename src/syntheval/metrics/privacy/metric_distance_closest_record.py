@@ -55,16 +55,13 @@ class MedianDistanceToClosestRecord(MetricClass):
         if (int_nn == 0 and mut_nn == 0): dcr = 1
         elif (int_nn == 0 and mut_nn != 0): dcr = 0
         else: dcr = mut_nn/int_nn
-        self.results = {'mDCR': dcr}
+        self.results = {'mDCR': float(dcr)}
         return self.results
 
-    def format_output(self) -> str:
-        """ Return string for formatting the output, when the
-        metric is part of SynthEval. 
-|                                          :                    |"""
-        string = """\
-| Median distance to closest record        :   %.4f           |""" % (self.results['mDCR'])
-        return string
+    def format_output(self) -> list:
+        """ Return a list of tuples for printing results to the rich console."""
+        row = [('privacy', 'Median distance to closest record', self.results['mDCR'], None)]
+        return row
 
     def normalize_output(self) -> list:
         """ This function is for making a dictionary of the most quintessential

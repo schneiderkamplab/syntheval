@@ -20,7 +20,8 @@ class MetricClassName(MetricClass):
     self.nn_dist   : string keyword
     self.analysis_target: variable name
 
-    self.verbose   : bool (mainly for supressing prints and plots)
+    self.verbose   : bool (for supressing prints)
+    self.plot_figures: bool (for supressing plots)
 
     """
 
@@ -38,13 +39,14 @@ class MetricClassName(MetricClass):
         self.results = {}
         return self.results
 
-    def format_output(self) -> str:
-        """ Return string for formatting the output, when the
-        metric is part of SynthEval. 
-|                                          :                    |"""
-        string = """\
-|                                          :   %.4f  %.4f   |""" % (0.0000, 0.0000)
-        return string
+    def format_output(self) -> List[tuple]:
+        """ Return a list of tuples for printing results to the rich console.
+        Required format: [(metric type in lowercase, string (max 40 characters), value, error)]
+        Example:
+            [('utility', 'Metric description', 0.1234, 0.0123)]
+        """
+        rows = []
+        return rows
 
     def normalize_output(self) -> List[dict]:
         """ This function is for making a dictionary of the most quintessential
@@ -72,18 +74,3 @@ class MetricClassName(MetricClass):
 
             return [{'metric': 'placeholder', 'dim': 'u', 'val': 0.0, 'err': 0.0, 'n_val': 0.0, 'n_err': 0.0}]
         else: pass
-
-
-    ### Hooks (Extra functions, not required)
-    def extra_formatted_output(self) -> Dict[str, str]:
-        """ Some metrics may output both utility, privacy and fairness results. 
-        For keeping these results seperate in the console print, strings can be 
-        placed into a dictionary with appropriate keys to be sent to the correct
-        output. Keep the same string formatting as the format_output function.
-|                                          :                    |""" 
-        pass
-
-
-
-
-

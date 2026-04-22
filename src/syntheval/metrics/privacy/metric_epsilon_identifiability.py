@@ -86,7 +86,7 @@ class EpsilonIdentifiability(MetricClass):
         R_Diff = ext_distances - in_dists
         identifiability_value = np.sum(R_Diff < 0) / float(no)
 
-        self.results['eps_risk'] = identifiability_value
+        self.results['eps_risk'] = float(identifiability_value)
 
         if self.hout_data is not None:
             in_dists = _knn_distance(self.hout_data,self.hout_data,self.cat_cols,1,self.nn_dist,W_adjust)[0]
@@ -95,21 +95,24 @@ class EpsilonIdentifiability(MetricClass):
             R_Diff = ext_distances - in_dists
             identifiability_value = np.sum(R_Diff < 0) / float(no)
 
-            self.results['priv_loss'] = self.results['eps_risk'] - identifiability_value
+            self.results['priv_loss'] = float(self.results['eps_risk'] - identifiability_value)
 
         return self.results
 
-    def format_output(self) -> str:
-        """ Return string for formatting the output, when the
-        metric is part of SynthEval. 
-|                                          :                    |"""
-        string = """\
-| Epsilon identifiability risk             :   %.4f           |""" % (self.results['eps_risk'])
+    def format_output(self) -> list:
+        """ Return a list of tuples for printing results to the rich console."""
+        rows = []
+        rows.append(("privacy",
+                    "Epsilon identifiability risk",
+                    self.results['eps_risk'],
+                    None))
         if (self.results != {} and self.hout_data is not None):
-             string += """       
-| Privacy loss (diff. in eps. risk)        :   %.4f           |""" % (self.results['priv_loss'])
-        return string
-
+            rows.append(("privacy",
+                        "Privacy loss (diff. in eps. risk)",
+                        self.results['priv_loss'],
+                        None))
+        return rows
+    
     def normalize_output(self) -> list:
         """ This function is for making a dictionary of the most quintessential
         nummerical results of running this metric (to be turned into a dataframe).
