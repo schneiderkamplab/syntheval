@@ -90,7 +90,7 @@ Utility analysis entails resemblance, quality and usability metrics testing how 
 | `pca` | Principal Components Analysis | [PrincipalComponentsAnalysis](src\syntheval\metrics\utility\metric_principal_component_analysis.py) | [Text Documentation](guides/metrics_references.md#Inter-Dataset-Similarity-Metric-Based-on-PCA) |
 | `cio` | Confidence Interval Overlap | [ConfidenceIntervalOverlap](src\syntheval\metrics\utility\metric_confidence_interval_overlap.py) | nums. only, number and fraction of significant tests |
 | `corr_diff` | Correlation Matrix Difference | [MixedCorrelation](src\syntheval\metrics\utility\metric_mixed_correlation.py) | mixed correlation |
-| `mi_diff` | Mutual Information Matrix Difference | [MutualInformation](src\syntheval\metrics\utility\metric_mutual_information.py) | mixed correlation |
+| `mi_diff` | Mutual Information Matrix Difference | [MutualInformation](src\syntheval\metrics\utility\metric_mutual_information.py) | mixed |
 | `ks_test` | Kolmogorov–Smirnov / Total Variation Distance test | [KolmogorovSmirnov](src\syntheval\metrics\utility\metric_kolmogorov_smirnov.py) | avg. distance, avg. p-value and number and fraction of significant tests |
 | `h_dist` | Hellinger Distance | [HellingerDistance](src\syntheval\metrics\utility\metric_hellinger_distance.py) | avg. distance |
 | `p_MSE` | Propensity Mean Squared Error | [PropensityMeanSquaredError](src\syntheval\metrics\utility\metric_propensity_mse.py) | pMSE and accuracy |
