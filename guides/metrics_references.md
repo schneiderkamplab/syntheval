@@ -14,7 +14,7 @@ $$
 where the first normalisation factor $d/2(d-1)$ is based on the dimensionality of the dataset (used to quantify the maximum discrepancy between the eigenvalues), and the second normalisation factor $2/\pi$ is used to scale the angle difference to the range $[0,1]$. The angle difference metric has the minimum to acount for vectors comming out of the PCA as antiparallel. A lower value of $\Delta \lambda$ and $\Delta \theta$ indicates that the real and synthetic datasets are similar. Note that the metric is rather unstable if using less than a couple hundred samples.
 
 Reference:
-> Rajabinasab, M., Lautrup, A.D. & Zimek, A. (2025). Metrics for Inter-Dataset Similarity with Example Applications in Synthetic Data and Feature Selection Evaluation. In Proceedings of the 2025 SIAM International Conference on Data Mining (SDM) (pp. TBD). Society for Industrial and Applied Mathematics. Accepted [20-12-2024] 
+> Rajabinasab, M., Lautrup, A.D. & Zimek, A. (2025). Metrics for Inter-Dataset Similarity with Example Applications in Synthetic Data and Feature Selection Evaluation. In Proceedings of the 2025 SIAM International Conference on Data Mining (SDM) (pp. 527--537). Society for Industrial and Applied Mathematics.
 
 ### Quantile MSE
 Quantile MSE measures the mean squared error of the **10%** percent quantiles of the synthetic data as dictated by the real data. This metric is used to evaluate the distribution of the synthetic data. The metric is calculated as follows:
