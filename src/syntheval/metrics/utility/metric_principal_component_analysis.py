@@ -2,6 +2,7 @@
 # Author: Anton D. Lautrup
 # Date: 23-08-2023
 
+import warnings
 import pandas as pd
 import numpy as np
 
@@ -80,8 +81,14 @@ class PrincipalComponentAnalysis(MetricClass):
             else:
                 select_cols = self.num_cols
 
+            if len(self.real_data) < len(select_cols):
+                warnings.warn("Calculating the pca metric with fewer rows than columns may not be reliable!")
+                metric_comps = min(len(self.real_data), len(select_cols))
+            else:
+                metric_comps = len(select_cols)
+            
             # Get PCA metrics and projections
-            res, _, _ = PCAMetric(self.real_data[select_cols], self.synt_data[select_cols], preprocess=preprocess)
+            res, _, _ = PCAMetric(self.real_data[select_cols], self.synt_data[select_cols], num_components = metric_comps, preprocess=preprocess)
 
             self.results = {'exp_var_diff': float(res['exp_var_diff']), 'comp_angle_diff': float(res['comp_angle_diff'])}
 
