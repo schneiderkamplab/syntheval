@@ -162,9 +162,13 @@ class FeatureImportanceOverlap(MetricClass):
                         else:
                             continue
             else:
-                self.results['fio_diff'] = result_rows[0]['mae_importance']
-                self.results['fio_diff_weighted'] = result_rows[0]['mae_weighted_importance']
-                self.results = {'fio_' + key: result_rows[0][key] for key in result_rows[0] if key.startswith('top_')}
+                self.results['fio_diff'] = float(result_rows[0]['mae_importance'])
+                self.results['fio_diff_weighted'] = float(result_rows[0]['mae_weighted_importance'])
+                for p in compare_percentages:
+                    if 'top_'+str(int(p*100))+ '%' in result_rows[0]:
+                        self.results[f'fio_top_{int(p*100)}%'] = float(result_rows[0]['top_'+str(int(p*100))+ '%'])
+                    else:
+                        continue
         return self.results
 
     def format_output(self) -> List[tuple]:
