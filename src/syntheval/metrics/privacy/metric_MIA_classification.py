@@ -2,9 +2,11 @@
 # Author: Tobias Hyrup
 # Date: 2023-10-30
 
+import warnings
+
 import numpy as np
 import pandas as pd
-from logging import warning
+
 from syntheval.metrics.core.metric import MetricClass
 from lightgbm import LGBMClassifier
 from sklearn.metrics import precision_score, recall_score, f1_score
@@ -59,9 +61,7 @@ class MIAClassifier(MetricClass):
             raise ValueError("Membership inference attack metric did not run, holdout data was not supplied!")
         else:
             if len(self.real_data) < len(self.hout_data) // 2:
-                    warning(
-                        "The holdout data is more than double the size of the real data. The holdout data will be downsampled to match the size of the real data. real size: %s, holdout size: %s", len(self.real_data), len(self.hout_data)
-                    )
+                warnings.warn(f"The holdout data is more than double the size of the real data. The holdout data will be downsampled to match the size of the real data. real size: {len(self.real_data)}, holdout size: {len(self.hout_data)}")
             # One-hot encode. All data is combined to ensure consitent encoding
             combined_data = pd.concat(
                 [self.real_data, self.synt_data, self.hout_data], ignore_index=True
@@ -87,7 +87,10 @@ class MIAClassifier(MetricClass):
             }
             for _ in range(num_eval_iter):
                 hout_train, hout_test = train_test_split(hout, test_size=0.25)
-                syn_samples = syn.sample(n=len(hout_train))
+                if len(syn) < len(hout_train):
+                    syn_samples = syn.sample(n=len(hout_train), replace=True)
+                else:
+                    syn_samples = syn.sample(n=len(hout_train))
 
                 # Create training data consisting of synthetic and holdout data
                 X_train = pd.concat([syn_samples, hout_train], axis=0, ignore_index=True)
