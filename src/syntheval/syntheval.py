@@ -7,6 +7,8 @@ import json
 import glob
 import time
 import threading
+import warnings
+import io
 
 import asyncio
 import traceback
@@ -31,15 +33,24 @@ def _has_not_slash_backslash_or_dot(input_string):
     return not ('/' in input_string or '\\' in input_string or '.' in input_string)
 
 def _metric_work(method, evaluation_config, worker_args):
-    try:
-        M = method(**worker_args)
-        raw_result = M.evaluate(**evaluation_config)
-        formatted_output = M.format_output()
-        key_result = M.normalize_output()
-        error = None
-    except Exception as e:
-        raw_result, formatted_output, key_result, error = None, None, None, e
-    return raw_result, formatted_output, key_result, error
+    warnings_list = []
+    
+    # Capture warnings during metric evaluation
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        try:
+            M = method(**worker_args)
+            raw_result = M.evaluate(**evaluation_config)
+            formatted_output = M.format_output()
+            key_result = M.normalize_output()
+            error = None
+        except Exception as e:
+            raw_result, formatted_output, key_result, error = None, None, None, e
+        
+        # Store any warnings that were raised
+        warnings_list = [str(warning.message) for warning in w]
+    
+    return raw_result, formatted_output, key_result, error, warnings_list
 
 async def _run_metric_with_timeout(method, evaluation_config, worker_args, timeout):
     return await asyncio.wait_for(asyncio.to_thread(_metric_work, method, evaluation_config, worker_args), timeout=timeout)
@@ -103,7 +114,8 @@ class SynthEval():
                  verbose: bool = True,
                  enable_plots: bool = True,
                  console: Literal['rich', 'ascii', 'off'] = 'rich',
-                 timeout: int = None
+                 timeout: int = None,
+                 show_warnings: bool = True
         ) -> None:
         """Primary object for accessing the SynthEval evaluation framework. Create with the real data used for training 
         and use either evaluate of benchmark methods for evaluating synthetic datasets.
@@ -119,9 +131,11 @@ class SynthEval():
             enable_plots        : flag for enabling plot generation.
             console             : type of console output to use ('rich', 'ascii', 'off').
             timeout             : time in seconds after which a metric evaluation will be interrupted and skipped. Default is None (no timeout).
+            show_warnings       : flag for displaying warnings from metrics in the console. Default is True.
         """
         self.verbose = verbose
         self.enable_plots = enable_plots
+        self.show_warnings = show_warnings
 
         if in_notebook() and console == 'rich':
             self.console = 'ascii'
@@ -260,7 +274,7 @@ class SynthEval():
                 console.show_cursor(True)
                 for method in methods_loaded:
                     try:
-                        raw, formatted_output, key_result, error = _run_coroutine_sync(
+                        raw, formatted_output, key_result, error, warnings_list = _run_coroutine_sync(
                             _run_metric_with_timeout(
                                 loaded_metrics[method], evaluation_config[method], worker_args, self.timeout
                             )
@@ -269,6 +283,10 @@ class SynthEval():
                             raise error
                         raw_results[method] = raw
                         key_results = _add_key_results(key_results, key_result)
+
+                        if self.show_warnings and warnings_list:
+                            for warning_msg in warnings_list:
+                                co.add_error_message(message=f"WARNING ({method}): {warning_msg}")
 
                         if formatted_output is not None:
                             co.update_result_table_rows(method, formatted_output)
@@ -296,7 +314,7 @@ class SynthEval():
             for method in pbar:
                 pbar.set_description(f'Syntheval: {method}')
                 try:                    
-                    raw, formatted_output, key_result, error = _run_coroutine_sync(
+                    raw, formatted_output, key_result, error, warnings_list = _run_coroutine_sync(
                             _run_metric_with_timeout(
                                 loaded_metrics[method], evaluation_config[method], worker_args, self.timeout
                             )
@@ -305,6 +323,10 @@ class SynthEval():
                         raise error
                     raw_results[method] = raw
                     key_results = _add_key_results(key_results, key_result)
+                    
+                    if self.show_warnings and warnings_list:
+                        for warning_msg in warnings_list:
+                            print(f"WARNING ({method}): {warning_msg}")
                     
                     if formatted_output is not None:
                             co.add_results_to_tables(formatted_output)
@@ -322,7 +344,7 @@ class SynthEval():
             timed_out_methods = [] 
             for method in methods_loaded:
                 try:
-                    raw, formatted_output, key_result, error = _run_coroutine_sync(
+                    raw, formatted_output, key_result, error, warnings_list = _run_coroutine_sync(
                             _run_metric_with_timeout(
                                 loaded_metrics[method], evaluation_config[method], worker_args, self.timeout
                             )
@@ -331,6 +353,10 @@ class SynthEval():
                         raise error
                     raw_results[method] = raw
                     key_results = _add_key_results(key_results, key_result)
+                    
+                    if self.show_warnings and warnings_list:
+                        for warning_msg in warnings_list:
+                            print(f"WARNING ({method}): {warning_msg}")
                 except asyncio.TimeoutError:
                     timed_out_methods.append(method)
                     continue
