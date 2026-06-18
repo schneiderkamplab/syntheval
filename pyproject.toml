@@ -20,9 +20,9 @@ dependencies = [
     "scipy >= 1.14.1",
     "seaborn",
     "tqdm",
-    "rich ~= 13.4.2",
+    "rich >= 13.4.2, < 16",
     "lightgbm",
-    "pcametric ~= 1.0.3",
+    "pcametric >= 1.0.3, < 2",
 ]
 
 description = "A package for evaluating synthetic data fidelity on various performance dimensions."
