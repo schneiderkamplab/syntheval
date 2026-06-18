@@ -2,19 +2,21 @@
 # Author: Anton D. Lautrup
 # Date: 18-08-2023
 
-import numpy as np
+import pandas as pd
 
 
 def get_cat_variables(df, threshold):
     cat_variables = []
 
     for col in df.columns:
-        if df[col].dtype == "object":
+        if (
+            df[col].dtype == "object"
+            or pd.api.types.is_string_dtype(df[col])
+            or pd.api.types.is_categorical_dtype(df[col])
+        ):
             cat_variables.append(col)
         # https://stackoverflow.com/questions/37726830/how-to-determine-if-a-number-is-any-type-of-int-core-or-numpy-signed-or-not
-        elif (
-            np.issubdtype(df[col].dtype, np.integer) or np.issubdtype(df[col].dtype, np.floating)
-        ) and df[col].nunique() < threshold:
+        elif pd.api.types.is_numeric_dtype(df[col]) and df[col].nunique() < threshold:
             cat_variables.append(col)
 
     return cat_variables
