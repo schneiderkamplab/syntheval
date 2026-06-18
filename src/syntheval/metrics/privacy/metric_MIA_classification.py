@@ -119,7 +119,7 @@ class MIAClassifier(MetricClass):
                 )
                 y_test = pd.Series([1] * len(real_sample) + [0] * len(hout_sample))
 
-                cls = LGBMClassifier(verbosity=-1).fit(X_train, y_train)
+                cls = LGBMClassifier(verbosity=-1, n_jobs=1).fit(X_train, y_train)
                 holdout_predictions = cls.predict(X_test)
 
                 # Calculate precision, recall, and F1-score
