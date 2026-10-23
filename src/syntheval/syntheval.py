@@ -216,7 +216,7 @@ class SynthEval():
         analysis_target_var = kwargs.pop('analysis_target_var', None)
         if (analysis_target is not None) or (analysis_target_var is not None):
             analysis_target = _analysis_target_parser(self.real, analysis_target, analysis_target_var)
-
+            analysis_target.update_target_types(self.categorical_columns)
         metric_kwargs = kwargs
         
         loaded_preset = {}
@@ -469,8 +469,11 @@ class SynthEval():
         errs_df = errs_df.set_index('dataset')
         rank_df = rank_df.set_index('dataset')
 
+        #TODO: make a headsup print on how the ranking is interpreted (e.g. higher is better, etc.) based on the strategy chosen.
         match rank_strategy:
-            case 'normal': rank_df = extremes_ranking(rank_df, utility_mets, privacy_mets, fairness_mets)
+            case 'normal': 
+                rank_df = extremes_ranking(rank_df, utility_mets, privacy_mets, fairness_mets)
+                print("Using normal ranking strategy: best score gets 1, worst gets 0, everything else gets 0.5. I.e. higher rank is better.")
             case 'linear': rank_df = linear_ranking(rank_df, utility_mets, privacy_mets, fairness_mets)
             case 'quantile': rank_df = quantile_ranking(rank_df, utility_mets, privacy_mets, fairness_mets)
             case 'summation': rank_df = summation_ranking(rank_df, utility_mets, privacy_mets, fairness_mets)

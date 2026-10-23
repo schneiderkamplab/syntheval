@@ -32,10 +32,12 @@ class AnalysisConfig:
                  sensitive_vars: list | str = None, auto_exclusive: bool = False):
         self.target_vars = target_vars if isinstance(target_vars, list) else [target_vars]
 
+        self.num_uniques = {var: dataset[var].nunique() for var in self.target_vars}
         self.target_types = {}
+
         for var in self.target_vars:
             if dataset[var].dtype == "object" or dataset[var].dtype == "int":
-                self.target_types[var] = len(dataset[var].unique())
+                self.target_types[var] = self.num_uniques[var]
             else:
                 self.target_types[var] = "num"
 
@@ -61,6 +63,16 @@ class AnalysisConfig:
                         self.confounder_vars[other_var].append(var)
             
         self.sensitive_vars = sensitive_vars if isinstance(sensitive_vars, list) else [sensitive_vars]
+        pass
+
+    def update_target_types(self, cat_cols: list | str):
+        """Function for SynthEval to update the target types with the inferred categorical columns from the dataset."""
+        self.target_types = {} 
+        for var in self.target_vars:
+            if var in cat_cols:
+                self.target_types[var] = self.num_uniques[var]
+            else:
+                self.target_types[var] = "num"
         pass
 
     def save(self, path: str = "SE_analysis_config"):

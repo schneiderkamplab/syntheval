@@ -195,6 +195,10 @@ class ClassificationAccuracy(MetricClass):
             fake_models = [_get_model(model_name) for model_name in cls_models]
             target_var = target_var.replace(' ', '_').lower()
 
+            # TODO: If the number of classes in the synthetic data is less than two, fallback to a dummy classifier that always predicts the most frequent class in the real data, to avoid errors in F1 score calculation.
+            # if len(fake_y.unique()) < 2:
+            #     fake_models = [DummyClassifier(strategy='most_frequent', random_state=42) for _ in fake_models]
+
             res = []
             max_len = max(len(real_y), len(fake_y))
             real_x_sub, real_y_sub = resample(real_x, real_y, n_samples=max_len, stratify=real_y, random_state=42)
